@@ -50,12 +50,14 @@ class BaseExperiment(ABC):
         """Experiment-specific result analysis (implemented in each experiment class)"""
         pass
 
-    @abstractmethod
     def save_experiment_data(
-        self, results: dict[str, Any], metadata: dict[str, Any] = None
+        self, results: dict[str, Any], metadata: dict[str, Any] | None = None, experiment_type: str | None = None
     ) -> str:
-        """Experiment-specific data saving (implemented in each experiment class)"""
-        pass
+        """Save experiment data using data manager"""
+        exp_type = experiment_type or self.__class__.__name__.lower().replace("experiment", "")
+        return self.data_manager.save_results(
+            results=results, metadata=metadata or {}, experiment_type=exp_type
+        )
 
     # Common save methods
     def save_job_ids(
@@ -124,6 +126,14 @@ class BaseExperiment(ABC):
             circuits = self.circuits()
             print(f"Created default circuits: {len(circuits)} circuits")
 
+        # Store backend info for device name resolution
+        if hasattr(backend, 'device_name'):
+            self._last_backend_device = backend.device_name
+        elif hasattr(backend, 'backend_type'):
+            self._last_backend_device = backend.backend_type
+        else:
+            self._last_backend_device = "unknown"
+        
         # Auto-transpile if physical qubit specified
         circuits, was_transpiled = self._auto_transpile_if_needed(circuits, backend)
 
@@ -171,16 +181,73 @@ class BaseExperiment(ABC):
                 print(f"Auto-transpiling circuits: logical qubit {logical_qubit} → physical qubit {physical_qubit}")
                 try:
                     transpiled = backend.transpile(circuits, physical_qubits=[physical_qubit])
-                    print(f"✅ Transpilation successful")
+                    print(f"Transpilation successful")
                     return transpiled, True
                 except Exception as e:
-                    print(f"⚠️  Transpilation failed: {e}, using original circuits")
+                    print(f"Transpilation failed: {e}, using original circuits")
                     return circuits, False
             else:
-                print(f"⚠️  Backend does not support transpilation, using original circuits")
+                print(f"Backend does not support transpilation, using original circuits")
                 return circuits, False
         
         return circuits, False
+
+    def _transpile_circuits_with_tranqu(self, circuits, logical_qubit=0, physical_qubit=None):
+        """
+        Transpile circuits using Tranqu (backend-independent)
+        
+        Args:
+            circuits: Circuit collection or list
+            logical_qubit: Logical qubit index (default: 0)
+            physical_qubit: Target physical qubit
+            
+        Returns:
+            Transpiled circuits or original circuits if transpilation fails
+        """
+        if physical_qubit is None:
+            return circuits
+            
+        try:
+            from tranqu import Tranqu
+            from ..devices import DeviceInfo
+
+            device_info = DeviceInfo("anemone")
+            if not device_info.available:
+                print("Device info not available, using original circuits")
+                return circuits
+
+            tranqu = Tranqu()
+            transpiled_circuits = []
+
+            for i, circuit in enumerate(circuits):
+                try:
+                    initial_layout = {circuit.qubits[logical_qubit]: physical_qubit}
+                    result = tranqu.transpile(
+                        program=circuit,
+                        transpiler_lib="qiskit",
+                        program_lib="qiskit",
+                        transpiler_options={
+                            "basis_gates": ["sx", "x", "rz", "cx"],
+                            "optimization_level": 1,
+                            "initial_layout": initial_layout,
+                        },
+                        device=device_info.device_info,
+                        device_lib="oqtopus",
+                    )
+                    transpiled_circuits.append(result.transpiled_program)
+                except Exception as e:
+                    print(f"Circuit {i+1} transpilation failed: {e}")
+                    transpiled_circuits.append(circuit)
+
+            print(f"Transpiled {len(transpiled_circuits)} circuits to physical qubit {physical_qubit}")
+            return transpiled_circuits
+
+        except ImportError:
+            print("Tranqu not available, using original circuits")
+            return circuits
+        except Exception as e:
+            print(f"Transpilation failed: {e}, using original circuits")
+            return circuits
 
     def run_parallel(
         self,
@@ -286,13 +353,13 @@ class BaseExperiment(ABC):
                 print(f"Auto-transpiling circuits: logical qubit {logical_qubit} → physical qubit {physical_qubit}")
                 try:
                     transpiled = backend.transpile(circuits, physical_qubits=[physical_qubit])
-                    print(f"✅ Transpilation successful")
+                    print(f"Transpilation successful")
                     return transpiled, True
                 except Exception as e:
-                    print(f"⚠️  Transpilation failed: {e}, using original circuits")
+                    print(f"Transpilation failed: {e}, using original circuits")
                     return circuits, False
             else:
-                print(f"⚠️  Backend does not support transpilation, using original circuits")
+                print(f"Backend does not support transpilation, using original circuits")
                 return circuits, False
         
         return circuits, False

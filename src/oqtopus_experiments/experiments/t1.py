@@ -4,7 +4,7 @@ T1 Experiment Class - Simplified T1 decay experiment implementation
 Inherits from BaseExperiment and provides streamlined T1 experiment functionality
 """
 
-from typing import Any
+from typing import Any, Optional
 
 import numpy as np
 from qiskit import QuantumCircuit, transpile
@@ -25,7 +25,7 @@ class T1(BaseExperiment):
     """
 
     def __init__(
-        self, experiment_name: str = None, disable_mitigation: bool = False, **kwargs
+        self, experiment_name: Optional[str] = None, disable_mitigation: bool = False, **kwargs
     ):
         # Extract T1 experiment-specific parameters (not passed to BaseExperiment)
         t1_specific_params = {
@@ -74,7 +74,7 @@ class T1(BaseExperiment):
                 continue
 
             # Extract expectation values (probability of measuring |1⟩)
-            expectation_values = []
+            expectation_values: list[float] = []
 
             for result in device_results:
                 if "counts" in result:
@@ -90,13 +90,13 @@ class T1(BaseExperiment):
                 else:
                     expectation_values.append(0.0)
 
-            expectation_values = np.array(expectation_values)
+            expectation_values_array = np.array(expectation_values)
 
             # Fit exponential decay: P(t) = A * exp(-t/T1) + B
             try:
                 # Initial parameter estimates
-                initial_amplitude = np.max(expectation_values) - np.min(
-                    expectation_values
+                initial_amplitude = np.max(expectation_values_array) - np.min(
+                    expectation_values_array
                 )
                 initial_t1 = self.expected_t1
                 initial_offset = np.min(expectation_values)
@@ -108,7 +108,7 @@ class T1(BaseExperiment):
                 popt, pcov = curve_fit(
                     exponential_decay,
                     delay_times,
-                    expectation_values,
+                    expectation_values_array,
                     p0=[initial_amplitude, initial_t1, initial_offset],
                     bounds=([0, 1, -0.1], [2, 1e6, 1.1]),  # Reasonable bounds
                     maxfev=5000,
@@ -118,8 +118,8 @@ class T1(BaseExperiment):
 
                 # Calculate R-squared for fit quality
                 fitted_values = exponential_decay(delay_times, *popt)
-                ss_res = np.sum((expectation_values - fitted_values) ** 2)
-                ss_tot = np.sum((expectation_values - np.mean(expectation_values)) ** 2)
+                ss_res = np.sum((expectation_values_array - fitted_values) ** 2)
+                ss_tot = np.sum((expectation_values_array - np.mean(expectation_values_array)) ** 2)
                 r_squared = 1 - (ss_res / ss_tot) if ss_tot > 0 else 0
 
                 # Calculate parameter uncertainties
@@ -136,7 +136,7 @@ class T1(BaseExperiment):
 
                 analysis["fit_quality"][device] = {
                     "r_squared": float(r_squared),
-                    "rmse": float(np.sqrt(ss_res / len(expectation_values))),
+                    "rmse": float(np.sqrt(ss_res / len(expectation_values_array))),
                 }
 
                 print(
@@ -148,7 +148,7 @@ class T1(BaseExperiment):
                 analysis["t1_estimates"][device] = {"error": str(e)}
                 analysis["fit_quality"][device] = {"error": str(e)}
 
-            analysis["expectation_values"][device] = expectation_values.tolist()
+            analysis["expectation_values"][device] = expectation_values_array.tolist()
 
         return analysis
 
@@ -205,12 +205,5 @@ class T1(BaseExperiment):
         circuit_collection = CircuitCollection(circuits)
         # Store circuits for later use by run() methods
         self._circuits = circuit_collection
-        return circuit_collection
+        return circuits  # Return list instead of CircuitCollection for compatibility
 
-    def save_experiment_data(
-        self, results: dict[str, Any], metadata: dict[str, Any] = None
-    ) -> str:
-        """Save T1 experiment data"""
-        return self.data_manager.save_results(
-            results=results, metadata=metadata or {}, experiment_type="t1"
-        )

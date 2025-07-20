@@ -44,12 +44,12 @@ class OqtopusBackend:
             self.backend = OqtopusSamplingBackend()
             self.available = True
             print(
-                f"✅ OQTOPUS backend initialized (device: {device}, timeout: {timeout_seconds}s)"
+                f"OQTOPUS backend initialized (device: {device}, timeout: {timeout_seconds}s)"
             )
         except ImportError:
             self.backend = None
             self.available = False
-            print("❌ OQTOPUS backend not available (missing quri_parts_oqtopus)")
+            print("OQTOPUS backend not available (missing quri_parts_oqtopus)")
 
         # Initialize device info (lazy loading)
         self._device_info_loaded = False
@@ -66,7 +66,7 @@ class OqtopusBackend:
             Result dictionary with counts
         """
         if not self.available:
-            print("⚠️  OQTOPUS not available, using simulated results")
+            print("OQTOPUS not available, using simulated results")
             return {"counts": {"0": shots // 2, "1": shots // 2}}
 
         try:
@@ -76,7 +76,7 @@ class OqtopusBackend:
 
             # Convert circuit to QASM3
             qasm_str = dumps(circuit)
-            print(f"📤 Submitting circuit to OQTOPUS device: {self.device_name}")
+            print(f"Submitting circuit to OQTOPUS device: {self.device_name}")
 
             # Submit to OQTOPUS with configured settings
             job = self.backend.sample_qasm(
@@ -95,7 +95,7 @@ class OqtopusBackend:
                 },
             )
 
-            print(f"📋 Job submitted with ID: {job.job_id[:8]}...")
+            print(f"Job submitted with ID: {job.job_id[:8]}...")
 
             # Wait for results (polling with timeout)
             max_wait = self.timeout_seconds
@@ -125,7 +125,7 @@ class OqtopusBackend:
                                     "backend": "oqtopus",
                                 }
                         except Exception as e:
-                            print(f"⚠️  Error getting result: {e}")
+                            print(f"Error getting result: {e}")
                             # If job is ready but result access fails, continue waiting
                             if status == "ready":
                                 time.sleep(2)
@@ -142,7 +142,7 @@ class OqtopusBackend:
                             result = job.result()
                             if result and hasattr(result, "counts"):
                                 counts = result.counts
-                                print(f"✅ OQTOPUS job completed (status: {status})")
+                                print(f"OQTOPUS job completed (status: {status})")
                                 return {
                                     "counts": dict(counts),
                                     "job_id": job.job_id,
@@ -152,18 +152,18 @@ class OqtopusBackend:
                         except Exception:
                             pass
 
-                        print(f"❓ Unknown job status: {status}")
+                        print(f"Unknown job status: {status}")
                         time.sleep(5)
                         continue
 
                 except Exception as e:
-                    print(f"⚠️  Error checking job status: {e}")
+                    print(f"Error checking job status: {e}")
                     time.sleep(5)
                     continue
 
             elapsed = time.time() - start_time
             print(
-                f"⏰ OQTOPUS job timeout after {elapsed:.1f}s, using simulated results"
+                f"OQTOPUS job timeout after {elapsed:.1f}s, using simulated results"
             )
             return {
                 "counts": {"0": shots // 2, "1": shots // 2},
@@ -173,8 +173,8 @@ class OqtopusBackend:
             }
 
         except Exception as e:
-            print(f"❌ OQTOPUS submission failed: {e}")
-            print("⚠️  Falling back to simulated results")
+            print(f"OQTOPUS submission failed: {e}")
+            print("Falling back to simulated results")
             return {"counts": {"0": shots // 2, "1": shots // 2}}
 
     def submit(self, circuit: Any, shots: int = 1024) -> str:
@@ -219,7 +219,7 @@ class OqtopusBackend:
                 self._device_info = DeviceInfo(self.device_name)
                 self._device_info_loaded = True
             except Exception as e:
-                print(f"⚠️  Could not load device info: {e}")
+                print(f"Could not load device info: {e}")
                 self._device_info = None
                 self._device_info_loaded = True
 
@@ -236,7 +236,7 @@ class OqtopusBackend:
         if self.device and self.device.available:
             self.device.show(show_qubits=show_qubits, show_couplings=show_couplings)
         else:
-            print(f"❌ Device information not available for {self.device_name}")
+            print(f"Device information not available for {self.device_name}")
 
     def get_best_qubits(self, n: int = 5, sorted_key: str = "fidelity") -> Any:
         """
@@ -251,7 +251,7 @@ class OqtopusBackend:
         if self.device and self.device.available:
             return self.device.get_best_qubits(n, sorted_key=sorted_key)
         else:
-            print(f"❌ Device information not available for {self.device_name}")
+            print(f"Device information not available for {self.device_name}")
             return None
 
     def get_device_stats(self):
@@ -264,7 +264,7 @@ class OqtopusBackend:
         if self.device and self.device.available:
             return self.device.get_qubit_stats()
         else:
-            print(f"❌ Device information not available for {self.device_name}")
+            print(f"Device information not available for {self.device_name}")
             return None
 
     def plot_device_layout(self, color_by: str = "fidelity", show_edges: bool = True):
@@ -278,7 +278,7 @@ class OqtopusBackend:
         if self.device and self.device.available:
             self.device.plot_layout(color_by=color_by, show_edges=show_edges)
         else:
-            print(f"❌ Device information not available for {self.device_name}")
+            print(f"Device information not available for {self.device_name}")
 
     def save_device_info(self, filename: str = None) -> str:
         """
@@ -322,7 +322,7 @@ class OqtopusBackend:
         if self.device and self.device.available:
             return self.device.compare_qubits(qubit_ids)
         else:
-            print(f"❌ Device information not available for {self.device_name}")
+            print(f"Device information not available for {self.device_name}")
             return None
 
     def transpile(
@@ -753,7 +753,7 @@ class OqtopusBackend:
                         retry_indices.append(i)
 
                 if retry_indices:
-                    print(f"🔄 Retrying {len(retry_indices)} failed jobs...")
+                    print(f"Retrying {len(retry_indices)} failed jobs...")
                     time.sleep(5)  # Wait before retry
 
                     with ThreadPoolExecutor(max_workers=4) as executor:
@@ -767,9 +767,9 @@ class OqtopusBackend:
                                 idx, result = future.result()
                                 if result.get("status") == "success":
                                     results[idx] = result
-                                    print(f"✅ Retry successful for job {idx + 1}")
+                                    print(f"Retry successful for job {idx + 1}")
                             except Exception as e:
-                                print(f"❌ Retry failed: {e}")
+                                print(f"Retry failed: {e}")
 
             # Count results by status
             success_count = sum(
@@ -783,7 +783,7 @@ class OqtopusBackend:
             )
 
             print(
-                f"📊 Collection summary: {success_count} success, {failed_count} failed, {timeout_count} timeout/error"
+                f"Collection summary: {success_count} success, {failed_count} failed, {timeout_count} timeout/error"
             )
 
             # Only raise error if there are permanently failed jobs
@@ -793,7 +793,7 @@ class OqtopusBackend:
                     for i, r in enumerate(results)
                     if r and r.get("status") == "failed"
                 ]
-                print(f"❌ {failed_count} jobs permanently failed:")
+                print(f"{failed_count} jobs permanently failed:")
                 for job_idx, error in failed_jobs:
                     print(f"   Job {job_idx + 1}: {error}")
                 raise RuntimeError(f"{failed_count} jobs failed permanently")

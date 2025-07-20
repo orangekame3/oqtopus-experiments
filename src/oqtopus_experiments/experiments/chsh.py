@@ -4,7 +4,7 @@ CHSH Experiment Class - Simplified implementation for CHSH Bell inequality viola
 Inherits from BaseExperiment and provides streamlined implementation for CHSH experiments
 """
 
-from typing import Any
+from typing import Any, Optional
 
 import numpy as np
 
@@ -23,7 +23,7 @@ class CHSH(BaseExperiment):
     - Bell inequality analysis
     """
 
-    def __init__(self, experiment_name: str = None, **kwargs):
+    def __init__(self, experiment_name: Optional[str] = None, **kwargs):
         # Extract CHSH experiment-specific parameters (not passed to BaseExperiment)
         chsh_specific_params = {
             "phase_points",

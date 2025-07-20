@@ -5,6 +5,8 @@ Experiment result wrapper for usage.py compatibility
 
 from typing import Any
 
+import pandas as pd
+
 
 class ExperimentResult:
     """
@@ -33,16 +35,18 @@ class ExperimentResult:
         self.analysis_params = kwargs
         self._analyzed_results = None
 
-    def analyze(self, save: bool = True, **kwargs) -> dict[str, Any]:
+    def analyze(
+        self, save_data: bool = True, **kwargs
+    ) -> pd.DataFrame:
         """
         Analyze the experiment results
 
         Args:
-            save: Whether to save results
+            save_data: Whether to save analysis results data
             **kwargs: Additional parameters passed to experiment's analyze method
 
         Returns:
-            Analysis results dictionary
+            DataFrame with analysis results
         """
         if self._analyzed_results is None:
             # Perform analysis using the experiment's analyze method
@@ -51,27 +55,31 @@ class ExperimentResult:
                 self.raw_results, **analysis_params
             )
 
-        # Save results if requested
-        if save:
+        # Save results if requested (DataFrame is easily serializable)
+        if save_data:
             try:
-                self.experiment.save_experiment_data(
-                    self._analyzed_results,
-                    metadata={
-                        "experiment_type": self.experiment_type,
-                        **self.analysis_params,
-                    },
-                )
+                if hasattr(self.experiment, "save_experiment_data") and hasattr(self._analyzed_results, "to_dict"):
+                    # DataFrame to dict conversion for clean JSON storage
+                    saved_path = self.experiment.save_experiment_data(
+                        self._analyzed_results.to_dict(orient="records"),
+                        metadata={
+                            "experiment_type": self.experiment_type,
+                            **self.analysis_params,
+                        },
+                    )
+                    print(f"💾 Results saved to: {saved_path}")
+                else:
+                    print("⚠️  Save method not available for this experiment")
             except Exception as e:
-                print(f"Warning: Could not save results: {e}")
+                print(f"⚠️  Warning: Could not save results: {e}")
 
         return self._analyzed_results
 
-
     @property
-    def results(self) -> dict[str, Any]:
+    def results(self) -> pd.DataFrame:
         """Get analyzed results (lazy evaluation)"""
         if self._analyzed_results is None:
-            self.analyze(save=False)
+            self.analyze(save_data=False)
         return self._analyzed_results
 
     def __repr__(self) -> str:

@@ -55,6 +55,8 @@ dependencies = [
     "quri-parts-oqtopus>=1.0.3",
     "tranqu",
     "qctrl-visualizer>=8.0.2",
+    "kaleido>=1.0.0",
+    "pytest>=8.4.1",
 ]
 
 [project.urls]
@@ -126,6 +128,19 @@ disallow_incomplete_defs = false
 check_untyped_defs = true
 disallow_untyped_decorators = false
 no_implicit_optional = true
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-ra -q --strict-markers"
+testpaths = ["tests"]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
 warn_redundant_casts = true
 warn_unused_ignores = true
 warn_no_return = true

@@ -4,15 +4,15 @@ Parallel Rabi experiment with Qulacs
 """
 
 
-from oqtopus_experiments.backends import OqtopusBackend
+from oqtopus_experiments.backends import LocalBackend
 from oqtopus_experiments.experiments import Rabi
 
 
 def main():
-    print("=== Parallel Rabi with Qulacs ===")
+    print("=== Parallel Rabi with Noisy Simulator ===")
 
     # OQTOPUS backend for Qulacs
-    backend = OqtopusBackend(device="qulacs")
+    backend = LocalBackend(device="noisy")
 
     # Create Rabi experiment
     rabi = Rabi(
@@ -22,8 +22,8 @@ def main():
         max_amplitude=4.0,
     )
 
-    # Sequential execution with backend
-    result = rabi.run(backend=backend, shots=1000)
+    # Parallel execution with backend
+    result = rabi.run_parallel(backend=backend, shots=1000, workers=4)
 
     # Analyze results (defaults to DataFrame)
     df = result.analyze(plot=True, save_data=True, save_image=True)

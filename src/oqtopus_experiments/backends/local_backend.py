@@ -29,37 +29,38 @@ class LocalBackend:
     Compatible with usage.py style API.
     """
 
-    def __init__(self, noise: bool = True, t1: float = 50.0, t2: float = 100.0):
+    def __init__(self, device: str = "noisy", t1: float = 50.0, t2: float = 100.0):
         """
         Initialize local backend
 
         Args:
-            noise: Whether to include noise model (IBM-like parameters)
+            device: Device type ("noisy" or "ideal")
             t1: T1 relaxation time in microseconds
             t2: T2 dephasing time in microseconds
         """
         self.backend_type = "local"
-        self.noise_enabled = noise
+        self.device_name = device
+        self.noise_enabled = device == "noisy"
         self.t1_us = t1
         self.t2_us = t2
 
         # Try to initialize Qiskit Aer
         if QISKIT_AVAILABLE:
             self.simulator = AerSimulator()
-            if noise:
+            if self.noise_enabled:
                 self.noise_model = self._create_noise_model()
             else:
                 self.noise_model = None
             self.available = True
             noise_status = (
-                f"with noise (T1={t1}μs, T2={t2}μs)" if noise else "noiseless"
+                f"with noise (T1={t1}μs, T2={t2}μs)" if self.noise_enabled else "noiseless"
             )
-            print(f"✅ Local backend initialized ({noise_status})")
+            print(f"Local backend initialized ({device}, {noise_status})")
         else:
             self.simulator = None
             self.noise_model = None
             self.available = False
-            print("❌ Local backend not available (missing qiskit-aer)")
+            print("Local backend not available (missing qiskit-aer)")
 
     def _create_noise_model(self) -> "NoiseModel":
         """
@@ -116,7 +117,7 @@ class LocalBackend:
             Result dictionary with counts
         """
         if not self.available:
-            print("⚠️  Local simulator not available, using fake results")
+            print("Local simulator not available, using fake results")
             return {"counts": {"0": shots // 2, "1": shots // 2}}
 
         try:
@@ -142,12 +143,12 @@ class LocalBackend:
                 "counts": dict(counts),
                 "shots": shots,
                 "success": True,
-                "backend": "local_aer",
+                "backend": self.device_name,
                 "noise_enabled": self.noise_enabled,
             }
 
         except Exception as e:
-            print(f"❌ Local simulation failed: {e}")
+            print(f"Local simulation failed: {e}")
             # Return fake results on error
             return {
                 "job_id": "error",
@@ -221,17 +222,19 @@ class LocalBackend:
         self.t2_us = t2
         if self.noise_enabled and QISKIT_AVAILABLE:
             self.noise_model = self._create_noise_model()
-            print(f"✅ Noise model updated (T1={t1}μs, T2={t2}μs)")
+            print(f"Noise model updated (T1={t1}μs, T2={t2}μs)")
 
     def disable_noise(self):
-        """Disable noise model"""
+        """Switch to ideal simulation"""
         self.noise_enabled = False
         self.noise_model = None
-        print("✅ Noise model disabled")
+        self.device_name = "ideal"
+        print("Switched to ideal simulation")
 
     def enable_noise(self):
-        """Enable noise model"""
+        """Switch to noisy simulation"""
         self.noise_enabled = True
+        self.device_name = "noisy"
         if QISKIT_AVAILABLE:
             self.noise_model = self._create_noise_model()
-            print(f"✅ Noise model enabled (T1={self.t1_us}μs, T2={self.t2_us}μs)")
+            print(f"Switched to noisy simulation (T1={self.t1_us}μs, T2={self.t2_us}μs)")

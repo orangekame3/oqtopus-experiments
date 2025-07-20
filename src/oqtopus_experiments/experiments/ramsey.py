@@ -4,7 +4,7 @@ Ramsey Experiment Class - Simplified Ramsey oscillation experiment implementatio
 Inherits from BaseExperiment and provides streamlined Ramsey experiment functionality
 """
 
-from typing import Any
+from typing import Any, Optional
 
 import numpy as np
 from qiskit import QuantumCircuit, transpile
@@ -25,7 +25,7 @@ class Ramsey(BaseExperiment):
     """
 
     def __init__(
-        self, experiment_name: str = None, disable_mitigation: bool = False, **kwargs
+        self, experiment_name: Optional[str] = None, disable_mitigation: bool = False, **kwargs
     ):
         # Extract Ramsey experiment-specific parameters (not passed to BaseExperiment)
         ramsey_specific_params = {
@@ -79,7 +79,7 @@ class Ramsey(BaseExperiment):
                 continue
 
             # Extract expectation values (probability of measuring |0⟩ for Ramsey)
-            expectation_values = []
+            expectation_values: list[float] = []
 
             for result in device_results:
                 if "counts" in result:
@@ -95,20 +95,20 @@ class Ramsey(BaseExperiment):
                 else:
                     expectation_values.append(0.5)
 
-            expectation_values = np.array(expectation_values)
+            expectation_values_array = np.array(expectation_values)
 
             # Fit Ramsey oscillation: P(t) = A * exp(-t/T2*) * cos(2πft + φ) + B
             try:
                 # Initial parameter estimates
                 initial_amplitude = (
-                    np.max(expectation_values) - np.min(expectation_values)
+                    np.max(expectation_values_array) - np.min(expectation_values_array)
                 ) / 2
                 initial_frequency = self._estimate_frequency(
-                    delay_times, expectation_values
+                    delay_times, expectation_values_array
                 )
                 initial_t2_star = self.expected_t2_star
                 initial_phase = 0.0
-                initial_offset = np.mean(expectation_values)
+                initial_offset = np.mean(expectation_values_array)
 
                 def ramsey_oscillation(t, amplitude, frequency, t2_star, phase, offset):
                     # Convert frequency from MHz to Hz, time from ns to s
@@ -123,7 +123,7 @@ class Ramsey(BaseExperiment):
                 popt, pcov = curve_fit(
                     ramsey_oscillation,
                     delay_times,
-                    expectation_values,
+                    expectation_values_array,
                     p0=[
                         initial_amplitude,
                         initial_frequency,
@@ -148,8 +148,8 @@ class Ramsey(BaseExperiment):
 
                 # Calculate R-squared for fit quality
                 fitted_values = ramsey_oscillation(delay_times, *popt)
-                ss_res = np.sum((expectation_values - fitted_values) ** 2)
-                ss_tot = np.sum((expectation_values - np.mean(expectation_values)) ** 2)
+                ss_res = np.sum((expectation_values_array - fitted_values) ** 2)
+                ss_tot = np.sum((expectation_values_array - np.mean(expectation_values_array)) ** 2)
                 r_squared = 1 - (ss_res / ss_tot) if ss_tot > 0 else 0
 
                 # Calculate parameter uncertainties
@@ -170,7 +170,7 @@ class Ramsey(BaseExperiment):
 
                 analysis["fit_quality"][device] = {
                     "r_squared": float(r_squared),
-                    "rmse": float(np.sqrt(ss_res / len(expectation_values))),
+                    "rmse": float(np.sqrt(ss_res / len(expectation_values_array))),
                 }
 
                 print(
@@ -182,7 +182,7 @@ class Ramsey(BaseExperiment):
                 analysis["ramsey_estimates"][device] = {"error": str(e)}
                 analysis["fit_quality"][device] = {"error": str(e)}
 
-            analysis["expectation_values"][device] = expectation_values.tolist()
+            analysis["expectation_values"][device] = expectation_values_array.tolist()
 
         return analysis
 
@@ -217,7 +217,7 @@ class Ramsey(BaseExperiment):
             if len(positive_fft) > 1:
                 peak_idx = np.argmax(positive_fft[1:]) + 1  # Skip DC component
                 estimated_freq = abs(positive_freqs[peak_idx]) / 1e6  # Hz to MHz
-                return estimated_freq
+                return float(estimated_freq)
             else:
                 return 1.0  # Default 1 MHz
 
@@ -285,12 +285,5 @@ class Ramsey(BaseExperiment):
         circuit_collection = CircuitCollection(circuits)
         # Store circuits for later use by run() methods
         self._circuits = circuit_collection
-        return circuit_collection
+        return circuits  # Return list instead of CircuitCollection for compatibility
 
-    def save_experiment_data(
-        self, results: dict[str, Any], metadata: dict[str, Any] = None
-    ) -> str:
-        """Save Ramsey experiment data"""
-        return self.data_manager.save_results(
-            results=results, metadata=metadata or {}, experiment_type="ramsey"
-        )
