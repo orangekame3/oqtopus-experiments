@@ -20,7 +20,7 @@ except ImportError:
     QISKIT_AVAILABLE = False
 
 
-class ParityOscillationExperiment(BaseExperiment):
+class ParityOscillation(BaseExperiment):
     """
     Parity oscillation experiment for studying GHZ state decoherence
 
@@ -117,7 +117,7 @@ class ParityOscillationExperiment(BaseExperiment):
 
         return qc
 
-    def create_circuits(self, **kwargs) -> list[Any]:
+    def circuits(self, **kwargs) -> list[Any]:
         """
         Create parity oscillation experiment circuits
 
@@ -195,6 +195,8 @@ class ParityOscillationExperiment(BaseExperiment):
             f"Phase points per (N,τ): {actual_phase_points} for max N={max(num_qubits_list)}"
         )
 
+        # Store circuits for later use by run() methods
+        self._circuits = circuits
         return circuits
 
     def calculate_parity(self, counts: dict[str | int, int]) -> float:
@@ -333,7 +335,7 @@ class ParityOscillationExperiment(BaseExperiment):
                 "fit_success": False,
             }
 
-    def analyze_results(
+    def analyze(
         self, results: dict[str, list[dict[str, Any]]], **kwargs
     ) -> dict[str, Any]:
         """

@@ -11,9 +11,10 @@ from qiskit import QuantumCircuit, transpile
 from scipy.optimize import curve_fit
 
 from ..core.base_experiment import BaseExperiment
+from ..models.circuit_collection import CircuitCollection
 
 
-class T1Experiment(BaseExperiment):
+class T1(BaseExperiment):
     """
     T1 decay experiment class
 
@@ -43,69 +44,7 @@ class T1Experiment(BaseExperiment):
         self.expected_t1 = 1000  # Initial estimate [ns] for fitting
         self.disable_mitigation = disable_mitigation
 
-    @classmethod
-    def create_t1_circuits(
-        cls,
-        delay_points: int = 20,
-        max_delay: float = 50000.0,
-        qubit: int = 0,
-        basis_gates: list[str] = None,
-        optimization_level: int = 1,
-    ) -> tuple[list[Any], dict]:
-        """
-        Create T1 decay experiment circuits using functional approach
-
-        Args:
-            delay_points: Number of delay time points
-            max_delay: Maximum delay time in nanoseconds
-            qubit: Target qubit for T1 measurement
-            basis_gates: Transpilation basis gates
-            optimization_level: Transpilation optimization level
-
-        Returns:
-            Tuple of (circuits_list, metadata_dict)
-        """
-        # Generate delay times (logarithmic spacing for better T1 characterization)
-        delay_times = np.logspace(
-            np.log10(1.0), np.log10(max_delay), delay_points  # Start from 1 ns
-        )
-
-        circuits = []
-
-        for delay in delay_times:
-            # Create X-gate preparation + delay + measurement circuit
-            qc = QuantumCircuit(1, 1)
-            qc.x(0)  # Prepare |1⟩ state
-            qc.delay(delay, 0, unit="ns")  # Wait for decay
-            qc.measure(0, 0)  # Measure final state
-
-            # Transpile if basis gates specified
-            if basis_gates is not None:
-                qc = transpile(
-                    qc,
-                    basis_gates=basis_gates,
-                    optimization_level=optimization_level,
-                )
-
-            circuits.append(qc)
-
-        metadata = {
-            "delay_times": delay_times,
-            "max_delay": max_delay,
-            "delay_points": delay_points,
-            "qubit": qubit,
-        }
-
-        print(
-            f"Created {len(circuits)} T1 circuits (delay range: {delay_times[0]:.1f} - {delay_times[-1]:.1f} ns)"
-        )
-        print(
-            "T1 circuit structure: |0⟩ → X → delay(t) → measure (expected: exponential decay)"
-        )
-
-        return circuits, metadata
-
-    def analyze_results(
+    def analyze(
         self, results: dict[str, list[dict[str, Any]]], **kwargs
     ) -> dict[str, Any]:
         """
@@ -201,7 +140,7 @@ class T1Experiment(BaseExperiment):
                 }
 
                 print(
-                    f"📊 {device}: T₁ = {fitted_t1:.1f} ± {param_errors[1]:.1f} ns ({fitted_t1/1000:.2f} μs), R² = {r_squared:.3f}"
+                    f"📊 {device}: T₁ = {fitted_t1:.1f} ± {param_errors[1]:.1f} ns ({fitted_t1 / 1000:.2f} μs), R² = {r_squared:.3f}"
                 )
 
             except Exception as e:
@@ -212,3 +151,66 @@ class T1Experiment(BaseExperiment):
             analysis["expectation_values"][device] = expectation_values.tolist()
 
         return analysis
+
+    def circuits(self, **kwargs) -> list[Any]:
+        """Create T1 decay experiment circuits"""
+        # Extract parameters with defaults
+        delay_points = kwargs.get("delay_points", kwargs.get("points", 20))
+        max_delay = kwargs.get("max_delay", 50000.0)
+        qubit = kwargs.get("qubit", 0)
+        basis_gates = kwargs.get("basis_gates", None)
+        optimization_level = kwargs.get("optimization_level", 1)
+
+        # Generate delay times (logarithmic spacing for better T1 characterization)
+        delay_times = np.logspace(
+            np.log10(1.0),
+            np.log10(max_delay),
+            delay_points,  # Start from 1 ns
+        )
+
+        circuits = []
+
+        for delay in delay_times:
+            # Create X-gate preparation + delay + measurement circuit
+            qc = QuantumCircuit(1, 1)
+            qc.x(0)  # Prepare |1⟩ state
+            qc.delay(delay, 0, unit="ns")  # Wait for decay
+            qc.measure(0, 0)  # Measure final state
+
+            # Transpile if basis gates specified
+            if basis_gates is not None:
+                qc = transpile(
+                    qc,
+                    basis_gates=basis_gates,
+                    optimization_level=optimization_level,
+                )
+
+            circuits.append(qc)
+
+        # Store metadata for analyze method
+        self.experiment_params = {
+            "delay_times": delay_times,
+            "max_delay": max_delay,
+            "delay_points": delay_points,
+            "qubit": qubit,
+        }
+
+        print(
+            f"Created {len(circuits)} T1 circuits (delay range: {delay_times[0]:.1f} - {delay_times[-1]:.1f} ns)"
+        )
+        print(
+            "T1 circuit structure: |0⟩ → X → delay(t) → measure (expected: exponential decay)"
+        )
+
+        circuit_collection = CircuitCollection(circuits)
+        # Store circuits for later use by run() methods
+        self._circuits = circuit_collection
+        return circuit_collection
+
+    def save_experiment_data(
+        self, results: dict[str, Any], metadata: dict[str, Any] = None
+    ) -> str:
+        """Save T1 experiment data"""
+        return self.data_manager.save_results(
+            results=results, metadata=metadata or {}, experiment_type="t1"
+        )

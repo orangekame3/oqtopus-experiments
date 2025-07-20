@@ -5,21 +5,52 @@ OQTOPUS Experiments - Quantum computing experiment library
 
 # Core components
 # Backend implementations
-from .backend import QuantumExperimentSimple
+from .backends import LocalBackend, OqtopusBackend
 
 # Circuit utilities
 from .circuit import create_chsh_circuit
-from .core import BaseExperiment, SimpleDataManager
+from .core import BaseExperiment, ExperimentDataManager
+
+# Device information
+from .devices import DeviceInfo
 
 # Experiments
-from .experiments import CHSHExperiment
+# Legacy imports
+from .experiments import (
+    CHSH,
+    T1,
+    CHSHExperiment,
+    ParityOscillation,
+    ParityOscillationExperiment,
+    Rabi,
+    RabiExperiment,
+    Ramsey,
+    RamseyExperiment,
+    T1Experiment,
+    T2Echo,
+    T2EchoExperiment,
+)
 
 __version__ = "0.1.0"
 __author__ = "quantumlib"
 __all__ = [
     "BaseExperiment",
-    "CHSHExperiment",
-    "QuantumExperimentSimple",
+    "CHSH",
+    "Rabi",
+    "Ramsey",
+    "T1",
+    "T2Echo",
+    "ParityOscillation",
+    "LocalBackend",
+    "OqtopusBackend",
+    "DeviceInfo",
     "create_chsh_circuit",
-    "SimpleDataManager",
+    "ExperimentDataManager",
+    # Legacy names
+    "CHSHExperiment",
+    "RabiExperiment",
+    "RamseyExperiment",
+    "T1Experiment",
+    "T2EchoExperiment",
+    "ParityOscillationExperiment",
 ]

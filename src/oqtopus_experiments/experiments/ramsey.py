@@ -11,9 +11,10 @@ from qiskit import QuantumCircuit, transpile
 from scipy.optimize import curve_fit
 
 from ..core.base_experiment import BaseExperiment
+from ..models.circuit_collection import CircuitCollection
 
 
-class RamseyExperiment(BaseExperiment):
+class Ramsey(BaseExperiment):
     """
     Ramsey oscillation experiment class
 
@@ -46,80 +47,7 @@ class RamseyExperiment(BaseExperiment):
         self.expected_t2_star = 1000  # Initial estimate [ns] for fitting
         self.disable_mitigation = disable_mitigation
 
-    @classmethod
-    def create_ramsey_circuits(
-        cls,
-        delay_points: int = 20,
-        max_delay: float = 50000.0,
-        detuning: float = 0.0,
-        qubit: int = 0,
-        basis_gates: list[str] = None,
-        optimization_level: int = 1,
-    ) -> tuple[list[Any], dict]:
-        """
-        Create Ramsey oscillation experiment circuits using functional approach
-
-        Args:
-            delay_points: Number of delay time points
-            max_delay: Maximum delay time in nanoseconds
-            detuning: Detuning frequency in MHz
-            qubit: Target qubit for Ramsey measurement
-            basis_gates: Transpilation basis gates
-            optimization_level: Transpilation optimization level
-
-        Returns:
-            Tuple of (circuits_list, metadata_dict)
-        """
-        # Generate delay times (linear spacing for Ramsey oscillations)
-        delay_times = np.linspace(0, max_delay, delay_points)
-
-        circuits = []
-
-        for delay in delay_times:
-            # Create Ramsey sequence: X/2 - delay - X/2 - measure
-            qc = QuantumCircuit(1, 1)
-            qc.rx(np.pi / 2, 0)  # First π/2 pulse (create superposition)
-
-            if delay > 0:
-                qc.delay(delay, 0, unit="ns")  # Free evolution with detuning
-
-            # Apply detuning phase if specified
-            if detuning != 0:
-                # Phase accumulation during delay: φ = 2π * f_detuning * t
-                detuning_phase = 2 * np.pi * detuning * 1e6 * delay * 1e-9  # MHz * ns
-                qc.rz(detuning_phase, 0)
-
-            qc.rx(np.pi / 2, 0)  # Second π/2 pulse (analysis pulse)
-            qc.measure(0, 0)  # Measure final state
-
-            # Transpile if basis gates specified
-            if basis_gates is not None:
-                qc = transpile(
-                    qc,
-                    basis_gates=basis_gates,
-                    optimization_level=optimization_level,
-                )
-
-            circuits.append(qc)
-
-        metadata = {
-            "delay_times": delay_times,
-            "max_delay": max_delay,
-            "delay_points": delay_points,
-            "detuning": detuning,
-            "qubit": qubit,
-        }
-
-        print(
-            f"Created {len(circuits)} Ramsey circuits (delay range: {delay_times[0]:.1f} - {delay_times[-1]:.1f} ns)"
-        )
-        print(
-            f"Ramsey circuit structure: |0⟩ → RX(π/2) → delay(t) → RX(π/2) → measure (detuning: {detuning} MHz)"
-        )
-
-        return circuits, metadata
-
-    def analyze_results(
+    def analyze(
         self, results: dict[str, list[dict[str, Any]]], **kwargs
     ) -> dict[str, Any]:
         """
@@ -246,7 +174,7 @@ class RamseyExperiment(BaseExperiment):
                 }
 
                 print(
-                    f"📊 {device}: f = {fitted_frequency:.3f} ± {param_errors[1]:.3f} MHz, T₂* = {fitted_t2_star:.1f} ± {param_errors[2]:.1f} ns ({fitted_t2_star/1000:.2f} μs), R² = {r_squared:.3f}"
+                    f"📊 {device}: f = {fitted_frequency:.3f} ± {param_errors[1]:.3f} MHz, T₂* = {fitted_t2_star:.1f} ± {param_errors[2]:.1f} ns ({fitted_t2_star / 1000:.2f} μs), R² = {r_squared:.3f}"
                 )
 
             except Exception as e:
@@ -295,3 +223,74 @@ class RamseyExperiment(BaseExperiment):
 
         except Exception:
             return 1.0  # Default 1 MHz if estimation fails
+
+    def circuits(self, **kwargs) -> list[Any]:
+        """Create Ramsey oscillation experiment circuits"""
+        # Extract parameters with defaults
+        delay_points = kwargs.get("delay_points", kwargs.get("points", 20))
+        max_delay = kwargs.get("max_delay", 50000.0)
+        detuning = kwargs.get("detuning", 0.0)
+        qubit = kwargs.get("qubit", 0)
+        basis_gates = kwargs.get("basis_gates", None)
+        optimization_level = kwargs.get("optimization_level", 1)
+
+        # Generate delay times (linear spacing for Ramsey oscillations)
+        delay_times = np.linspace(0, max_delay, delay_points)
+
+        circuits = []
+
+        for delay in delay_times:
+            # Create Ramsey sequence: X/2 - delay - X/2 - measure
+            qc = QuantumCircuit(1, 1)
+            qc.rx(np.pi / 2, 0)  # First π/2 pulse (create superposition)
+
+            if delay > 0:
+                qc.delay(delay, 0, unit="ns")  # Free evolution with detuning
+
+            # Apply detuning phase if specified
+            if detuning != 0:
+                # Phase accumulation during delay: φ = 2π * f_detuning * t
+                detuning_phase = 2 * np.pi * detuning * 1e6 * delay * 1e-9  # MHz * ns
+                qc.rz(detuning_phase, 0)
+
+            qc.rx(np.pi / 2, 0)  # Second π/2 pulse (analysis pulse)
+            qc.measure(0, 0)  # Measure final state
+
+            # Transpile if basis gates specified
+            if basis_gates is not None:
+                qc = transpile(
+                    qc,
+                    basis_gates=basis_gates,
+                    optimization_level=optimization_level,
+                )
+
+            circuits.append(qc)
+
+        # Store metadata for analyze method
+        self.experiment_params = {
+            "delay_times": delay_times,
+            "max_delay": max_delay,
+            "delay_points": delay_points,
+            "detuning": detuning,
+            "qubit": qubit,
+        }
+
+        print(
+            f"Created {len(circuits)} Ramsey circuits (delay range: {delay_times[0]:.1f} - {delay_times[-1]:.1f} ns)"
+        )
+        print(
+            f"Ramsey circuit structure: |0⟩ → RX(π/2) → delay(t) → RX(π/2) → measure (detuning: {detuning} MHz)"
+        )
+
+        circuit_collection = CircuitCollection(circuits)
+        # Store circuits for later use by run() methods
+        self._circuits = circuit_collection
+        return circuit_collection
+
+    def save_experiment_data(
+        self, results: dict[str, Any], metadata: dict[str, Any] = None
+    ) -> str:
+        """Save Ramsey experiment data"""
+        return self.data_manager.save_results(
+            results=results, metadata=metadata or {}, experiment_type="ramsey"
+        )

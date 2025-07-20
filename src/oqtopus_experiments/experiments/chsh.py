@@ -10,9 +10,10 @@ import numpy as np
 
 from ..circuit.chsh_circuits import create_chsh_circuit
 from ..core.base_experiment import BaseExperiment
+from ..models.circuit_collection import CircuitCollection
 
 
-class CHSHExperiment(BaseExperiment):
+class CHSH(BaseExperiment):
     """
     CHSH Bell inequality violation experiment class
 
@@ -58,90 +59,6 @@ class CHSHExperiment(BaseExperiment):
             k: v for k, v in kwargs.items() if k in chsh_specific_params
         }
 
-    @classmethod
-    def create_chsh_circuits(
-        cls,
-        phase_points: int = 20,
-        theta_a: float = 0.0,
-        theta_b: float = np.pi / 4,
-        angles: list[tuple[float, float]] = None,
-        qubit_list: list[int] = None,
-        basis_gates: list[str] = None,
-        optimization_level: int = 1,
-    ) -> tuple[list[Any], dict]:
-        """
-        Create CHSH experiment circuits using functional approach
-
-        Args:
-            phase_points: Number of phase points for scan
-            theta_a: Alice measurement angle
-            theta_b: Bob measurement angle
-            angles: Custom angle list (optional)
-            qubit_list: Target qubits
-            basis_gates: Transpilation basis gates
-            optimization_level: Transpilation optimization level
-
-        Returns:
-            Tuple of (circuits_list, metadata_dict)
-        """
-        if qubit_list is None:
-            qubit_list = [0, 1]
-
-        if angles is None:
-            angles = [
-                (theta_a, theta_b),
-                (theta_a, theta_b + np.pi / 2),
-                (theta_a + np.pi / 2, theta_b),
-                (theta_a + np.pi / 2, theta_b + np.pi / 2),
-            ]
-
-        phase_range = np.linspace(0, 2 * np.pi, phase_points)
-
-        circuits = []
-        circuit_metadata = []
-        measurements = []
-
-        for i, (angle_a, angle_b) in enumerate(angles):
-            measurement_label = f"measurement_{i+1}"
-            measurements.append((angle_a, angle_b))
-
-            for j, phase in enumerate(phase_range):
-                circuit = create_chsh_circuit(
-                    theta_a=angle_a,
-                    theta_b=angle_b,
-                    phase=phase,
-                    qubit_list=qubit_list,
-                    basis_gates=basis_gates,
-                    optimization_level=optimization_level,
-                )
-                circuits.append(circuit)
-
-                circuit_metadata.append(
-                    {
-                        "measurement": measurement_label,
-                        "phase": phase,
-                        "theta_a": angle_a,
-                        "theta_b": angle_b,
-                        "circuit_index": len(circuits) - 1,
-                    }
-                )
-
-        metadata = {
-            "circuit_metadata": circuit_metadata,
-            "phase_range": phase_range,
-            "angles": angles,
-            "measurements": measurements,
-        }
-
-        print(
-            f"Created {len(circuits)} CHSH circuits ({len(angles)} measurements × {phase_points} phases)"
-        )
-        print(
-            "CHSH circuit structure: |Φ⁺⟩ → A(θₐ), B(θᵦ) → measure (expected: Bell inequality violation with S-value)"
-        )
-
-        return circuits, metadata
-
     def _process_4_measurement_results(
         self,
         results: dict[str, list[dict]],
@@ -155,7 +72,7 @@ class CHSHExperiment(BaseExperiment):
 
         Args:
             results: Raw measurement results per device
-            circuit_metadata: Circuit metadata from create_chsh_circuits
+            circuit_metadata: Circuit metadata from circuits method
             phase_range: Phase values array
             measurements: Measurement angle tuples
             device_list: List of devices
@@ -170,12 +87,11 @@ class CHSHExperiment(BaseExperiment):
                 continue
 
             device_results = results[device]
-            phase_points = len(phase_range)
 
             # Initialize measurement arrays
             measurement_data = {}
             for i, (theta_a, theta_b) in enumerate(measurements):
-                measurement_label = f"measurement_{i+1}"
+                measurement_label = f"measurement_{i + 1}"
                 measurement_data[measurement_label] = {
                     "theta_a": theta_a,
                     "theta_b": theta_b,
@@ -353,3 +269,100 @@ class CHSHExperiment(BaseExperiment):
             )
 
         return analysis
+
+    def analyze(
+        self, results: dict[str, list[dict[str, Any]]], **kwargs
+    ) -> dict[str, Any]:
+        """Analyze CHSH experiment results"""
+        if not hasattr(self, "experiment_params"):
+            # If no experiment_params, create basic analysis
+            return {"error": "No experiment parameters available for analysis"}
+
+        # Extract required parameters from experiment_params
+        phase_range = self.experiment_params.get("phase_range", [])
+        angles = self.experiment_params.get("angles", [])
+        measurements = self.experiment_params.get("measurements", [])
+        circuit_metadata = self.experiment_params.get("circuit_metadata", [])
+        device_list = list(results.keys())
+
+        # Process results
+        processed_results = self._process_4_measurement_results(
+            results, circuit_metadata, phase_range, measurements, device_list
+        )
+
+        # Create analysis
+        return self._create_4_measurement_analysis(
+            phase_range, processed_results, angles
+        )
+
+    def circuits(self, **kwargs) -> list[Any]:
+        """Create CHSH experiment circuits"""
+        # Extract parameters with defaults
+        phase_points = kwargs.get("phase_points", kwargs.get("points", 20))
+        theta_a = kwargs.get("theta_a", 0.0)
+        theta_b = kwargs.get("theta_b", np.pi / 4)
+        angles = kwargs.get("angles", None)
+
+        if angles is None:
+            angles = [
+                (theta_a, theta_b),
+                (theta_a, theta_b + np.pi / 2),
+                (theta_a + np.pi / 2, theta_b),
+                (theta_a + np.pi / 2, theta_b + np.pi / 2),
+            ]
+
+        phase_range = np.linspace(0, 2 * np.pi, phase_points)
+
+        circuits = []
+        circuit_metadata = []
+        measurements = []
+
+        for i, (angle_a, angle_b) in enumerate(angles):
+            measurement_label = f"measurement_{i + 1}"
+            measurements.append((angle_a, angle_b))
+
+            for _j, phase in enumerate(phase_range):
+                circuit = create_chsh_circuit(
+                    theta_a=angle_a,
+                    theta_b=angle_b,
+                    phase_phi=phase,
+                )
+                circuits.append(circuit)
+
+                circuit_metadata.append(
+                    {
+                        "measurement": measurement_label,
+                        "phase": phase,
+                        "theta_a": angle_a,
+                        "theta_b": angle_b,
+                        "circuit_index": len(circuits) - 1,
+                    }
+                )
+
+        # Store metadata for analyze method
+        self.experiment_params = {
+            "circuit_metadata": circuit_metadata,
+            "phase_range": phase_range,
+            "angles": angles,
+            "measurements": measurements,
+        }
+
+        print(
+            f"Created {len(circuits)} CHSH circuits ({len(angles)} measurements × {phase_points} phases)"
+        )
+        print(
+            "CHSH circuit structure: |Φ⁺⟩ → A(θₐ), B(θᵦ) → measure (expected: Bell inequality violation with S-value)"
+        )
+
+        circuit_collection = CircuitCollection(circuits)
+        # Store circuits for later use by run() methods
+        self._circuits = circuit_collection
+        return circuit_collection
+
+    def save_experiment_data(
+        self, results: dict[str, Any], metadata: dict[str, Any] = None
+    ) -> str:
+        """Save CHSH experiment data"""
+        return self.data_manager.save_results(
+            results=results, metadata=metadata or {}, experiment_type="chsh"
+        )

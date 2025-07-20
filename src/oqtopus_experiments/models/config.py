@@ -1,7 +1,6 @@
 from pydantic import Field, field_validator
 
 from .base import BaseConfigModel
-from .experiments import CHSHParameters
 
 
 class ExperimentSettings(BaseConfigModel):
@@ -98,9 +97,7 @@ class DefaultConfig(BaseConfigModel):
     oqtopus_settings: OQTOPUSSettings = Field(
         default_factory=OQTOPUSSettings, description="OQTOPUS platform settings"
     )
-    chsh_parameters: CHSHParameters | None = Field(
-        default_factory=CHSHParameters, description="CHSH experiment parameters"
-    )
+    # chsh_parameters: Removed - using simplified experiment API
     workspace_info: WorkspaceInfo = Field(description="Workspace information")
 
     @classmethod
