@@ -22,7 +22,7 @@ def main():
     )
 
     # Sequential execution with backend
-    result = rabi.run(backend=backend, shots=1000)
+    result = rabi.run_parallel(backend=backend, shots=1000)
 
     # Analyze results (defaults to DataFrame)
     df = result.analyze(plot=True, save_data=True, save_image=True)

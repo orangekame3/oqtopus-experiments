@@ -135,7 +135,16 @@ class ParityOscillation(BaseExperiment):
         for qubit in range(num_qubits):
             # Using U gate: U(θ, φ, λ) where θ=π/2, φ=-φ-π/2, λ=-φ-π/2
             # This implements the rotation from the paper
-            qc.u(np.pi / 2, -phi - np.pi / 2, -phi - np.pi / 2, qubit)
+            u_params = (np.pi / 2, -phi - np.pi / 2, -phi - np.pi / 2)
+            qc.u(*u_params, qubit)
+            
+            # Debug: show U gate parameters for first circuit
+            if qubit == 0 and hasattr(self, '_debug_u_params'):
+                print(f"🔍 U gate params for φ={phi:.3f}: θ={u_params[0]:.3f}, φ={u_params[1]:.3f}, λ={u_params[2]:.3f}")
+        
+        # Set debug flag for first call
+        if not hasattr(self, '_debug_u_params'):
+            self._debug_u_params = True
 
         # Step 4: Measurement
         qc.measure_all()
@@ -166,6 +175,11 @@ class ParityOscillation(BaseExperiment):
                 num_qubits, delay_us, phi, no_delay
             )
             circuits.append(circuit)
+            
+            # Debug: show first circuit for comparison
+            if len(circuits) <= 2:
+                print(f"🔍 Circuit for φ={phi:.3f}:")
+                print(circuit.draw())
 
             # Store metadata for analysis
             circuit_metadata.append(
@@ -229,11 +243,9 @@ class ParityOscillation(BaseExperiment):
             max_value = max(integer_keys)
             num_qubits = max_value.bit_length() if max_value > 0 else 1
 
-            # Debug info (show once)
-            if not hasattr(self, "_parity_counts_debug_shown"):
-                print(f"🔍 Parity Raw decimal counts: {dict(counts)}")
-                print(f"🔍 Detected {num_qubits} qubits from max value {max_value}")
-                self._parity_counts_debug_shown = True
+            # Debug info for OQTOPUS counts format
+            print(f"🔍 Parity Raw decimal counts: {dict(counts)}")
+            print(f"🔍 Detected {num_qubits} qubits from max value {max_value}")
 
             # Convert to binary format
             binary_counts = {}
@@ -375,14 +387,32 @@ class ParityOscillation(BaseExperiment):
         parity_values = []
 
         for i, result in enumerate(all_results):
-            if result is None or not result.get("success", False):
+            if result is None:
+                continue
+            
+            # Check if result has valid counts
+            counts = result.get("counts", {})
+            if not counts:
                 continue
 
-            metadata = self.circuit_metadata[i]
-            counts = result.get("counts", {})
+            # Get metadata from OQTOPUS params or fallback to circuit_metadata
+            params = result.get("params", {})
+            if "phi" in params:
+                # Use parameters embedded in OQTOPUS description
+                phi = params["phi"]
+            elif hasattr(self, "circuit_metadata") and i < len(self.circuit_metadata):
+                # Fallback to stored metadata
+                phi = self.circuit_metadata[i]["phi"]
+            else:
+                # Skip if no parameter information available
+                continue
+                
             parity = self.calculate_parity(counts)
+            
+            # Debug: show phi vs parity relationship
+            print(f"🔍 φ={phi:.3f} → parity={parity:.3f}")
 
-            phase_values.append(metadata["phi"])
+            phase_values.append(phi)
             parity_values.append(parity)
 
         if len(phase_values) < 5:  # Need sufficient points
@@ -1055,3 +1085,11 @@ class ParityOscillation(BaseExperiment):
                     print(
                         f"  Coherence range: {min(coherences):.3f} - {max(coherences):.3f}"
                     )
+
+    def _get_circuit_params(self) -> list[dict[str, Any]] | None:
+        """Get circuit parameters for OQTOPUS description embedding"""
+        if not hasattr(self, "circuit_metadata"):
+            return None
+        
+        # Return the metadata as circuit parameters
+        return [metadata.copy() for metadata in self.circuit_metadata]

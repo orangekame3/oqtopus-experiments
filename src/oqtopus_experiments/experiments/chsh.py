@@ -28,21 +28,26 @@ class CHSH(BaseExperiment):
         physical_qubit_1: int | None = None,
         shots_per_circuit: int = 1000,
         measurement_angles: dict[str, float] | None = None,
+        theta: float = 0.0,
     ):
         """Initialize CHSH experiment with explicit parameters"""
         # Track if physical qubits were explicitly specified
         self._physical_qubits_specified = (
             physical_qubit_0 is not None and physical_qubit_1 is not None
         )
-        actual_physical_qubit_0 = physical_qubit_0 if physical_qubit_0 is not None else 0
-        actual_physical_qubit_1 = physical_qubit_1 if physical_qubit_1 is not None else 1
+        actual_physical_qubit_0 = (
+            physical_qubit_0 if physical_qubit_0 is not None else 0
+        )
+        actual_physical_qubit_1 = (
+            physical_qubit_1 if physical_qubit_1 is not None else 1
+        )
 
         # Default measurement angles for optimal CHSH violation
         default_angles = {
-            "alice_0": 0.0,     # θ_A0 = 0°
-            "alice_1": 45.0,    # θ_A1 = 45°
-            "bob_0": 22.5,      # θ_B0 = 22.5°
-            "bob_1": 67.5,      # θ_B1 = 67.5°
+            "alice_0": 0.0,  # θ_A0 = 0°
+            "alice_1": 45.0,  # θ_A1 = 45°
+            "bob_0": 22.5,  # θ_B0 = 22.5°
+            "bob_1": 67.5,  # θ_B1 = 67.5°
         }
 
         self.params = CHSHParameters(
@@ -50,6 +55,7 @@ class CHSH(BaseExperiment):
             physical_qubit_0=actual_physical_qubit_0,
             physical_qubit_1=actual_physical_qubit_1,
             shots_per_circuit=shots_per_circuit,
+            theta=theta,
             measurement_angles=measurement_angles or default_angles,
         )
         super().__init__(self.params.experiment_name or "chsh_experiment")
@@ -58,6 +64,7 @@ class CHSH(BaseExperiment):
         self.physical_qubit_1 = self.params.physical_qubit_1
         self.shots_per_circuit = self.params.shots_per_circuit
         self.measurement_angles = self.params.measurement_angles
+        self.theta = theta
 
     def analyze(
         self, results: dict[str, list[dict[str, Any]]], **kwargs: Any
@@ -109,15 +116,15 @@ class CHSH(BaseExperiment):
         """Generate CHSH circuits for sampling-based measurement"""
         circuits = []
 
-        # Get the angle parameter (default to 0 if not provided)
-        theta = kwargs.get("theta", 0.0)  # Single angle parameter
+        # Use theta from constructor (can be overridden by kwargs for backward compatibility)
+        theta = kwargs.get("theta", self.theta)
 
         # The four measurement bases for CHSH: ZZ, ZX, XZ, XX
         measurement_bases = [
             ("ZZ", False, False),  # No additional rotations
-            ("ZX", False, True),   # H gate on qubit 1 (Bob)
-            ("XZ", True, False),   # H gate on qubit 0 (Alice)
-            ("XX", True, True),    # H gates on both qubits
+            ("ZX", False, True),  # H gate on qubit 1 (Bob)
+            ("XZ", True, False),  # H gate on qubit 0 (Alice)
+            ("XX", True, True),  # H gates on both qubits
         ]
 
         for basis_name, alice_x, bob_x in measurement_bases:
@@ -133,7 +140,7 @@ class CHSH(BaseExperiment):
             # Apply measurement basis rotations
             if alice_x:  # Measure Alice in X basis
                 qc.h(0)
-            if bob_x:    # Measure Bob in X basis
+            if bob_x:  # Measure Bob in X basis
                 qc.h(1)
 
             # Measurements
@@ -161,10 +168,10 @@ class CHSH(BaseExperiment):
 
         return circuits  # type: ignore
 
-    def run(self, backend, shots: int = 1024, theta: float = math.pi/4, **kwargs):
+    def run(self, backend, shots: int = 1024, theta: float = math.pi / 4, **kwargs):
         """
         Run CHSH experiment with specified theta angle
-        
+
         Args:
             backend: Backend instance
             shots: Number of shots per circuit
@@ -208,23 +215,37 @@ class CHSH(BaseExperiment):
             # Calculate CHSH quantities:
             # CHSH1 = <ZZ> - <ZX> + <XZ> + <XX>
             # CHSH2 = <ZZ> + <ZX> - <XZ> + <XX>
-            chsh1 = correlations["ZZ"] - correlations["ZX"] + correlations["XZ"] + correlations["XX"]
-            chsh2 = correlations["ZZ"] + correlations["ZX"] - correlations["XZ"] + correlations["XX"]
+            chsh1 = (
+                correlations["ZZ"]
+                - correlations["ZX"]
+                + correlations["XZ"]
+                + correlations["XX"]
+            )
+            chsh2 = (
+                correlations["ZZ"]
+                + correlations["ZX"]
+                - correlations["XZ"]
+                + correlations["XX"]
+            )
 
             # Take the maximum violation
             chsh_value = max(abs(chsh1), abs(chsh2))
 
             # Calculate uncertainty in CHSH value
             chsh_std_error = math.sqrt(
-                correlation_errors["ZZ"]**2 + correlation_errors["ZX"]**2 +
-                correlation_errors["XZ"]**2 + correlation_errors["XX"]**2
+                correlation_errors["ZZ"] ** 2
+                + correlation_errors["ZX"] ** 2
+                + correlation_errors["XZ"] ** 2
+                + correlation_errors["XX"] ** 2
             )
 
             # Check for Bell inequality violation (S > 2)
             bell_violation = chsh_value > 2.0
 
             # Calculate statistical significance
-            significance = (chsh_value - 2.0) / chsh_std_error if chsh_std_error > 0 else 0
+            significance = (
+                (chsh_value - 2.0) / chsh_std_error if chsh_std_error > 0 else 0
+            )
 
             return CHSHAnalysisResult(
                 chsh_value=chsh_value,
@@ -266,6 +287,7 @@ class CHSH(BaseExperiment):
             return 0.0, 0.0, 0
 
         # Count same outcomes (00, 11) and different outcomes (01, 10)
+        # Backend should have normalized integer keys to string keys
         same_outcomes = counts.get("00", 0) + counts.get("11", 0)
         different_outcomes = counts.get("01", 0) + counts.get("10", 0)
 
@@ -288,19 +310,21 @@ class CHSH(BaseExperiment):
             counts = analysis_result.measurement_counts[basis]
             total = sum(counts.values())
 
-            df_data.append({
-                "measurement_basis": basis,
-                "correlation": correlation,
-                "correlation_error": analysis_result.correlation_errors[basis],
-                "counts_00": counts.get("00", 0),
-                "counts_01": counts.get("01", 0),
-                "counts_10": counts.get("10", 0),
-                "counts_11": counts.get("11", 0),
-                "total_shots": total,
-                "chsh_value": analysis_result.chsh_value,
-                "bell_violation": analysis_result.bell_violation,
-                "significance": analysis_result.significance,
-            })
+            df_data.append(
+                {
+                    "measurement_basis": basis,
+                    "correlation": correlation,
+                    "correlation_error": analysis_result.correlation_errors[basis],
+                    "counts_00": counts.get("00", 0),
+                    "counts_01": counts.get("01", 0),
+                    "counts_10": counts.get("10", 0),
+                    "counts_11": counts.get("11", 0),
+                    "total_shots": total,
+                    "chsh_value": analysis_result.chsh_value,
+                    "bell_violation": analysis_result.bell_violation,
+                    "significance": analysis_result.significance,
+                }
+            )
 
         return pd.DataFrame(df_data)
 
@@ -326,9 +350,10 @@ class CHSH(BaseExperiment):
 
             # Create subplots: correlations and CHSH value
             fig = make_subplots(
-                rows=1, cols=2,
+                rows=1,
+                cols=2,
                 subplot_titles=("Correlation Values", "CHSH Test"),
-                specs=[[{"secondary_y": False}, {"secondary_y": False}]]
+                specs=[[{"secondary_y": False}, {"secondary_y": False}]],
             )
 
             analysis = experiment_result.analysis_result
@@ -342,56 +367,65 @@ class CHSH(BaseExperiment):
                 go.Bar(
                     x=settings,
                     y=correlations,
-                    error_y=dict(type='data', array=errors),
+                    error_y=dict(type="data", array=errors),
                     name="Correlations",
                     marker_color=colors[1],
-                    showlegend=False
+                    showlegend=False,
                 ),
-                row=1, col=1
+                row=1,
+                col=1,
             )
 
             # Plot 2: CHSH value comparison
             chsh_categories = ["Classical Limit", "CHSH Value", "Quantum Limit"]
             chsh_values = [2.0, analysis.chsh_value, 2.828]
-            chsh_colors = [colors[2], colors[0] if analysis.bell_violation else colors[3], colors[2]]
+            chsh_colors = [
+                colors[2],
+                colors[0] if analysis.bell_violation else colors[3],
+                colors[2],
+            ]
 
             fig.add_trace(
                 go.Bar(
                     x=chsh_categories,
                     y=chsh_values,
-                    error_y=dict(
-                        type='data',
-                        array=[0, analysis.chsh_std_error, 0]
-                    ),
+                    error_y=dict(type="data", array=[0, analysis.chsh_std_error, 0]),
                     name="CHSH Comparison",
                     marker_color=chsh_colors,
-                    showlegend=False
+                    showlegend=False,
                 ),
-                row=1, col=2
+                row=1,
+                col=2,
             )
 
             # Update layout
             fig.update_layout(
                 title=f"CHSH Bell Test : Q{self.physical_qubit_0}-Q{self.physical_qubit_1}",
                 height=400,
-                showlegend=False
+                showlegend=False,
             )
 
             # Update axes
             fig.update_xaxes(title_text="Measurement Settings", row=1, col=1)
-            fig.update_yaxes(title_text="Correlation E(A,B)", row=1, col=1, range=[-1.1, 1.1])
+            fig.update_yaxes(
+                title_text="Correlation E(A,B)", row=1, col=1, range=[-1.1, 1.1]
+            )
 
             fig.update_xaxes(title_text="CHSH Bounds", row=1, col=2)
             fig.update_yaxes(title_text="CHSH Value S", row=1, col=2, range=[0, 3])
 
             # Add violation annotation
-            violation_text = "Bell Violation!" if analysis.bell_violation else "No Violation"
+            violation_text = (
+                "Bell Violation!" if analysis.bell_violation else "No Violation"
+            )
             violation_color = "green" if analysis.bell_violation else "red"
 
             fig.add_annotation(
-                x=0.98, y=0.98,
+                x=0.98,
+                y=0.98,
                 text=f"{violation_text}<br>S = {analysis.chsh_value:.3f} ± {analysis.chsh_std_error:.3f}<br>σ = {analysis.significance:.1f}",
-                xref="paper", yref="paper",
+                xref="paper",
+                yref="paper",
                 showarrow=False,
                 font=dict(size=12, color=violation_color),
                 bgcolor="rgba(255,255,255,0.9)",
@@ -415,7 +449,8 @@ class CHSH(BaseExperiment):
 
             config = get_plotly_config(
                 f"chsh_Q{self.physical_qubit_0}_Q{self.physical_qubit_1}",
-                width=800, height=400
+                width=800,
+                height=400,
             )
             show_plotly_figure(fig, config)
 
@@ -458,16 +493,19 @@ class CHSH(BaseExperiment):
         physical_qubit_1 = self.experiment_params.get("physical_qubit_1", 1)
 
         circuit_params = []
-        for basis_name, alice_x, bob_x in measurement_bases:
+        for i, (basis_name, alice_x, bob_x) in enumerate(measurement_bases):
             param_model = CHSHCircuitParams(
                 measurement_setting=basis_name,
                 alice_angle=theta,  # Single angle parameter
-                bob_angle=0.0,      # Bob doesn't rotate
+                bob_angle=0.0,  # Bob doesn't rotate
                 logical_qubit_0=logical_qubit_0,
                 logical_qubit_1=logical_qubit_1,
                 physical_qubit_0=physical_qubit_0,
                 physical_qubit_1=physical_qubit_1,
             )
-            circuit_params.append(param_model.model_dump())
+            # Add circuit index for parameter tracking
+            params_dict = param_model.model_dump()
+            params_dict["circuit_index"] = i
+            circuit_params.append(params_dict)
 
         return circuit_params

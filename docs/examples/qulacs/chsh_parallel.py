@@ -25,7 +25,7 @@ def main():
 
     # Run CHSH experiment with optimal theta = π/4 (45°) for maximum CHSH violation
 
-    result = exp.run(backend=backend, shots=2000)
+    result = exp.run_parallel(backend=backend, shots=2000)
 
     # Analyze results and check for Bell inequality violation
     df = result.analyze(plot=True, save_data=True, save_image=True)

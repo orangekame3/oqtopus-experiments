@@ -137,11 +137,21 @@ class BaseExperiment(ABC):
         # Auto-transpile if physical qubit specified
         circuits, was_transpiled = self._auto_transpile_if_needed(circuits, backend)
 
+        # Get circuit parameters if available from experiment
+        circuit_params = None
+        if hasattr(self, "_get_circuit_params"):
+            circuit_params = self._get_circuit_params()
+        
         # Sequential execution
         raw_results = {}
         for i, circuit in enumerate(circuits):
             try:
-                result = backend.run(circuit, shots)
+                # Prepare parameters for this specific circuit
+                single_circuit_params = None
+                if circuit_params and i < len(circuit_params):
+                    single_circuit_params = circuit_params[i]
+                
+                result = backend.run(circuit, shots, circuit_params=single_circuit_params)
                 raw_results[f"circuit_{i}"] = [result]
             except Exception as e:
                 print(f"Backend execution failed: {e}")
@@ -168,14 +178,15 @@ class BaseExperiment(ABC):
             - circuits: Transpiled circuits if needed, otherwise original circuits
             - was_transpiled: Boolean indicating if transpilation occurred
         """
-        # Check if experiment has physical qubit specification
-        if not hasattr(self, "experiment_params") or not self.experiment_params:
+        # Check if physical qubit was explicitly specified
+        if hasattr(self, "_physical_qubit_specified") and self._physical_qubit_specified:
+            physical_qubit = self.experiment_params.get("physical_qubit")
+            logical_qubit = self.experiment_params.get("logical_qubit", 0)
+        else:
+            # No explicit physical qubit - let OQTOPUS handle transpilation
             return circuits, False
 
-        physical_qubit = self.experiment_params.get("physical_qubit")
-        logical_qubit = self.experiment_params.get("logical_qubit", 0)
-
-        # Transpile if physical qubit is specified (regardless of value)
+        # Transpile if physical qubit was explicitly specified
         if physical_qubit is not None:
             if hasattr(backend, "transpile"):
                 print(f"Auto-transpiling circuits: logical qubit {logical_qubit} → physical qubit {physical_qubit}")
@@ -311,10 +322,21 @@ class BaseExperiment(ABC):
         else:
             # Sequential execution for backends without parallel support
             print("Backend does not support parallel execution, running sequentially")
+            
+            # Get circuit parameters if available from experiment
+            circuit_params = None
+            if hasattr(self, "_get_circuit_params"):
+                circuit_params = self._get_circuit_params()
+            
             raw_results = {}
             for i, circuit in enumerate(circuits):
                 try:
-                    result = backend.run(circuit, shots)
+                    # Prepare parameters for this specific circuit
+                    single_circuit_params = None
+                    if circuit_params and i < len(circuit_params):
+                        single_circuit_params = circuit_params[i]
+                    
+                    result = backend.run(circuit, shots, circuit_params=single_circuit_params)
                     raw_results[f"circuit_{i}"] = [result]
                 except Exception as e:
                     print(f"Backend execution failed: {e}")
@@ -341,14 +363,15 @@ class BaseExperiment(ABC):
             - circuits: Transpiled circuits if needed, otherwise original circuits
             - was_transpiled: Boolean indicating if transpilation occurred
         """
-        # Check if experiment has physical qubit specification
-        if not hasattr(self, "experiment_params") or not self.experiment_params:
+        # Check if physical qubit was explicitly specified
+        if hasattr(self, "_physical_qubit_specified") and self._physical_qubit_specified:
+            physical_qubit = self.experiment_params.get("physical_qubit")
+            logical_qubit = self.experiment_params.get("logical_qubit", 0)
+        else:
+            # No explicit physical qubit - let OQTOPUS handle transpilation
             return circuits, False
 
-        physical_qubit = self.experiment_params.get("physical_qubit")
-        logical_qubit = self.experiment_params.get("logical_qubit", 0)
-
-        # Transpile if physical qubit is specified (regardless of value)
+        # Transpile if physical qubit was explicitly specified
         if physical_qubit is not None:
             if hasattr(backend, "transpile"):
                 print(f"Auto-transpiling circuits: logical qubit {logical_qubit} → physical qubit {physical_qubit}")
@@ -369,12 +392,17 @@ class BaseExperiment(ABC):
         """
         Check if OQTOPUS transpilation should be disabled
         
-        Returns True if physical qubit is specified (regardless of value)
+        Returns True if physical qubit was explicitly specified by user
         """
+        # Check if experiment has explicit physical qubit specification
+        if hasattr(self, "_physical_qubit_specified"):
+            return self._physical_qubit_specified
+            
+        # Fallback: check experiment params (legacy compatibility)
         if not hasattr(self, "experiment_params") or not self.experiment_params:
             return False
 
         physical_qubit = self.experiment_params.get("physical_qubit")
-
+        
         # Disable OQTOPUS transpilation if physical qubit is specified
         return physical_qubit is not None

@@ -54,16 +54,17 @@ class OqtopusBackend:
         # Initialize device info (lazy loading)
         self._device_info_loaded = False
 
-    def run(self, circuit: Any, shots: int = 1024) -> dict[str, Any]:
+    def run(self, circuit: Any, shots: int = 1024, circuit_params: dict[str, Any] = None) -> dict[str, Any]:
         """
         Run circuit on OQTOPUS backend
 
         Args:
             circuit: Quantum circuit to run
             shots: Number of shots
+            circuit_params: Optional parameters to embed in job description
 
         Returns:
-            Result dictionary with counts
+            Result dictionary with counts and embedded parameters
         """
         if not self.available:
             print("OQTOPUS not available, using simulated results")
@@ -71,12 +72,18 @@ class OqtopusBackend:
 
         try:
             import time
+            import json
 
             from qiskit.qasm3 import dumps
 
             # Convert circuit to QASM3
             qasm_str = dumps(circuit)
             print(f"Submitting circuit to OQTOPUS device: {self.device_name}")
+
+            # Prepare job description with parameters
+            description = None
+            if circuit_params:
+                description = json.dumps(circuit_params)
 
             # Submit to OQTOPUS with configured settings
             job = self.backend.sample_qasm(
@@ -93,6 +100,7 @@ class OqtopusBackend:
                 mitigation_info={
                     "ro_error_mitigation": "pseudo_inverse",
                 },
+                description=description,
             )
 
             print(f"Job submitted with ID: {job.job_id[:8]}...")
@@ -104,7 +112,8 @@ class OqtopusBackend:
 
             while time.time() - start_time < max_wait:
                 try:
-                    # Get job status
+                    # Re-retrieve job object to get fresh status
+                    job = self.backend.retrieve_job(job.job_id)
                     job_dict = job._job.to_dict()
                     status = job_dict.get("status", "unknown")
 
@@ -115,14 +124,24 @@ class OqtopusBackend:
                             result = job.result()
                             if result and hasattr(result, "counts"):
                                 counts = result.counts
+                                
+                                # Extract parameters from job description
+                                params = {}
+                                try:
+                                    if hasattr(job, "description") and job.description:
+                                        params = json.loads(job.description)
+                                except (json.JSONDecodeError, AttributeError):
+                                    params = {}
+                                
                                 print(
                                     f"✅ OQTOPUS job completed successfully (status: {status})"
                                 )
                                 return {
-                                    "counts": dict(counts),
+                                    "counts": self._normalize_counts(dict(counts)),
                                     "job_id": job.job_id,
                                     "shots": shots,
                                     "backend": "oqtopus",
+                                    "params": params,
                                 }
                         except Exception as e:
                             print(f"Error getting result: {e}")
@@ -142,12 +161,22 @@ class OqtopusBackend:
                             result = job.result()
                             if result and hasattr(result, "counts"):
                                 counts = result.counts
+                                
+                                # Extract parameters from job description
+                                params = {}
+                                try:
+                                    if hasattr(job, "description") and job.description:
+                                        params = json.loads(job.description)
+                                except (json.JSONDecodeError, AttributeError):
+                                    params = {}
+                                
                                 print(f"OQTOPUS job completed (status: {status})")
                                 return {
-                                    "counts": dict(counts),
+                                    "counts": self._normalize_counts(dict(counts)),
                                     "job_id": job.job_id,
                                     "shots": shots,
                                     "backend": "oqtopus",
+                                    "params": params,
                                 }
                         except Exception:
                             pass
@@ -601,7 +630,7 @@ class OqtopusBackend:
                                             f"✅ {self.device_name}: {job_id[:8]}... collected"
                                         )
                                         return idx, {
-                                            "counts": dict(counts),
+                                            "counts": self._normalize_counts(dict(counts)),
                                             "job_id": job_id,
                                             "shots": sum(counts.values()),
                                             "backend": self.device_name,
@@ -672,7 +701,7 @@ class OqtopusBackend:
                                             f"✅ {self.device_name}: {job_id[:8]}... collected"
                                         )
                                         return idx, {
-                                            "counts": dict(counts),
+                                            "counts": self._normalize_counts(dict(counts)),
                                             "job_id": job_id,
                                             "shots": sum(counts.values()),
                                             "backend": self.device_name,
@@ -879,3 +908,47 @@ class OqtopusBackend:
         else:
             # Default fallback
             return list(range(n_qubits))
+
+    def _normalize_counts(self, counts: dict[str | int, int]) -> dict[str, int]:
+        """
+        Normalize count keys to Qiskit-style binary strings
+        
+        OQTOPUS returns decimal keys (0,1,2,3) but Qiskit uses binary strings ("00","01","10","11")
+        This method converts decimal keys to binary string keys for consistency.
+        
+        Args:
+            counts: Dictionary with potentially mixed key types
+            
+        Returns:
+            Dictionary with normalized string keys
+        """
+        # If all keys are already strings, return as-is
+        if all(isinstance(k, str) for k in counts.keys()):
+            return {str(k): v for k, v in counts.items()}
+            
+        # Determine number of qubits from maximum integer key
+        int_keys = [k for k in counts.keys() if isinstance(k, int)]
+        if not int_keys:
+            return {str(k): v for k, v in counts.items()}
+            
+        max_key = max(int_keys)
+        # For quantum measurements: n_qubits = ceil(log2(max_key + 1))
+        # This ensures 2^n states can be represented
+        import math
+        n_bits = max(1, math.ceil(math.log2(max_key + 1))) if max_key > 0 else 1
+        
+        normalized = {}
+        for key, value in counts.items():
+            if isinstance(key, int):
+                # Convert to binary string with appropriate padding
+                binary_key = format(key, f'0{n_bits}b')
+                normalized[binary_key] = value
+            else:
+                # Already a string, keep as-is
+                normalized[str(key)] = value
+        
+        # Debug: show conversion for troubleshooting
+        if int_keys:
+            print(f"🔍 OQTOPUS counts conversion: {dict(counts)} → {normalized}")
+        
+        return normalized

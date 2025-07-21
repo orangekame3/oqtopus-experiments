@@ -200,13 +200,14 @@ class LocalBackend:
 
         return noise_model
 
-    def run(self, circuit: Any, shots: int = 1024) -> dict[str, Any]:
+    def run(self, circuit: Any, shots: int = 1024, circuit_params: dict[str, Any] = None) -> dict[str, Any]:
         """
         Run circuit on local simulator
 
         Args:
             circuit: Quantum circuit to run
             shots: Number of shots
+            circuit_params: Optional parameters (ignored for local backend, for compatibility)
 
         Returns:
             Result dictionary with counts
@@ -259,6 +260,7 @@ class LocalBackend:
                 "success": True,
                 "backend": self.device_name,
                 "noise_enabled": self.noise_enabled,
+                "params": circuit_params or {},
             }
 
         except Exception as e:
@@ -269,6 +271,7 @@ class LocalBackend:
                 "counts": {"0": shots // 2, "1": shots // 2},
                 "success": False,
                 "error": str(e),
+                "params": circuit_params or {},
             }
 
     def submit(self, circuit: Any, shots: int = 1024) -> str:

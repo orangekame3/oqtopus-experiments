@@ -29,7 +29,7 @@ def main():
     print(f"Scanning {exp.phase_points} phase points from 0° to 540°")
 
     # Run experiment with unified interface
-    result = exp.run(backend=backend, shots=1000)
+    result = exp.run_parallel(backend=backend, shots=1000)
 
     # Analyze results with the new visualization
     df = result.analyze(plot=True, save_data=True, save_image=True)

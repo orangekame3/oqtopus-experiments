@@ -31,6 +31,7 @@ class CHSHParameters(BaseModel):
     physical_qubit_0: int = Field(default=0, description="First physical qubit")
     physical_qubit_1: int = Field(default=1, description="Second physical qubit")
     shots_per_circuit: int = Field(default=1000, description="Number of shots per circuit")
+    theta: float = Field(default=0.0, description="Rotation angle parameter for Bell state")
     measurement_angles: dict[str, float] = Field(
         default={
             "alice_0": 0.0,     # θ_A0 = 0°
