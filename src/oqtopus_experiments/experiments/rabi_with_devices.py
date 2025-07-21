@@ -274,7 +274,7 @@ class Rabi(BaseExperiment):
         df_data = []
 
         for device, result in device_results.items():
-            for amp, prob in zip(result.amplitudes, result.probabilities):
+            for amp, prob in zip(result.amplitudes, result.probabilities, strict=False):
                 df_data.append(
                     {
                         "device": device,

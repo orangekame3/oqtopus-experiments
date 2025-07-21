@@ -7,13 +7,13 @@ Provides structured data validation and serialization
 from typing import Any
 
 import pandas as pd
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class T1FittingResult(BaseModel):
     """Fitting results for T1 decay"""
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    
+
     t1_time: float = Field(description="T1 relaxation time in ns")
     amplitude: float = Field(description="Fitted amplitude")
     offset: float = Field(description="Fitted offset")
@@ -34,7 +34,7 @@ class T1Parameters(BaseModel):
 class T1AnalysisResult(BaseModel):
     """Complete T1 analysis results"""
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    
+
     fitting_result: T1FittingResult = Field(description="Fitting results")
     dataframe: pd.DataFrame = Field(description="Analysis results as DataFrame")
     metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")

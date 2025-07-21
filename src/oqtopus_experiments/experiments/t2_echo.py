@@ -33,7 +33,7 @@ class T2Echo(BaseExperiment):
         # Track if physical_qubit was explicitly specified
         self._physical_qubit_specified = physical_qubit is not None
         actual_physical_qubit = physical_qubit if physical_qubit is not None else 0
-        
+
         self.params = T2EchoParameters(
             experiment_name=experiment_name,
             physical_qubit=actual_physical_qubit,
@@ -75,7 +75,7 @@ class T2Echo(BaseExperiment):
         if all_results:
             # Get device name from first result's backend field
             device_name = all_results[0].get("backend", "unknown")
-        
+
         # Create DataFrame
         df = self._create_dataframe(fitting_result, device_name)
 
@@ -106,17 +106,17 @@ class T2Echo(BaseExperiment):
         for delay in delay_times:
             qc = QuantumCircuit(1, 1)
             qc.ry(np.pi/2, 0)  # First π/2 pulse (creates superposition)
-            
+
             # First half of the delay
             if delay > 0:
                 qc.delay(delay/2, 0, unit="ns")  # τ/2 delay
-                
+
             qc.x(0)  # π pulse (echo pulse)
-            
+
             # Second half of the delay
             if delay > 0:
                 qc.delay(delay/2, 0, unit="ns")  # τ/2 delay
-                
+
             qc.ry(np.pi/2, 0)  # Second π/2 pulse (analysis pulse)
             qc.measure(0, 0)  # Measure final state
             circuits.append(qc)
@@ -306,7 +306,7 @@ class T2Echo(BaseExperiment):
 
             df = analysis_result.dataframe
             result = analysis_result.fitting_result
-            
+
             # Get device name from dataframe or use fallback
             device_name = "unknown"
             if not df.empty and "device" in df.columns:

@@ -4,10 +4,10 @@ Experiments module - Concrete experiment implementations
 """
 
 from .chsh import CHSH
-from .chsh_phase_scan import CHSHPhaseScan
 
 # Legacy imports for backward compatibility
 from .chsh import CHSH as CHSHExperiment
+from .chsh_phase_scan import CHSHPhaseScan
 from .parity_oscillation import ParityOscillation
 from .parity_oscillation import ParityOscillation as ParityOscillationExperiment
 from .rabi import Rabi

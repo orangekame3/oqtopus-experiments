@@ -5,14 +5,12 @@ Pydantic models for Parity Oscillation experiments
 
 from typing import Any
 
-import numpy as np
-import pandas as pd
 from pydantic import BaseModel, Field
 
 
 class ParityOscillationParameters(BaseModel):
     """Parameters for Parity Oscillation experiment"""
-    
+
     experiment_name: str | None = Field(
         default=None, description="Name of the experiment"
     )
@@ -35,7 +33,7 @@ class ParityOscillationParameters(BaseModel):
 
 class ParityOscillationPoint(BaseModel):
     """Results for a single measurement point"""
-    
+
     num_qubits: int = Field(description="Number of qubits in GHZ state")
     delay_us: float = Field(description="Delay time in microseconds")
     phase_radians: float = Field(description="Rotation phase in radians")
@@ -48,7 +46,7 @@ class ParityOscillationPoint(BaseModel):
 
 class ParityOscillationFitting(BaseModel):
     """Sinusoidal fitting results for parity oscillation"""
-    
+
     amplitude: float = Field(description="Fitted oscillation amplitude")
     phase_offset: float = Field(description="Fitted phase offset")
     vertical_offset: float = Field(description="Fitted vertical offset")
@@ -59,7 +57,7 @@ class ParityOscillationFitting(BaseModel):
 
 class ParityOscillationAnalysisResult(BaseModel):
     """Complete analysis results for Parity Oscillation experiment"""
-    
+
     measurement_points: list[ParityOscillationPoint] = Field(
         description="All measurement points"
     )
@@ -73,15 +71,15 @@ class ParityOscillationAnalysisResult(BaseModel):
     decoherence_rates: dict[int, float] = Field(
         description="Decoherence rates γ for each qubit count"
     )
-    
+
     def get_num_qubits_list(self) -> list[int]:
         """Get list of unique qubit counts"""
         return sorted(list(set(point.num_qubits for point in self.measurement_points)))
-    
+
     def get_delays_list(self) -> list[float]:
         """Get list of unique delay times"""
         return sorted(list(set(point.delay_us for point in self.measurement_points)))
-    
+
     def get_coherence_for_qubits(self, num_qubits: int) -> dict[float, float]:
         """Get coherence vs delay for specific qubit count"""
         coherence_vs_delay = {}
@@ -94,7 +92,7 @@ class ParityOscillationAnalysisResult(BaseModel):
 
 class ParityOscillationCircuitParams(BaseModel):
     """Circuit parameters for Parity Oscillation experiment"""
-    
+
     num_qubits: int = Field(description="Number of qubits in GHZ state")
     delay_us: float = Field(description="Delay time in microseconds")
     phase_radians: float = Field(description="Rotation phase in radians")
@@ -103,10 +101,10 @@ class ParityOscillationCircuitParams(BaseModel):
 
 class ParityOscillationExperimentResult(BaseModel):
     """Complete experiment result for Parity Oscillation"""
-    
+
     analysis_result: ParityOscillationAnalysisResult = Field(description="Analysis results")
     dataframe: Any = Field(description="Results as pandas DataFrame")
     metadata: dict[str, Any] = Field(default_factory=dict, description="Experiment metadata")
-    
+
     class Config:
         arbitrary_types_allowed = True

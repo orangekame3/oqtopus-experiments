@@ -7,13 +7,13 @@ Provides structured data validation and serialization
 from typing import Any
 
 import pandas as pd
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class T2EchoFittingResult(BaseModel):
     """Fitting results for T2 Echo decay"""
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    
+
     t2_time: float = Field(description="T2 coherence time in ns")
     amplitude: float = Field(description="Fitted amplitude")
     offset: float = Field(description="Fitted offset")
@@ -34,7 +34,7 @@ class T2EchoParameters(BaseModel):
 class T2EchoAnalysisResult(BaseModel):
     """Complete T2 Echo analysis results"""
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    
+
     fitting_result: T2EchoFittingResult = Field(description="Fitting results")
     dataframe: pd.DataFrame = Field(description="Analysis results as DataFrame")
     metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")

@@ -7,13 +7,13 @@ Provides structured data validation and serialization
 from typing import Any
 
 import pandas as pd
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class RamseyFittingResult(BaseModel):
     """Fitting results for Ramsey fringe oscillation"""
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    
+
     t2_star_time: float = Field(description="T2* dephasing time in ns")
     frequency: float = Field(description="Oscillation frequency in Hz")
     amplitude: float = Field(description="Oscillation amplitude")
@@ -37,7 +37,7 @@ class RamseyParameters(BaseModel):
 class RamseyAnalysisResult(BaseModel):
     """Complete Ramsey analysis results"""
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    
+
     fitting_result: RamseyFittingResult = Field(description="Fitting results")
     dataframe: pd.DataFrame = Field(description="Analysis results as DataFrame")
     metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")

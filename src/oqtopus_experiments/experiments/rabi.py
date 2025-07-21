@@ -34,7 +34,7 @@ class Rabi(BaseExperiment):
         # Track if physical_qubit was explicitly specified
         self._physical_qubit_specified = physical_qubit is not None
         actual_physical_qubit = physical_qubit if physical_qubit is not None else 0
-        
+
         self.params = RabiParameters(
             experiment_name=experiment_name,
             physical_qubit=actual_physical_qubit,
@@ -76,7 +76,7 @@ class Rabi(BaseExperiment):
         if all_results:
             # Get device name from first result's backend field
             device_name = all_results[0].get("backend", "unknown")
-        
+
         # Create DataFrame
         df = self._create_dataframe(fitting_result, device_name)
 
@@ -300,7 +300,7 @@ class Rabi(BaseExperiment):
 
             df = analysis_result.dataframe
             result = analysis_result.fitting_result
-            
+
             # Get device name from dataframe or use fallback
             device_name = "unknown"
             if not df.empty and "device" in df.columns:

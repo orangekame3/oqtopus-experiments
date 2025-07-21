@@ -7,13 +7,13 @@ Provides structured data validation and serialization
 from typing import Any
 
 import pandas as pd
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class CHSHAnalysisResult(BaseModel):
     """CHSH analysis results"""
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    
+
     chsh_value: float = Field(description="CHSH value (S)")
     chsh_std_error: float = Field(description="Standard error of CHSH value")
     bell_violation: bool = Field(description="Whether Bell inequality is violated (S > 2)")
@@ -45,7 +45,7 @@ class CHSHParameters(BaseModel):
 class CHSHExperimentResult(BaseModel):
     """Complete CHSH experiment results"""
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    
+
     analysis_result: CHSHAnalysisResult = Field(description="Analysis results")
     dataframe: pd.DataFrame = Field(description="Detailed results as DataFrame")
     metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")

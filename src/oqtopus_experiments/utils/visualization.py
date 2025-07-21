@@ -6,21 +6,18 @@ Provides plotly-based interactive visualization functionality
 
 import datetime
 import os
-from pathlib import Path
-from typing import Any, Optional
-
-import numpy as np
+from typing import Any
 
 
 def setup_plotly_environment():
     """Setup plotly environment for optimal display"""
     try:
         import plotly.io as pio
-        
+
         # Force inline display for Jupyter environments
         try:
             from IPython import get_ipython
-            
+
             if get_ipython() is not None:
                 pio.renderers.default = "notebook_connected"
             else:
@@ -84,7 +81,7 @@ def save_plotly_figure(
     width: int = 600,
     height: int = 300,
     scale: int = 3,
-) -> Optional[str]:
+) -> str | None:
     """
     Save plotly figure as image file with automatic naming
     
@@ -104,7 +101,7 @@ def save_plotly_figure(
         # Create images directory if it doesn't exist
         if not os.path.exists(images_dir):
             os.makedirs(images_dir)
-            
+
         # Generate unique filename with date and counter
         counter = 1
         current_date = datetime.datetime.now().strftime("%Y%m%d")
@@ -112,14 +109,14 @@ def save_plotly_figure(
             images_dir,
             f"{current_date}_{name}_{counter}.{format}",
         )
-        
+
         while os.path.exists(file_path):
             counter += 1
             file_path = os.path.join(
                 images_dir,
                 f"{current_date}_{name}_{counter}.{format}",
             )
-        
+
         # Save the figure
         fig.write_image(
             file_path,
@@ -130,14 +127,14 @@ def save_plotly_figure(
         )
         print(f"Image saved to {file_path}")
         return file_path
-        
+
     except Exception as e:
         print(f"Failed to save image: {e}")
         print("   Note: Image saving requires kaleido: pip install kaleido")
         return None
 
 
-def show_plotly_figure(fig, config: Optional[dict[str, Any]] = None):
+def show_plotly_figure(fig, config: dict[str, Any] | None = None):
     """
     Display plotly figure with fallback options
     
@@ -148,7 +145,7 @@ def show_plotly_figure(fig, config: Optional[dict[str, Any]] = None):
     try:
         # Try to use iplot for guaranteed inline display
         from plotly.offline import iplot
-        
+
         iplot(fig)
         print("Interactive plot displayed inline (iplot)")
     except:
@@ -177,7 +174,7 @@ def apply_experiment_layout(
         width: Plot width
     """
     colors = get_experiment_colors()
-    
+
     fig.update_layout(
         title=dict(
             text=title,
@@ -204,7 +201,7 @@ def apply_experiment_layout(
             borderwidth=1,
         ),
     )
-    
+
     # Update axes styling
     fig.update_xaxes(
         showgrid=True,

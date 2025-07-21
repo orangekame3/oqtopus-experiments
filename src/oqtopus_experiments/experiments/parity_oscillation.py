@@ -47,14 +47,14 @@ class ParityOscillation(BaseExperiment):
         **kwargs
     ):
         """Initialize Parity Oscillation experiment with simplified parameters"""
-        
+
         super().__init__(experiment_name or "parity_oscillation")
 
         from ..models.parity_oscillation_models import ParityOscillationParameters
-        
+
         # Calculate phase points automatically based on paper: 4N+1 points for N-qubit GHZ state
         phase_points = 4 * num_qubits + 1
-        
+
         # Simplified parameters like other experiments
         self.params = ParityOscillationParameters(
             experiment_name=experiment_name,
@@ -201,7 +201,7 @@ class ParityOscillation(BaseExperiment):
         # Update shots if provided
         if shots != 1024:
             self.shots = shots
-            
+
         # Use BaseExperiment's run method with current parameters
         return super().run(backend=backend, shots=shots, **kwargs)
 
@@ -355,7 +355,7 @@ class ParityOscillation(BaseExperiment):
             DataFrame with coherence data for interface consistency
         """
         plot = kwargs.get("plot", False)
-        save_data = kwargs.get("save_data", False) 
+        save_data = kwargs.get("save_data", False)
         save_image = kwargs.get("save_image", False)
         if not hasattr(self, "circuit_metadata"):
             raise ValueError("Circuit metadata not found. Run create_circuits first.")
@@ -373,7 +373,7 @@ class ParityOscillation(BaseExperiment):
         # Collect all phase values and parity values from flattened results
         phase_values = []
         parity_values = []
-        
+
         for i, result in enumerate(all_results):
             if result is None or not result.get("success", False):
                 continue
@@ -425,11 +425,11 @@ class ParityOscillation(BaseExperiment):
 
         # Create DataFrame for interface consistency
         df = self._create_dataframe(analysis_results)
-        
+
         # Optional plotting (like other experiments)
         if plot and len(phase_values) >= 5:
             self._create_plot(phase_array, parity_array, coherence, save_image)
-            
+
         return df
 
     def _create_dataframe(self, analysis_results: dict[str, Any]) -> "pd.DataFrame":
@@ -445,12 +445,12 @@ class ParityOscillation(BaseExperiment):
         if not PANDAS_AVAILABLE:
             print("Warning: pandas not available, returning empty DataFrame")
             return None
-            
+
         df_data = []
-        
+
         for device, device_results in analysis_results.items():
             coherence_data = device_results.get("coherence_data", [])
-            
+
             for data in coherence_data:
                 df_data.append({
                     "device": device,
@@ -460,7 +460,7 @@ class ParityOscillation(BaseExperiment):
                     "fit_r_squared": data["fit_r_squared"],
                     "fit_success": data["fit_success"],
                 })
-        
+
         return pd.DataFrame(df_data) if df_data else pd.DataFrame()
 
     def _create_plot(self, phase_array, parity_array, coherence, save_image=False):
@@ -475,6 +475,7 @@ class ParityOscillation(BaseExperiment):
         """
         try:
             import plotly.graph_objects as go
+
             from ..utils.visualization import (
                 apply_experiment_layout,
                 get_experiment_colors,
@@ -483,14 +484,14 @@ class ParityOscillation(BaseExperiment):
                 setup_plotly_environment,
                 show_plotly_figure,
             )
-            
+
             setup_plotly_environment()
             colors = get_experiment_colors()
             fig = go.Figure()
-            
+
             # Convert phase to π units for display
             phase_pi = phase_array / np.pi
-            
+
             # Data points with lines (like other experiments)
             fig.add_trace(
                 go.Scatter(
@@ -507,9 +508,9 @@ class ParityOscillation(BaseExperiment):
                     showlegend=True
                 )
             )
-            
+
             # Removed fitting - just show data points
-            
+
             # Apply standard experiment layout
             apply_experiment_layout(
                 fig,
@@ -517,7 +518,7 @@ class ParityOscillation(BaseExperiment):
                 xaxis_title="Phase φ/π",
                 yaxis_title="Parity (P_even - P_odd)"
             )
-            
+
             # Custom x-axis ticks in π units (0 to π range)
             fig.update_xaxes(
                 tickmode='array',
@@ -525,11 +526,11 @@ class ParityOscillation(BaseExperiment):
                 ticktext=['0', 'π/4', 'π/2', '3π/4', 'π'],
                 range=[0, 1]
             )
-            
+
             # Fix y-axis scale to -1 to +1 with padding like CHSH experiment
             fig.update_yaxes(range=[-1.1, 1.1])
-            
-            # Add coherence annotation  
+
+            # Add coherence annotation
             fig.add_annotation(
                 x=0.98,
                 y=0.02,
@@ -543,7 +544,7 @@ class ParityOscillation(BaseExperiment):
                 bordercolor="gray",
                 borderwidth=1
             )
-            
+
             # Save if requested
             if save_image:
                 images_dir = getattr(self, 'data_manager', None)
@@ -551,19 +552,19 @@ class ParityOscillation(BaseExperiment):
                     images_dir = f"{images_dir.session_dir}/plots"
                 else:
                     images_dir = "."
-                    
+
                 save_plotly_figure(
                     fig,
                     name=f"parity_oscillation_N{self.num_qubits}_tau{self.delay_us}us",
                     images_dir=images_dir,
                 )
-            
+
             # Show plot with standard config
             config = get_plotly_config(
                 f"parity_oscillation_N{self.num_qubits}", width=800, height=500
             )
             show_plotly_figure(fig, config)
-            
+
         except ImportError:
             print("plotly not available, skipping plot")
         except Exception as e:

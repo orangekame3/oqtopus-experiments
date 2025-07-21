@@ -3,10 +3,9 @@
 CHSH (Bell Inequality) Experiment Class
 """
 
-from typing import Any
 import math
+from typing import Any
 
-import numpy as np
 import pandas as pd
 from qiskit import QuantumCircuit
 
@@ -37,7 +36,7 @@ class CHSH(BaseExperiment):
         )
         actual_physical_qubit_0 = physical_qubit_0 if physical_qubit_0 is not None else 0
         actual_physical_qubit_1 = physical_qubit_1 if physical_qubit_1 is not None else 1
-        
+
         # Default measurement angles for optimal CHSH violation
         default_angles = {
             "alice_0": 0.0,     # θ_A0 = 0°
@@ -45,7 +44,7 @@ class CHSH(BaseExperiment):
             "bob_0": 22.5,      # θ_B0 = 22.5°
             "bob_1": 67.5,      # θ_B1 = 67.5°
         }
-        
+
         self.params = CHSHParameters(
             experiment_name=experiment_name,
             physical_qubit_0=actual_physical_qubit_0,
@@ -109,38 +108,38 @@ class CHSH(BaseExperiment):
     def circuits(self, **kwargs: Any) -> list[Any]:
         """Generate CHSH circuits for sampling-based measurement"""
         circuits = []
-        
+
         # Get the angle parameter (default to 0 if not provided)
         theta = kwargs.get("theta", 0.0)  # Single angle parameter
-        
+
         # The four measurement bases for CHSH: ZZ, ZX, XZ, XX
         measurement_bases = [
             ("ZZ", False, False),  # No additional rotations
-            ("ZX", False, True),   # H gate on qubit 1 (Bob)  
+            ("ZX", False, True),   # H gate on qubit 1 (Bob)
             ("XZ", True, False),   # H gate on qubit 0 (Alice)
             ("XX", True, True),    # H gates on both qubits
         ]
 
         for basis_name, alice_x, bob_x in measurement_bases:
             qc = QuantumCircuit(2, 2)
-            
+
             # Create Bell state |Φ+⟩ = (|00⟩ + |11⟩)/√2
             qc.h(0)  # Put first qubit in superposition
             qc.cx(0, 1)  # Entangle with second qubit
-            
+
             # Apply parameterized rotation to Alice (qubit 0)
             qc.ry(theta, 0)
-            
+
             # Apply measurement basis rotations
             if alice_x:  # Measure Alice in X basis
                 qc.h(0)
             if bob_x:    # Measure Bob in X basis
                 qc.h(1)
-            
+
             # Measurements
             qc.measure(0, 0)  # Alice's measurement
             qc.measure(1, 1)  # Bob's measurement
-            
+
             circuits.append(qc)
 
         # Store parameters for analysis and OQTOPUS
@@ -175,7 +174,7 @@ class CHSH(BaseExperiment):
         # Override circuits to use the specified theta
         original_circuits = self.circuits
         self.circuits = lambda **kw: original_circuits(theta=theta, **kw)
-        
+
         try:
             # Use BaseExperiment's run method
             result = super().run(backend=backend, shots=shots, **kwargs)
@@ -191,7 +190,7 @@ class CHSH(BaseExperiment):
         try:
             # Group results by measurement basis
             measurement_counts = self._extract_measurement_counts(all_results)
-            
+
             if len(measurement_counts) != 4:
                 return None
 
@@ -211,7 +210,7 @@ class CHSH(BaseExperiment):
             # CHSH2 = <ZZ> + <ZX> - <XZ> + <XX>
             chsh1 = correlations["ZZ"] - correlations["ZX"] + correlations["XZ"] + correlations["XX"]
             chsh2 = correlations["ZZ"] + correlations["ZX"] - correlations["XZ"] + correlations["XX"]
-            
+
             # Take the maximum violation
             chsh_value = max(abs(chsh1), abs(chsh2))
 
@@ -223,7 +222,7 @@ class CHSH(BaseExperiment):
 
             # Check for Bell inequality violation (S > 2)
             bell_violation = chsh_value > 2.0
-            
+
             # Calculate statistical significance
             significance = (chsh_value - 2.0) / chsh_std_error if chsh_std_error > 0 else 0
 
@@ -247,15 +246,15 @@ class CHSH(BaseExperiment):
     ) -> dict[str, dict[str, int]]:
         """Extract measurement counts grouped by measurement basis"""
         measurement_counts = {}
-        
+
         for i, result in enumerate(all_results):
             # Determine measurement basis from circuit index
             if i < len(self.experiment_params["measurement_bases"]):
                 basis_name, _, _ = self.experiment_params["measurement_bases"][i]
-                
+
                 counts = result.get("counts", {})
                 measurement_counts[basis_name] = counts
-                
+
         return measurement_counts
 
     def _calculate_correlation(
@@ -272,7 +271,7 @@ class CHSH(BaseExperiment):
 
         # Calculate correlation
         correlation = (same_outcomes - different_outcomes) / total_shots
-        
+
         # Calculate standard error (assuming binomial statistics)
         p_same = same_outcomes / total_shots
         variance = p_same * (1 - p_same) / total_shots
@@ -284,11 +283,11 @@ class CHSH(BaseExperiment):
         """Create DataFrame from CHSH analysis results"""
         # Create one row per measurement basis
         df_data = []
-        
+
         for basis, correlation in analysis_result.correlations.items():
             counts = analysis_result.measurement_counts[basis]
             total = sum(counts.values())
-            
+
             df_data.append({
                 "measurement_basis": basis,
                 "correlation": correlation,
@@ -324,7 +323,7 @@ class CHSH(BaseExperiment):
 
             setup_plotly_environment()
             colors = get_experiment_colors()
-            
+
             # Create subplots: correlations and CHSH value
             fig = make_subplots(
                 rows=1, cols=2,
@@ -361,7 +360,7 @@ class CHSH(BaseExperiment):
                     x=chsh_categories,
                     y=chsh_values,
                     error_y=dict(
-                        type='data', 
+                        type='data',
                         array=[0, analysis.chsh_std_error, 0]
                     ),
                     name="CHSH Comparison",
@@ -381,14 +380,14 @@ class CHSH(BaseExperiment):
             # Update axes
             fig.update_xaxes(title_text="Measurement Settings", row=1, col=1)
             fig.update_yaxes(title_text="Correlation E(A,B)", row=1, col=1, range=[-1.1, 1.1])
-            
+
             fig.update_xaxes(title_text="CHSH Bounds", row=1, col=2)
             fig.update_yaxes(title_text="CHSH Value S", row=1, col=2, range=[0, 3])
 
             # Add violation annotation
             violation_text = "Bell Violation!" if analysis.bell_violation else "No Violation"
             violation_color = "green" if analysis.bell_violation else "red"
-            
+
             fig.add_annotation(
                 x=0.98, y=0.98,
                 text=f"{violation_text}<br>S = {analysis.chsh_value:.3f} ± {analysis.chsh_std_error:.3f}<br>σ = {analysis.significance:.1f}",
@@ -415,7 +414,7 @@ class CHSH(BaseExperiment):
                 )
 
             config = get_plotly_config(
-                f"chsh_Q{self.physical_qubit_0}_Q{self.physical_qubit_1}", 
+                f"chsh_Q{self.physical_qubit_0}_Q{self.physical_qubit_1}",
                 width=800, height=400
             )
             show_plotly_figure(fig, config)

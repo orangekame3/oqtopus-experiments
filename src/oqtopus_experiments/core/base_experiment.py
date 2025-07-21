@@ -133,7 +133,7 @@ class BaseExperiment(ABC):
             self._last_backend_device = backend.backend_type
         else:
             self._last_backend_device = "unknown"
-        
+
         # Auto-transpile if physical qubit specified
         circuits, was_transpiled = self._auto_transpile_if_needed(circuits, backend)
 
@@ -171,25 +171,25 @@ class BaseExperiment(ABC):
         # Check if experiment has physical qubit specification
         if not hasattr(self, "experiment_params") or not self.experiment_params:
             return circuits, False
-            
+
         physical_qubit = self.experiment_params.get("physical_qubit")
         logical_qubit = self.experiment_params.get("logical_qubit", 0)
-        
+
         # Transpile if physical qubit is specified (regardless of value)
         if physical_qubit is not None:
             if hasattr(backend, "transpile"):
                 print(f"Auto-transpiling circuits: logical qubit {logical_qubit} → physical qubit {physical_qubit}")
                 try:
                     transpiled = backend.transpile(circuits, physical_qubits=[physical_qubit])
-                    print(f"Transpilation successful")
+                    print("Transpilation successful")
                     return transpiled, True
                 except Exception as e:
                     print(f"Transpilation failed: {e}, using original circuits")
                     return circuits, False
             else:
-                print(f"Backend does not support transpilation, using original circuits")
+                print("Backend does not support transpilation, using original circuits")
                 return circuits, False
-        
+
         return circuits, False
 
     def _transpile_circuits_with_tranqu(self, circuits, logical_qubit=0, physical_qubit=None):
@@ -206,9 +206,10 @@ class BaseExperiment(ABC):
         """
         if physical_qubit is None:
             return circuits
-            
+
         try:
             from tranqu import Tranqu
+
             from ..devices import DeviceInfo
 
             device_info = DeviceInfo("anemone")
@@ -278,7 +279,7 @@ class BaseExperiment(ABC):
 
         # Auto-transpile if physical qubit specified
         circuits, was_transpiled = self._auto_transpile_if_needed(circuits, backend)
-        
+
         # Debug: show transpiled circuit if requested
         if was_transpiled and len(circuits) > 1:
             print("Transpiled circuit sample:")
@@ -295,7 +296,7 @@ class BaseExperiment(ABC):
             circuit_params = None
             if hasattr(self, "_get_circuit_params"):
                 circuit_params = self._get_circuit_params()
-            
+
             # Check if physical qubit mapping is needed (disable OQTOPUS transpilation)
             disable_transpilation = self._should_disable_transpilation()
 
@@ -343,25 +344,25 @@ class BaseExperiment(ABC):
         # Check if experiment has physical qubit specification
         if not hasattr(self, "experiment_params") or not self.experiment_params:
             return circuits, False
-            
+
         physical_qubit = self.experiment_params.get("physical_qubit")
         logical_qubit = self.experiment_params.get("logical_qubit", 0)
-        
+
         # Transpile if physical qubit is specified (regardless of value)
         if physical_qubit is not None:
             if hasattr(backend, "transpile"):
                 print(f"Auto-transpiling circuits: logical qubit {logical_qubit} → physical qubit {physical_qubit}")
                 try:
                     transpiled = backend.transpile(circuits, physical_qubits=[physical_qubit])
-                    print(f"Transpilation successful")
+                    print("Transpilation successful")
                     return transpiled, True
                 except Exception as e:
                     print(f"Transpilation failed: {e}, using original circuits")
                     return circuits, False
             else:
-                print(f"Backend does not support transpilation, using original circuits")
+                print("Backend does not support transpilation, using original circuits")
                 return circuits, False
-        
+
         return circuits, False
 
     def _should_disable_transpilation(self) -> bool:
@@ -372,8 +373,8 @@ class BaseExperiment(ABC):
         """
         if not hasattr(self, "experiment_params") or not self.experiment_params:
             return False
-            
+
         physical_qubit = self.experiment_params.get("physical_qubit")
-        
+
         # Disable OQTOPUS transpilation if physical qubit is specified
         return physical_qubit is not None

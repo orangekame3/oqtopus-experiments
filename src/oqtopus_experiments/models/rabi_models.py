@@ -7,13 +7,13 @@ Provides structured data validation and serialization
 from typing import Any
 
 import pandas as pd
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class RabiFittingResult(BaseModel):
     """Fitting results for Rabi oscillation"""
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    
+
     pi_amplitude: float = Field(description="π-pulse amplitude")
     frequency: float = Field(description="Rabi frequency")
     fit_amplitude: float = Field(description="Fitted amplitude")
@@ -35,7 +35,7 @@ class RabiParameters(BaseModel):
 class RabiAnalysisResult(BaseModel):
     """Complete Rabi analysis results"""
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    
+
     fitting_result: RabiFittingResult = Field(description="Fitting results")
     dataframe: pd.DataFrame = Field(description="Analysis results as DataFrame")
     metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")

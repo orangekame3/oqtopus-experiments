@@ -3,7 +3,7 @@
 Rabi Experiment Class - Simplified Rabi oscillation experiment
 """
 
-from typing import Any, Optional
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -24,7 +24,7 @@ class Rabi(BaseExperiment):
 
     def __init__(
         self,
-        experiment_name: Optional[str] = None,
+        experiment_name: str | None = None,
         physical_qubit: int = 0,
         amplitude_points: int = 10,
         max_amplitude: float = 2.0,
@@ -102,7 +102,7 @@ class Rabi(BaseExperiment):
 
                 if amplitude is None:
                     print(
-                        f"⚠️  Warning: Could not determine amplitude for result, skipping"
+                        "⚠️  Warning: Could not determine amplitude for result, skipping"
                     )
                     continue
 
@@ -272,7 +272,7 @@ class Rabi(BaseExperiment):
                 device_amplitudes = device_result["amplitudes"]
                 device_probabilities = device_result["probabilities"]
 
-                for amp, prob in zip(device_amplitudes, device_probabilities):
+                for amp, prob in zip(device_amplitudes, device_probabilities, strict=False):
                     df_data.append(
                         {
                             "device": device,
@@ -367,7 +367,7 @@ class Rabi(BaseExperiment):
         self._circuits = circuit_collection
         return circuits  # Return list instead of CircuitCollection for compatibility
 
-    def _get_circuit_params(self) -> Optional[list[dict[str, Any]]]:
+    def _get_circuit_params(self) -> list[dict[str, Any]] | None:
         """Get parameters for each circuit for OQTOPUS description field"""
         if not hasattr(self, "experiment_params"):
             return None
