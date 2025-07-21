@@ -526,8 +526,8 @@ class ParityOscillation(BaseExperiment):
                 range=[0, 1]
             )
             
-            # Fix y-axis scale to always be -1 to +1 as requested
-            fig.update_yaxes(range=[-1, 1])
+            # Fix y-axis scale to -1 to +1 with padding like CHSH experiment
+            fig.update_yaxes(range=[-1.1, 1.1])
             
             # Add coherence annotation  
             fig.add_annotation(

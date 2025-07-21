@@ -30,7 +30,7 @@ def main():
         exp = ParityOscillation(
             experiment_name="parity_oscillation_test",
             num_qubits=num_qubits,  # Fixed parameter name
-            delay_us=20.0,  # Fixed parameter name
+            delay_us=0.0,  # Fixed parameter name
             shots=1000,
         )
 

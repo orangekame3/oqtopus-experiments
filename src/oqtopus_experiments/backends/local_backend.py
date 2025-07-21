@@ -143,6 +143,9 @@ class LocalBackend:
                             total_delay += float(duration) * 1e3
                         elif unit == "ms":
                             total_delay += float(duration) * 1e6
+                        elif unit == "dt":
+                            # Qiskit default time unit - assume 1 dt = 1 ns for simulation
+                            total_delay += float(duration)
                     elif hasattr(delay_op, "params") and len(delay_op.params) > 0:
                         # Fallback: assume nanoseconds
                         total_delay += float(delay_op.params[0])
