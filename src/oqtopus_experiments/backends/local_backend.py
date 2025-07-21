@@ -86,7 +86,7 @@ class LocalBackend:
 
         # Single qubit depolarizing error (typical: 0.1% per gate)
         single_qubit_error = 0.001
-        two_qubit_error = 0.02  # CNOT error ~2%
+        two_qubit_error = 0.06  # CNOT error ~2%
 
         # Add errors to gates
         for gate_name, gate_time in gate_times.items():
@@ -228,7 +228,9 @@ class LocalBackend:
                 compiled_circuit = transpile(circuit, coherence_simulator)
 
                 # Create coherence-specific noise model for this delay time
-                coherence_noise_model = self._create_coherence_noise_model(delay_time_ns)
+                coherence_noise_model = self._create_coherence_noise_model(
+                    delay_time_ns
+                )
 
                 job = coherence_simulator.run(
                     compiled_circuit, shots=shots, noise_model=coherence_noise_model
