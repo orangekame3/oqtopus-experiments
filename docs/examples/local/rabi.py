@@ -1,29 +1,33 @@
 #!/usr/bin/env python3
 """
-Rabi experiment with local noisy simulator
+Rabi experiment with Noisy Simulator
 """
+
 
 from oqtopus_experiments.backends import LocalBackend
 from oqtopus_experiments.experiments import Rabi
 
 
 def main():
-    # Local backend with realistic noise
-    backend = LocalBackend(noise=True, t1=50.0, t2=100.0)
+    print("=== Rabi with Noisy Simulator ===")
 
-    print("Running Rabi experiment with local noisy simulator")
-    print(f"Noise model: T1={backend.t1_us}μs, T2={backend.t2_us}μs")
+    # Local backend for Qiskit Aer simulator
+    backend = LocalBackend(device="noisy")
 
-    # Create and run experiment
-    rabi = Rabi()
-    circuits = rabi.circuits(qubits=[0], amplitude_points=20, max_amplitude=2.5)
+    # Create Rabi experiment
+    exp = Rabi(
+        experiment_name="parallel_rabi_experiment",
+        physical_qubit=3,
+        amplitude_points=12,
+        max_amplitude=4.0,
+    )
 
-    print(f"Created {len(circuits)} circuits")
-    print("Running noisy simulation...")
+    # Parallel execution with backend
+    result = exp.run(backend=backend, shots=1000)
 
-    result = rabi.run(backend=backend, shots=3000)
-    print("Simulation completed")
-    result.analyze()
+    # Analyze results (defaults to DataFrame)
+    df = result.analyze(plot=True, save_data=True, save_image=True)
+    print(df.head())
 
 
 if __name__ == "__main__":

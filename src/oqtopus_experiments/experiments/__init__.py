@@ -4,6 +4,7 @@ Experiments module - Concrete experiment implementations
 """
 
 from .chsh import CHSH
+from .chsh_phase_scan import CHSHPhaseScan
 
 # Legacy imports for backward compatibility
 from .chsh import CHSH as CHSHExperiment
@@ -20,6 +21,7 @@ from .t2_echo import T2Echo as T2EchoExperiment
 
 __all__ = [
     "CHSH",
+    "CHSHPhaseScan",
     "ParityOscillation",
     "Rabi",
     "Ramsey",

@@ -1,34 +1,36 @@
 #!/usr/bin/env python3
 """
-CHSH Bell test with local noisy simulator
+CHSH Bell inequality experiment with Local Simulator
 """
+
 
 from oqtopus_experiments.backends import LocalBackend
 from oqtopus_experiments.experiments import CHSH
 
+
 def main():
-    # Local backend with realistic noise
-    backend = LocalBackend(noise=True, t1=60.0, t2=120.0)
-    
-    print("Running CHSH experiment with local noisy simulator")
-    print(f"Noise model: T1={backend.t1_us}μs, T2={backend.t2_us}μs")
-    
-    # Create and run experiment
-    chsh = CHSH()
-    circuits = chsh.circuits(
-        qubits=[0, 1],
-        angles_a=[0, 0.25, 0.5, 0.75],
-        angles_b=[0.125, 0.375, 0.625, 0.875]
+    print("=== CHSH Bell Inequality Test ===")
+
+    # Local backend for Qiskit Aer simulator
+    backend = LocalBackend(
+        device="ideal"
+    )  # Use ideal simulator for perfect entanglement
+
+    # Create CHSH experiment with optimal theta angle for Bell violation
+    exp = CHSH(
+        experiment_name="chsh_bell_test",
+        shots_per_circuit=2000,  # More shots for better statistics
     )
-    
-    print(f"Created {len(circuits)} circuits")
-    print("Classical limit: S ≤ 2.0")
-    print("Quantum limit: S ≤ 2.828")
-    print("Running noisy simulation...")
-    
-    result = chsh.run(backend=backend, shots=4000)
-    print("Simulation completed")
-    result.analyze()
+
+    # Run CHSH experiment with optimal theta = π/4 (45°) for maximum CHSH violation
+    import math
+
+    result = exp.run(backend=backend, shots=2000, theta=math.pi / 4)
+
+    # Analyze results and check for Bell inequality violation
+    df = result.analyze(plot=True, save_data=True, save_image=True)
+    print(df.head())
+
 
 if __name__ == "__main__":
     main()

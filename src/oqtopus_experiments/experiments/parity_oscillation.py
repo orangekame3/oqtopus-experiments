@@ -10,6 +10,12 @@ from typing import Any
 
 import numpy as np
 
+try:
+    import pandas as pd
+    PANDAS_AVAILABLE = True
+except ImportError:
+    PANDAS_AVAILABLE = False
+
 from ..core.base_experiment import BaseExperiment
 
 try:
@@ -32,26 +38,44 @@ class ParityOscillation(BaseExperiment):
     The coherence is extracted from parity oscillations amplitude.
     """
 
-    def __init__(self, experiment_name: str = None, **kwargs):
-        # Extract parity oscillation experiment-specific parameters (not passed to BaseExperiment)
-        parity_specific_params = {
-            "num_qubits_list",
-            "delays_us",
-            "phase_points",
-            "no_delay",
-            "no_mitigation",
-        }
+    def __init__(
+        self,
+        experiment_name: str | None = None,
+        num_qubits: int = 2,
+        delay_us: float = 0.0,
+        shots: int = 1000,
+        **kwargs
+    ):
+        """Initialize Parity Oscillation experiment with simplified parameters"""
+        
+        super().__init__(experiment_name or "parity_oscillation")
 
-        # Filter kwargs to pass to BaseExperiment
-        base_kwargs = {
-            k: v for k, v in kwargs.items() if k not in parity_specific_params
-        }
-        super().__init__(experiment_name, **base_kwargs)
+        from ..models.parity_oscillation_models import ParityOscillationParameters
+        
+        # Calculate phase points automatically based on paper: 4N+1 points for N-qubit GHZ state
+        phase_points = 4 * num_qubits + 1
+        
+        # Simplified parameters like other experiments
+        self.params = ParityOscillationParameters(
+            experiment_name=experiment_name,
+            num_qubits_list=[num_qubits],  # Single qubit count
+            delays_us=[delay_us],          # Single delay
+            phase_points=phase_points,
+            no_delay=delay_us == 0.0,      # Auto-detect no_delay mode
+            shots_per_circuit=shots,
+        )
 
-        # Parity oscillation experiment parameters
-        self.default_num_qubits = [1, 2, 3, 4, 5]
-        self.default_delays_us = [0, 1, 2, 4, 8, 16]  # delay times in microseconds
-        self.default_phase_points = 21  # φ from 0 to π (4N+1 points as in paper)
+        # Store simplified parameters
+        self.num_qubits = num_qubits
+        self.delay_us = delay_us
+        self.phase_points = phase_points  # Auto-calculated from num_qubits
+        self.no_delay = delay_us == 0.0
+        self.shots = shots
+
+        # Backward compatibility for internal use
+        self.num_qubits_list = [num_qubits]
+        self.delays_us = [delay_us]
+        self.default_phase_points = phase_points
 
         # Handle mitigation options
         no_mitigation = kwargs.get("no_mitigation", False)
@@ -59,8 +83,9 @@ class ParityOscillation(BaseExperiment):
             self.mitigation_options = {}
 
         print("Parity Oscillation Experiment initialized")
-        print(f"Default qubit counts: {self.default_num_qubits}")
-        print(f"Default delays (μs): {self.default_delays_us}")
+        print(f"Qubits: {self.num_qubits}")
+        print(f"Delay (μs): {self.delay_us}")
+        print(f"Phase points: {self.phase_points} (4N+1 = 4×{self.num_qubits}+1)")
 
     def create_ghz_with_delay_and_rotation(
         self,
@@ -106,11 +131,11 @@ class ParityOscillation(BaseExperiment):
 
         # Step 3: Apply rotation U(φ) to each qubit
         # U(φ) = exp(-iφσy/2) rotation around Y-axis
-        if phi != 0:
-            for qubit in range(num_qubits):
-                # Using U gate: U(θ, φ, λ) where θ=π/2, φ=-φ-π/2, λ=-φ-π/2
-                # This implements the rotation from the paper
-                qc.u(np.pi / 2, -phi - np.pi / 2, -phi - np.pi / 2, qubit)
+        # Always apply rotation for continuity (even if phi=0)
+        for qubit in range(num_qubits):
+            # Using U gate: U(θ, φ, λ) where θ=π/2, φ=-φ-π/2, λ=-φ-π/2
+            # This implements the rotation from the paper
+            qc.u(np.pi / 2, -phi - np.pi / 2, -phi - np.pi / 2, qubit)
 
         # Step 4: Measurement
         qc.measure_all()
@@ -119,85 +144,66 @@ class ParityOscillation(BaseExperiment):
 
     def circuits(self, **kwargs) -> list[Any]:
         """
-        Create parity oscillation experiment circuits
-
-        Args:
-            num_qubits_list: List of qubit counts to test (default: [1,2,3,4,5])
-            delays_us: List of delay times in μs (default: [0,1,2,4,8,16])
-            phase_points: Number of phase points from 0 to π (default: 21)
-            no_delay: Skip delay insertion for faster execution (default: False)
+        Create parity oscillation experiment circuits for single qubit count and delay
 
         Returns:
             List of quantum circuits
         """
-        num_qubits_list = kwargs.get("num_qubits_list", self.default_num_qubits)
-        delays_us = kwargs.get("delays_us", self.default_delays_us)
-        no_delay = kwargs.get("no_delay", False)
-
-        # Note: delays_us is ignored in no_delay mode
-
-        kwargs.get("phase_points", self.default_phase_points)
-
         circuits = []
         circuit_metadata = []
 
-        for num_qubits in num_qubits_list:
-            # Generate phase points: 4N+1 points from 0 to π (as in paper)
-            actual_phase_points = 4 * num_qubits + 1
-            phase_values = np.linspace(0, np.pi, actual_phase_points)
+        # Use instance parameters (simplified single values)
+        num_qubits = self.num_qubits
+        delay_us = self.delay_us
+        phase_points = self.phase_points
+        no_delay = self.no_delay
 
-            if no_delay:
-                # No delay mode: generate circuits without delay parameter
-                for phi in phase_values:
-                    circuit = self.create_ghz_with_delay_and_rotation(
-                        num_qubits, 0.0, phi, no_delay
-                    )
-                    circuits.append(circuit)
+        # Generate phase values from 0 to π (unified range)
+        phase_values = np.linspace(0, np.pi, phase_points)
 
-                    # Store metadata for analysis
-                    circuit_metadata.append(
-                        {
-                            "num_qubits": num_qubits,
-                            "delay_us": 0.0,  # Always 0 in no-delay mode
-                            "phi": phi,
-                            "circuit_index": len(circuits) - 1,
-                        }
-                    )
-            else:
-                # Normal mode: iterate over all delays
-                for delay_us in delays_us:
-                    for phi in phase_values:
-                        circuit = self.create_ghz_with_delay_and_rotation(
-                            num_qubits, delay_us, phi, no_delay
-                        )
-                        circuits.append(circuit)
+        for phi in phase_values:
+            circuit = self.create_ghz_with_delay_and_rotation(
+                num_qubits, delay_us, phi, no_delay
+            )
+            circuits.append(circuit)
 
-                        # Store metadata for analysis
-                        circuit_metadata.append(
-                            {
-                                "num_qubits": num_qubits,
-                                "delay_us": delay_us,
-                                "phi": phi,
-                                "circuit_index": len(circuits) - 1,
-                            }
-                        )
+            # Store metadata for analysis
+            circuit_metadata.append(
+                {
+                    "num_qubits": num_qubits,
+                    "delay_us": delay_us,
+                    "phi": phi,
+                    "circuit_index": len(circuits) - 1,
+                }
+            )
 
         # Store metadata for later analysis
         self.circuit_metadata = circuit_metadata
 
         print(f"Generated {len(circuits)} parity oscillation circuits")
-        print(f"Qubit counts: {num_qubits_list}")
+        print(f"N={num_qubits} qubits, τ={delay_us}μs, {phase_points} phase points")
         if no_delay:
-            print("⚠️ Delay gates skipped (--no-delay mode) - using only τ=0")
-        else:
-            print(f"Delays: {delays_us} μs")
-        print(
-            f"Phase points per (N,τ): {actual_phase_points} for max N={max(num_qubits_list)}"
-        )
+            print("⚠️ Delay gates skipped (τ=0 mode)")
 
         # Store circuits for later use by run() methods
         self._circuits = circuits
         return circuits
+
+    def run(self, backend, shots: int = 1024, **kwargs):
+        """
+        Run Parity Oscillation experiment with unified interface
+        
+        Args:
+            backend: Backend instance
+            shots: Number of shots per circuit
+            **kwargs: Additional arguments (num_qubits_list, delays_us, no_delay, etc.)
+        """
+        # Update shots if provided
+        if shots != 1024:
+            self.shots = shots
+            
+        # Use BaseExperiment's run method with current parameters
+        return super().run(backend=backend, shots=shots, **kwargs)
 
     def calculate_parity(self, counts: dict[str | int, int]) -> float:
         """
@@ -337,108 +343,231 @@ class ParityOscillation(BaseExperiment):
 
     def analyze(
         self, results: dict[str, list[dict[str, Any]]], **kwargs
-    ) -> dict[str, Any]:
+    ) -> "pd.DataFrame":
         """
         Analyze parity oscillation results
 
         Args:
             results: Raw measurement results from quantum devices
+            **kwargs: Optional parameters (plot, save_data, save_image)
 
         Returns:
-            Analysis results with coherence data
+            DataFrame with coherence data for interface consistency
         """
+        plot = kwargs.get("plot", False)
+        save_data = kwargs.get("save_data", False) 
+        save_image = kwargs.get("save_image", False)
         if not hasattr(self, "circuit_metadata"):
             raise ValueError("Circuit metadata not found. Run create_circuits first.")
 
         analysis_results = {}
 
-        for device, device_results in results.items():
-            print(f"\nAnalyzing {device} results...")
+        # Flatten all results into single list (no device separation) - like Rabi
+        all_results = []
+        for device_data in results.values():
+            all_results.extend(device_data)
 
-            device_analysis: dict[str, Any] = {
-                "coherence_data": [],
-                "parity_oscillations": [],
-                "fit_parameters": [],
-            }
+        if not all_results:
+            return pd.DataFrame()
 
-            # Group results by (num_qubits, delay_us)
-            grouped_results: dict[tuple[int, float], list[Any]] = {}
+        # Collect all phase values and parity values from flattened results
+        phase_values = []
+        parity_values = []
+        
+        for i, result in enumerate(all_results):
+            if result is None or not result.get("success", False):
+                continue
 
-            for i, result in enumerate(device_results):
-                if result is None or not result.get("success", False):
-                    continue
+            metadata = self.circuit_metadata[i]
+            counts = result.get("counts", {})
+            parity = self.calculate_parity(counts)
 
-                metadata = self.circuit_metadata[i]
-                key = (metadata["num_qubits"], metadata["delay_us"])
+            phase_values.append(metadata["phi"])
+            parity_values.append(parity)
 
-                if key not in grouped_results:
-                    grouped_results[key] = {
-                        "phase_values": [],
-                        "parity_values": [],
-                        "counts_list": [],
-                    }
+        if len(phase_values) < 5:  # Need sufficient points
+            print(f"⚠ Insufficient data points: {len(phase_values)} < 5")
+            return pd.DataFrame()
 
-                # Calculate parity for this measurement
-                counts = result.get("counts", {})
-                parity = self.calculate_parity(counts)
+        # Sort by phase for proper fitting
+        sorted_indices = np.argsort(phase_values)
+        phase_array = np.array(phase_values)[sorted_indices]
+        parity_array = np.array(parity_values)[sorted_indices]
 
-                grouped_results[key]["phase_values"].append(metadata["phi"])
-                grouped_results[key]["parity_values"].append(parity)
-                grouped_results[key]["counts_list"].append(counts)
+        # Calculate coherence as amplitude of parity oscillations
+        p_center = np.mean(parity_array)
+        amplitude = np.max(np.abs(parity_array - p_center))
+        coherence = amplitude
 
-            # Analyze each (N, τ) combination
-            for (num_qubits, delay_us), data in grouped_results.items():
-                if len(data["phase_values"]) < 5:  # Need sufficient points
-                    continue
+        # Simplified: no fitting, just coherence calculation
+        fit_success = True
+        r_squared = 0.0
 
-                # Sort by phase for proper fitting
-                sorted_indices = np.argsort(data["phase_values"])
-                phase_array = np.array(data["phase_values"])[sorted_indices]
-                parity_array = np.array(data["parity_values"])[sorted_indices]
+        # Get device name from results (like Rabi does)
+        device_name = "unknown"
+        if all_results:
+            device_name = all_results[0].get("backend", "unknown")
 
-                # Calculate coherence as amplitude of parity oscillations
-                # Amplitude = deviation from center = max(|P - P_center|)
-                # where P_center is the mean parity value
-                p_center = np.mean(parity_array)
-                amplitude = np.max(np.abs(parity_array - p_center))
-                coherence = amplitude
+        print(f"N={self.num_qubits}, τ={self.delay_us}μs: C={coherence:.3f}")
 
-                # Optional: try fitting but don't rely on it
-                try:
-                    fit_result = self.fit_sinusoid(phase_array, parity_array)
-                    fit_success = fit_result["fit_success"]
-                    r_squared = fit_result["r_squared"]
-                except Exception:
-                    fit_result = {"fit_success": False, "r_squared": 0.0}
-                    fit_success = False
-                    r_squared = 0.0
-
-                coherence_data = {
-                    "num_qubits": num_qubits,
-                    "delay_us": delay_us,
+        # Create simplified analysis results for DataFrame creation
+        analysis_results = {
+            device_name: {
+                "coherence_data": [{
+                    "num_qubits": self.num_qubits,
+                    "delay_us": self.delay_us,
                     "coherence": coherence,
                     "fit_r_squared": r_squared,
                     "fit_success": fit_success,
-                }
+                }]
+            }
+        }
 
-                oscillation_data = {
-                    "num_qubits": num_qubits,
-                    "delay_us": delay_us,
-                    "phase_values": phase_array.tolist(),
-                    "parity_values": parity_array.tolist(),
-                    "fit_parameters": fit_result,
-                }
+        # Create DataFrame for interface consistency
+        df = self._create_dataframe(analysis_results)
+        
+        # Optional plotting (like other experiments)
+        if plot and len(phase_values) >= 5:
+            self._create_plot(phase_array, parity_array, coherence, save_image)
+            
+        return df
 
-                device_analysis["coherence_data"].append(coherence_data)
-                device_analysis["parity_oscillations"].append(oscillation_data)
+    def _create_dataframe(self, analysis_results: dict[str, Any]) -> "pd.DataFrame":
+        """
+        Create DataFrame from analysis results for interface consistency
+        
+        Args:
+            analysis_results: Raw analysis results dictionary
+            
+        Returns:
+            DataFrame with coherence data
+        """
+        if not PANDAS_AVAILABLE:
+            print("Warning: pandas not available, returning empty DataFrame")
+            return None
+            
+        df_data = []
+        
+        for device, device_results in analysis_results.items():
+            coherence_data = device_results.get("coherence_data", [])
+            
+            for data in coherence_data:
+                df_data.append({
+                    "device": device,
+                    "num_qubits": data["num_qubits"],
+                    "delay_us": data["delay_us"],
+                    "coherence": data["coherence"],
+                    "fit_r_squared": data["fit_r_squared"],
+                    "fit_success": data["fit_success"],
+                })
+        
+        return pd.DataFrame(df_data) if df_data else pd.DataFrame()
 
-                print(
-                    f"N={num_qubits}, τ={delay_us}μs: C={coherence:.3f}, R²={fit_result['r_squared']:.3f}"
+    def _create_plot(self, phase_array, parity_array, coherence, save_image=False):
+        """
+        Create parity oscillation plot using plotly (consistent with other experiments)
+        
+        Args:
+            phase_array: Phase values
+            parity_array: Parity values
+            coherence: Calculated coherence
+            save_image: Whether to save the plot
+        """
+        try:
+            import plotly.graph_objects as go
+            from ..utils.visualization import (
+                apply_experiment_layout,
+                get_experiment_colors,
+                get_plotly_config,
+                save_plotly_figure,
+                setup_plotly_environment,
+                show_plotly_figure,
+            )
+            
+            setup_plotly_environment()
+            colors = get_experiment_colors()
+            fig = go.Figure()
+            
+            # Convert phase to π units for display
+            phase_pi = phase_array / np.pi
+            
+            # Data points with lines (like other experiments)
+            fig.add_trace(
+                go.Scatter(
+                    x=phase_pi,
+                    y=parity_array,
+                    mode="markers+lines",
+                    name="Data",
+                    marker=dict(
+                        size=7,
+                        color=colors[1],  # Green like Rabi
+                        line=dict(width=1, color="white")
+                    ),
+                    line=dict(width=2, color=colors[1]),
+                    showlegend=True
                 )
-
-            analysis_results[device] = device_analysis
-
-        return analysis_results
+            )
+            
+            # Removed fitting - just show data points
+            
+            # Apply standard experiment layout
+            apply_experiment_layout(
+                fig,
+                title=f"Parity Oscillation: N={self.num_qubits}, τ={self.delay_us}μs",
+                xaxis_title="Phase φ/π",
+                yaxis_title="Parity (P_even - P_odd)"
+            )
+            
+            # Custom x-axis ticks in π units (0 to π range)
+            fig.update_xaxes(
+                tickmode='array',
+                tickvals=[0, 0.25, 0.5, 0.75, 1.0],
+                ticktext=['0', 'π/4', 'π/2', '3π/4', 'π'],
+                range=[0, 1]
+            )
+            
+            # Fix y-axis scale to always be -1 to +1 as requested
+            fig.update_yaxes(range=[-1, 1])
+            
+            # Add coherence annotation  
+            fig.add_annotation(
+                x=0.98,
+                y=0.02,
+                text=f"N={self.num_qubits} qubits<br>τ={self.delay_us}μs<br>Coherence = {coherence:.3f}",
+                showarrow=False,
+                xref="x domain",
+                yref="y domain",
+                xanchor="right",
+                yanchor="bottom",
+                bgcolor="rgba(255,255,255,0.8)",
+                bordercolor="gray",
+                borderwidth=1
+            )
+            
+            # Save if requested
+            if save_image:
+                images_dir = getattr(self, 'data_manager', None)
+                if images_dir and hasattr(images_dir, 'session_dir'):
+                    images_dir = f"{images_dir.session_dir}/plots"
+                else:
+                    images_dir = "."
+                    
+                save_plotly_figure(
+                    fig,
+                    name=f"parity_oscillation_N{self.num_qubits}_tau{self.delay_us}us",
+                    images_dir=images_dir,
+                )
+            
+            # Show plot with standard config
+            config = get_plotly_config(
+                f"parity_oscillation_N{self.num_qubits}", width=800, height=500
+            )
+            show_plotly_figure(fig, config)
+            
+        except ImportError:
+            print("plotly not available, skipping plot")
+        except Exception as e:
+            print(f"Plot creation failed: {e}")
 
     def save_experiment_data(
         self, results: dict[str, Any], metadata: dict[str, Any] = None

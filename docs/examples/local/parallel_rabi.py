@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Parallel Rabi experiment with Qulacs
+Parallel Rabi experiment with Noisy Simulator
 """
 
 
@@ -11,11 +11,11 @@ from oqtopus_experiments.experiments import Rabi
 def main():
     print("=== Parallel Rabi with Noisy Simulator ===")
 
-    # OQTOPUS backend for Qulacs
+    # Local backend for Qiskit Aer simulator
     backend = LocalBackend(device="noisy")
 
     # Create Rabi experiment
-    rabi = Rabi(
+    exp = Rabi(
         experiment_name="parallel_rabi_experiment",
         physical_qubit=3,
         amplitude_points=12,
@@ -23,7 +23,7 @@ def main():
     )
 
     # Parallel execution with backend
-    result = rabi.run_parallel(backend=backend, shots=1000, workers=4)
+    result = exp.run_parallel(backend=backend, shots=1000, workers=4)
 
     # Analyze results (defaults to DataFrame)
     df = result.analyze(plot=True, save_data=True, save_image=True)

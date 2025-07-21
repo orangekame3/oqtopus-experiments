@@ -23,9 +23,24 @@ from ..models.rabi_models import (
 class Rabi(BaseExperiment):
     """Rabi experiment"""
 
-    def __init__(self, **kwargs):
-        """Initialize with Pydantic parameter validation"""
-        self.params = RabiParameters(**kwargs)
+    def __init__(
+        self,
+        experiment_name: str | None = None,
+        physical_qubit: int | None = None,
+        amplitude_points: int = 10,
+        max_amplitude: float = 2.0,
+    ):
+        """Initialize Rabi experiment with explicit parameters"""
+        # Track if physical_qubit was explicitly specified
+        self._physical_qubit_specified = physical_qubit is not None
+        actual_physical_qubit = physical_qubit if physical_qubit is not None else 0
+        
+        self.params = RabiParameters(
+            experiment_name=experiment_name,
+            physical_qubit=actual_physical_qubit,
+            amplitude_points=amplitude_points,
+            max_amplitude=max_amplitude,
+        )
         super().__init__(self.params.experiment_name or "rabi_experiment")
 
         self.physical_qubit = self.params.physical_qubit
@@ -99,8 +114,8 @@ class Rabi(BaseExperiment):
             "physical_qubit": self.physical_qubit,
         }
 
-        # Auto-transpile if physical qubit specified using base class method
-        if self.physical_qubit is not None:
+        # Auto-transpile if physical qubit explicitly specified using base class method
+        if hasattr(self, '_physical_qubit_specified') and self._physical_qubit_specified:
             circuits = self._transpile_circuits_with_tranqu(
                 circuits, 0, self.physical_qubit
             )
