@@ -12,6 +12,7 @@ import numpy as np
 
 try:
     import pandas as pd
+
     PANDAS_AVAILABLE = True
 except ImportError:
     PANDAS_AVAILABLE = False
@@ -44,7 +45,7 @@ class ParityOscillation(BaseExperiment):
         num_qubits: int = 2,
         delay_us: float = 0.0,
         shots: int = 1000,
-        **kwargs
+        **kwargs,
     ):
         """Initialize Parity Oscillation experiment with simplified parameters"""
 
@@ -59,9 +60,9 @@ class ParityOscillation(BaseExperiment):
         self.params = ParityOscillationParameters(
             experiment_name=experiment_name,
             num_qubits_list=[num_qubits],  # Single qubit count
-            delays_us=[delay_us],          # Single delay
+            delays_us=[delay_us],  # Single delay
             phase_points=phase_points,
-            no_delay=delay_us == 0.0,      # Auto-detect no_delay mode
+            no_delay=delay_us == 0.0,  # Auto-detect no_delay mode
             shots_per_circuit=shots,
         )
 
@@ -116,7 +117,7 @@ class ParityOscillation(BaseExperiment):
             raise ImportError("Qiskit is required for parity oscillation circuits")
 
         # Create base GHZ state (without measurement)
-        qc = QuantumCircuit(num_qubits, num_qubits)
+        qc = QuantumCircuit(num_qubits)
 
         # Step 1: Generate GHZ state |0...0⟩ + |1...1⟩
         qc.h(0)  # Hadamard on first qubit
@@ -137,14 +138,6 @@ class ParityOscillation(BaseExperiment):
             # This implements the rotation from the paper
             u_params = (np.pi / 2, -phi - np.pi / 2, -phi - np.pi / 2)
             qc.u(*u_params, qubit)
-            
-            # Debug: show U gate parameters for first circuit
-            if qubit == 0 and hasattr(self, '_debug_u_params'):
-                print(f"🔍 U gate params for φ={phi:.3f}: θ={u_params[0]:.3f}, φ={u_params[1]:.3f}, λ={u_params[2]:.3f}")
-        
-        # Set debug flag for first call
-        if not hasattr(self, '_debug_u_params'):
-            self._debug_u_params = True
 
         # Step 4: Measurement
         qc.measure_all()
@@ -175,11 +168,6 @@ class ParityOscillation(BaseExperiment):
                 num_qubits, delay_us, phi, no_delay
             )
             circuits.append(circuit)
-            
-            # Debug: show first circuit for comparison
-            if len(circuits) <= 2:
-                print(f"🔍 Circuit for φ={phi:.3f}:")
-                print(circuit.draw())
 
             # Store metadata for analysis
             circuit_metadata.append(
@@ -206,7 +194,7 @@ class ParityOscillation(BaseExperiment):
     def run(self, backend, shots: int = 1024, **kwargs):
         """
         Run Parity Oscillation experiment with unified interface
-        
+
         Args:
             backend: Backend instance
             shots: Number of shots per circuit
@@ -389,7 +377,7 @@ class ParityOscillation(BaseExperiment):
         for i, result in enumerate(all_results):
             if result is None:
                 continue
-            
+
             # Check if result has valid counts
             counts = result.get("counts", {})
             if not counts:
@@ -406,9 +394,9 @@ class ParityOscillation(BaseExperiment):
             else:
                 # Skip if no parameter information available
                 continue
-                
+
             parity = self.calculate_parity(counts)
-            
+
             # Debug: show phi vs parity relationship
             print(f"🔍 φ={phi:.3f} → parity={parity:.3f}")
 
@@ -443,13 +431,15 @@ class ParityOscillation(BaseExperiment):
         # Create simplified analysis results for DataFrame creation
         analysis_results = {
             device_name: {
-                "coherence_data": [{
-                    "num_qubits": self.num_qubits,
-                    "delay_us": self.delay_us,
-                    "coherence": coherence,
-                    "fit_r_squared": r_squared,
-                    "fit_success": fit_success,
-                }]
+                "coherence_data": [
+                    {
+                        "num_qubits": self.num_qubits,
+                        "delay_us": self.delay_us,
+                        "coherence": coherence,
+                        "fit_r_squared": r_squared,
+                        "fit_success": fit_success,
+                    }
+                ]
             }
         }
 
@@ -465,10 +455,10 @@ class ParityOscillation(BaseExperiment):
     def _create_dataframe(self, analysis_results: dict[str, Any]) -> "pd.DataFrame":
         """
         Create DataFrame from analysis results for interface consistency
-        
+
         Args:
             analysis_results: Raw analysis results dictionary
-            
+
         Returns:
             DataFrame with coherence data
         """
@@ -482,21 +472,23 @@ class ParityOscillation(BaseExperiment):
             coherence_data = device_results.get("coherence_data", [])
 
             for data in coherence_data:
-                df_data.append({
-                    "device": device,
-                    "num_qubits": data["num_qubits"],
-                    "delay_us": data["delay_us"],
-                    "coherence": data["coherence"],
-                    "fit_r_squared": data["fit_r_squared"],
-                    "fit_success": data["fit_success"],
-                })
+                df_data.append(
+                    {
+                        "device": device,
+                        "num_qubits": data["num_qubits"],
+                        "delay_us": data["delay_us"],
+                        "coherence": data["coherence"],
+                        "fit_r_squared": data["fit_r_squared"],
+                        "fit_success": data["fit_success"],
+                    }
+                )
 
         return pd.DataFrame(df_data) if df_data else pd.DataFrame()
 
     def _create_plot(self, phase_array, parity_array, coherence, save_image=False):
         """
         Create parity oscillation plot using plotly (consistent with other experiments)
-        
+
         Args:
             phase_array: Phase values
             parity_array: Parity values
@@ -532,10 +524,10 @@ class ParityOscillation(BaseExperiment):
                     marker=dict(
                         size=7,
                         color=colors[1],  # Green like Rabi
-                        line=dict(width=1, color="white")
+                        line=dict(width=1, color="white"),
                     ),
                     line=dict(width=2, color=colors[1]),
-                    showlegend=True
+                    showlegend=True,
                 )
             )
 
@@ -546,15 +538,15 @@ class ParityOscillation(BaseExperiment):
                 fig,
                 title=f"Parity Oscillation: N={self.num_qubits}, τ={self.delay_us}μs",
                 xaxis_title="Phase φ/π",
-                yaxis_title="Parity (P_even - P_odd)"
+                yaxis_title="Parity (P_even - P_odd)",
             )
 
             # Custom x-axis ticks in π units (0 to π range)
             fig.update_xaxes(
-                tickmode='array',
+                tickmode="array",
                 tickvals=[0, 0.25, 0.5, 0.75, 1.0],
-                ticktext=['0', 'π/4', 'π/2', '3π/4', 'π'],
-                range=[0, 1]
+                ticktext=["0", "π/4", "π/2", "3π/4", "π"],
+                range=[0, 1],
             )
 
             # Fix y-axis scale to -1 to +1 with padding like CHSH experiment
@@ -572,13 +564,13 @@ class ParityOscillation(BaseExperiment):
                 yanchor="bottom",
                 bgcolor="rgba(255,255,255,0.8)",
                 bordercolor="gray",
-                borderwidth=1
+                borderwidth=1,
             )
 
             # Save if requested
             if save_image:
-                images_dir = getattr(self, 'data_manager', None)
-                if images_dir and hasattr(images_dir, 'session_dir'):
+                images_dir = getattr(self, "data_manager", None)
+                if images_dir and hasattr(images_dir, "session_dir"):
                     images_dir = f"{images_dir.session_dir}/plots"
                 else:
                     images_dir = "."
@@ -1090,6 +1082,6 @@ class ParityOscillation(BaseExperiment):
         """Get circuit parameters for OQTOPUS description embedding"""
         if not hasattr(self, "circuit_metadata"):
             return None
-        
+
         # Return the metadata as circuit parameters
         return [metadata.copy() for metadata in self.circuit_metadata]

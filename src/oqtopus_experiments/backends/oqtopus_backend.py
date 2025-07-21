@@ -54,7 +54,9 @@ class OqtopusBackend:
         # Initialize device info (lazy loading)
         self._device_info_loaded = False
 
-    def run(self, circuit: Any, shots: int = 1024, circuit_params: dict[str, Any] = None) -> dict[str, Any]:
+    def run(
+        self, circuit: Any, shots: int = 1024, circuit_params: dict[str, Any] = None
+    ) -> dict[str, Any]:
         """
         Run circuit on OQTOPUS backend
 
@@ -71,8 +73,8 @@ class OqtopusBackend:
             return {"counts": {"0": shots // 2, "1": shots // 2}}
 
         try:
-            import time
             import json
+            import time
 
             from qiskit.qasm3 import dumps
 
@@ -124,7 +126,7 @@ class OqtopusBackend:
                             result = job.result()
                             if result and hasattr(result, "counts"):
                                 counts = result.counts
-                                
+
                                 # Extract parameters from job description
                                 params = {}
                                 try:
@@ -132,7 +134,7 @@ class OqtopusBackend:
                                         params = json.loads(job.description)
                                 except (json.JSONDecodeError, AttributeError):
                                     params = {}
-                                
+
                                 print(
                                     f"✅ OQTOPUS job completed successfully (status: {status})"
                                 )
@@ -161,7 +163,7 @@ class OqtopusBackend:
                             result = job.result()
                             if result and hasattr(result, "counts"):
                                 counts = result.counts
-                                
+
                                 # Extract parameters from job description
                                 params = {}
                                 try:
@@ -169,7 +171,7 @@ class OqtopusBackend:
                                         params = json.loads(job.description)
                                 except (json.JSONDecodeError, AttributeError):
                                     params = {}
-                                
+
                                 print(f"OQTOPUS job completed (status: {status})")
                                 return {
                                     "counts": self._normalize_counts(dict(counts)),
@@ -191,9 +193,7 @@ class OqtopusBackend:
                     continue
 
             elapsed = time.time() - start_time
-            print(
-                f"OQTOPUS job timeout after {elapsed:.1f}s, using simulated results"
-            )
+            print(f"OQTOPUS job timeout after {elapsed:.1f}s, using simulated results")
             return {
                 "counts": {"0": shots // 2, "1": shots // 2},
                 "job_id": job.job_id if "job" in locals() else "timeout",
@@ -457,7 +457,11 @@ class OqtopusBackend:
             return transpiled_circuits
 
     def submit_parallel(
-        self, circuits: Any, shots: int = 1024, circuit_params: list[dict] = None, disable_transpilation: bool = False
+        self,
+        circuits: Any,
+        shots: int = 1024,
+        circuit_params: list[dict] = None,
+        disable_transpilation: bool = False,
     ) -> list[str]:
         """
         Submit circuits in parallel to OQTOPUS cloud with parameter tracking
@@ -497,7 +501,9 @@ class OqtopusBackend:
                     # Configure transpiler based on disable_transpilation flag
                     if disable_transpilation:
                         transpiler_info = {"transpiler_lib": None}
-                        print(f"Circuit {index + 1}: physical qubit specified, disabling OQTOPUS transpilation")
+                        print(
+                            f"Circuit {index + 1}: physical qubit specified, disabling OQTOPUS transpilation"
+                        )
                     else:
                         transpiler_info = {
                             "transpiler_lib": "qiskit",
@@ -630,7 +636,9 @@ class OqtopusBackend:
                                             f"✅ {self.device_name}: {job_id[:8]}... collected"
                                         )
                                         return idx, {
-                                            "counts": self._normalize_counts(dict(counts)),
+                                            "counts": self._normalize_counts(
+                                                dict(counts)
+                                            ),
                                             "job_id": job_id,
                                             "shots": sum(counts.values()),
                                             "backend": self.device_name,
@@ -701,7 +709,9 @@ class OqtopusBackend:
                                             f"✅ {self.device_name}: {job_id[:8]}... collected"
                                         )
                                         return idx, {
-                                            "counts": self._normalize_counts(dict(counts)),
+                                            "counts": self._normalize_counts(
+                                                dict(counts)
+                                            ),
                                             "job_id": job_id,
                                             "shots": sum(counts.values()),
                                             "backend": self.device_name,
@@ -912,43 +922,40 @@ class OqtopusBackend:
     def _normalize_counts(self, counts: dict[str | int, int]) -> dict[str, int]:
         """
         Normalize count keys to Qiskit-style binary strings
-        
+
         OQTOPUS returns decimal keys (0,1,2,3) but Qiskit uses binary strings ("00","01","10","11")
         This method converts decimal keys to binary string keys for consistency.
-        
+
         Args:
             counts: Dictionary with potentially mixed key types
-            
+
         Returns:
             Dictionary with normalized string keys
         """
         # If all keys are already strings, return as-is
         if all(isinstance(k, str) for k in counts.keys()):
             return {str(k): v for k, v in counts.items()}
-            
+
         # Determine number of qubits from maximum integer key
         int_keys = [k for k in counts.keys() if isinstance(k, int)]
         if not int_keys:
             return {str(k): v for k, v in counts.items()}
-            
+
         max_key = max(int_keys)
         # For quantum measurements: n_qubits = ceil(log2(max_key + 1))
         # This ensures 2^n states can be represented
         import math
+
         n_bits = max(1, math.ceil(math.log2(max_key + 1))) if max_key > 0 else 1
-        
+
         normalized = {}
         for key, value in counts.items():
             if isinstance(key, int):
                 # Convert to binary string with appropriate padding
-                binary_key = format(key, f'0{n_bits}b')
+                binary_key = format(key, f"0{n_bits}b")
                 normalized[binary_key] = value
             else:
                 # Already a string, keep as-is
                 normalized[str(key)] = value
-        
-        # Debug: show conversion for troubleshooting
-        if int_keys:
-            print(f"🔍 OQTOPUS counts conversion: {dict(counts)} → {normalized}")
-        
+
         return normalized
