@@ -369,15 +369,15 @@ class DeviceInfo:
                 fidelity = c.get("fidelity", 0.0)
                 duration_ns = c.get("duration_ns", "N/A")
                 
-                # Color-code edge based on fidelity (red=low, green=high) with thicker lines
+                # Color-code edge based on fidelity using experiment colors
                 if fidelity >= 0.95:
-                    edge_color = "rgba(34, 139, 34, 0.8)"  # Green for high fidelity
+                    edge_color = "#00B945"  # Experiment green for high fidelity
                     edge_width = 6  # Much thicker for better visibility
                 elif fidelity >= 0.90:
-                    edge_color = "rgba(255, 165, 0, 0.8)"  # Orange for medium fidelity
+                    edge_color = "#FF9500"  # Experiment orange for medium fidelity
                     edge_width = 5
                 else:
-                    edge_color = "rgba(220, 20, 60, 0.8)"  # Red for low fidelity
+                    edge_color = "#FF2C00"  # Experiment red for low fidelity
                     edge_width = 4
                 
                 # Create hover text with coupling information
@@ -514,7 +514,7 @@ class DeviceInfo:
                 marker={
                     "size": 40,  # Much larger for better text accommodation
                     "color": color_values,
-                    "colorscale": "RdYlGn",  # Red-Yellow-Green for intuitive fidelity mapping
+                    "colorscale": [[0, "#FF2C00"], [0.5, "#FF9500"], [1, "#00B945"]],  # Experiment colors
                     "colorbar": {
                         "title": {
                             "text": f"<b>Node {color_by.replace('_', ' ').title()}</b>",
@@ -552,26 +552,26 @@ class DeviceInfo:
             )
         )
 
-        # Add invisible legend traces for coupling edge colors
+        # Add invisible legend traces for coupling edge colors using experiment colors
         legend_traces = [
             go.Scatter(
                 x=[None], y=[None],
                 mode="lines",
-                line={"color": "rgba(34, 139, 34, 0.8)", "width": 6},
+                line={"color": "#00B945", "width": 6},
                 name="High Fidelity (≥0.95)",
                 showlegend=True,
             ),
             go.Scatter(
                 x=[None], y=[None],
                 mode="lines", 
-                line={"color": "rgba(255, 165, 0, 0.8)", "width": 5},
+                line={"color": "#FF9500", "width": 5},
                 name="Medium Fidelity (0.90-0.95)",
                 showlegend=True,
             ),
             go.Scatter(
                 x=[None], y=[None],
                 mode="lines",
-                line={"color": "rgba(220, 20, 60, 0.8)", "width": 4},
+                line={"color": "#FF2C00", "width": 4},
                 name="Low Fidelity (<0.90)",
                 showlegend=True,
             ),
@@ -585,25 +585,33 @@ class DeviceInfo:
                         f"<sub>Nodes: {color_by.replace('_', ' ').title()} | "
                         f"Edges: Coupling Gate Fidelity</sub>",
                 "x": 0.5,
-                "font": {"size": 16}
+                "font": {"size": 16, "color": "#2C3E50"}  # Experiment title color
             },
             xaxis={
                 "title": {
                     "text": "<b>X Position</b>",
-                    "font": {"size": 14}
+                    "font": {"size": 14, "color": "#2C3E50"}
                 },
                 "showgrid": True, 
-                "gridcolor": "lightgray"
+                "gridcolor": "#E8E8E8",
+                "showline": True,
+                "linewidth": 1.5,
+                "linecolor": "#2C3E50",
             },
             yaxis={
                 "title": {
                     "text": "<b>Y Position</b>",
-                    "font": {"size": 14}
+                    "font": {"size": 14, "color": "#2C3E50"}
                 },
                 "showgrid": True, 
-                "gridcolor": "lightgray"
+                "gridcolor": "#E8E8E8",
+                "showline": True,
+                "linewidth": 1.5,
+                "linecolor": "#2C3E50",
             },
             plot_bgcolor="white",
+            paper_bgcolor="white",
+            font={"size": 12, "color": "#2C3E50"},  # Experiment font style
             height=800,
             width=1000,
             legend={
@@ -624,7 +632,7 @@ class DeviceInfo:
                     "x": 0.5, "y": -0.1,
                     "xref": "paper", "yref": "paper",
                     "showarrow": False,
-                    "font": {"size": 12, "color": "darkblue"}
+                    "font": {"size": 12, "color": "#2C3E50"}  # Experiment text color
                 }
             ]
         )
