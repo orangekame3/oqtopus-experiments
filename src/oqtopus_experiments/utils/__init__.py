@@ -47,25 +47,26 @@ from .visualization import (
 )
 
 # Advanced utilities (optional dependencies)
+# Plotting functionality is in visualization module
 try:
-    from .plotting import (
-        apply_experiment_theme,
-        create_3d_surface_plot,
-        create_experiment_plot,
-        create_multi_device_comparison_plot,
+    from .visualization import (
+        apply_experiment_layout,
+        get_experiment_colors,
+        get_plotly_config,
+        save_plotly_figure,
+        setup_plotly_environment,
+        show_plotly_figure,
     )
 
     _PLOTTING_AVAILABLE = True
 except ImportError:
     _PLOTTING_AVAILABLE = False
 
+# Analysis functionality is in statistics module  
 try:
-    from .analysis import (
-        calculate_quantum_metrics,
-        calculate_uncertainty_propagation,
-        optimize_experiment_parameters,
-        perform_cross_experiment_analysis,
-        perform_statistical_tests,
+    from .statistics import (
+        calculate_probability,
+        calculate_fidelity,
     )
 
     _ANALYSIS_AVAILABLE = True

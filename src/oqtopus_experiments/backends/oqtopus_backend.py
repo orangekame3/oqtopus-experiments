@@ -41,7 +41,8 @@ class OqtopusBackend:
         try:
             from quri_parts_oqtopus.backend import OqtopusSamplingBackend
 
-            self.backend = OqtopusSamplingBackend()
+            backend_instance = OqtopusSamplingBackend()
+            self.backend: Any = backend_instance
             self.available = True
             print(
                 f"OQTOPUS backend initialized (device: {device}, timeout: {timeout_seconds}s)"
@@ -55,7 +56,7 @@ class OqtopusBackend:
         self._device_info_loaded = False
 
     def run(
-        self, circuit: Any, shots: int = 1024, circuit_params: dict[str, Any] = None
+        self, circuit: Any, shots: int = 1024, circuit_params: dict[str, Any] | None = None
     ) -> dict[str, Any]:
         """
         Run circuit on OQTOPUS backend
@@ -308,7 +309,7 @@ class OqtopusBackend:
         else:
             print(f"Device information not available for {self.device_name}")
 
-    def save_device_info(self, filename: str = None) -> str:
+    def save_device_info(self, filename: str | None = None) -> str:
         """
         Save device information to file (usage.py style)
 
@@ -356,7 +357,7 @@ class OqtopusBackend:
     def transpile(
         self,
         circuits: Any | list[Any] | CircuitCollection,
-        physical_qubits: list[int] = None,
+        physical_qubits: list[int] | None = None,
         optimization_level: int = 1,
         **kwargs,
     ) -> Any | list[Any] | CircuitCollection:
@@ -459,9 +460,9 @@ class OqtopusBackend:
         self,
         circuits: Any,
         shots: int = 1024,
-        circuit_params: list[dict] = None,
+        circuit_params: list[dict] | None = None,
         disable_transpilation: bool = False,
-    ) -> list[str]:
+    ) -> list[str | None]:
         """
         Submit circuits in parallel to OQTOPUS cloud with parameter tracking
 
@@ -528,7 +529,7 @@ class OqtopusBackend:
                     return index, None
 
             # Submit circuits in parallel with parameters
-            job_ids: list[str] = [""] * len(circuits)
+            job_ids: list[str | None] = [None] * len(circuits)
 
             with ThreadPoolExecutor(max_workers=4) as executor:
                 # Create circuit-params-index tuples

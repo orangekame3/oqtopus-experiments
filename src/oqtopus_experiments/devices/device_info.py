@@ -301,16 +301,17 @@ class DeviceInfo:
 
         # Show top 10 qubits by fidelity
         top_qubits = self.get_best_qubits(10)
-        for _, q in top_qubits.iterrows():
-            table.add_row(
-                str(int(q["id"])),
-                str(int(q["physical_id"])),
-                f"({q['x']:.1f},{q['y']:.1f})",
-                f"{q['t1']:.1f}",
-                f"{q['t2']:.1f}",
-                f"{q['fidelity']:.5f}",
-                f"{q['readout_error']:.3f}",
-            )
+        if top_qubits is not None:
+            for _, q in top_qubits.iterrows():
+                table.add_row(
+                    str(int(q["id"])),
+                    str(int(q["physical_id"])),
+                    f"({q['x']:.1f},{q['y']:.1f})",
+                    f"{q['t1']:.1f}",
+                    f"{q['t2']:.1f}",
+                    f"{q['fidelity']:.5f}",
+                    f"{q['readout_error']:.3f}",
+                )
 
         self.console.print(table)
 
@@ -762,7 +763,7 @@ class DeviceInfo:
 
         return self._qubits_df[self._qubits_df["id"].isin(qubit_ids)]
 
-    def save_data(self, filename: str = None) -> str:
+    def save_data(self, filename: str | None = None) -> str:
         """
         Save device information to JSON file
 

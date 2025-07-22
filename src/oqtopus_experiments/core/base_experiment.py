@@ -79,7 +79,7 @@ class BaseExperiment(ABC):
     def save_job_ids(
         self,
         job_ids: dict[str, list[str]],
-        metadata: dict[str, Any] = None,
+        metadata: dict[str, Any] | None = None,
         filename: str = "job_ids",
     ) -> str:
         """Save job IDs"""
@@ -99,7 +99,7 @@ class BaseExperiment(ABC):
     def save_raw_results(
         self,
         results: dict[str, Any],
-        metadata: dict[str, Any] = None,
+        metadata: dict[str, Any] | None = None,
         filename: str = "raw_results",
     ) -> str:
         """Save raw results"""

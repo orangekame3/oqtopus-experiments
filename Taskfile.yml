@@ -21,7 +21,7 @@ tasks:
       
   mypy-strict:
     cmds:
-      - uv run mypy src workspace
+      - uv run mypy src --strict
     desc: "Run strict type checking with mypy"
 
   check:

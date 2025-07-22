@@ -768,7 +768,7 @@ class ParityOscillation(BaseExperiment):
         return plot_filename
 
     def create_plots(
-        self, analysis_results: dict[str, Any], save_dir: str = None
+        self, analysis_results: dict[str, Any], save_dir: str | None = None
     ) -> None:
         """
         Create plots for parity oscillation experiment results (legacy method)
