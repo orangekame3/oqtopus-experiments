@@ -75,4 +75,4 @@ Each experiment supports parallel execution, automatic data analysis, and visual
 
 ## License
 
-MIT License
+[Apache License 2.0](LICENSE)

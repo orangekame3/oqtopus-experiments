@@ -66,3 +66,7 @@ tasks:
       - task: docs-build
       - task: docs-serve
     desc: "Build and serve documentation locally"
+
+  run-local:
+    cmds:
+      - for f in docs/examples/local/*.py; do uv run python "$f"; done
