@@ -37,12 +37,13 @@ class Rabi(BaseExperiment):
         self.max_amplitude = self.params.max_amplitude
 
     def analyze(
-        self, results: dict[str, list[dict[str, Any]]], **kwargs: Any
+        self, 
+        results: dict[str, list[dict[str, Any]]], 
+        plot: bool = True, 
+        save_data: bool = True, 
+        save_image: bool = True
     ) -> pd.DataFrame:
         """Analyze Rabi results with structured output"""
-        plot = kwargs.get("plot", False)
-        save_data = kwargs.get("save_data", False)
-        save_image = kwargs.get("save_image", False)
 
         if not results:
             return pd.DataFrame()

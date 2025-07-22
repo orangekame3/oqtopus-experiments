@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 """
-CHSH Bell inequality experiment with Qulacs Simulator
+Parallel CHSH Bell inequality experiment on QPU device
 """
-
 
 import math
 
@@ -11,20 +10,18 @@ from oqtopus_experiments.experiments import CHSH
 
 
 def main():
-    print("=== CHSH Bell Inequality Test with Qulacs ===")
 
-    # OQTOPUS backend for Qulacs
-    backend = OqtopusBackend(device="qulacs")
+    # OQTOPUS backend for QPU
+    backend = OqtopusBackend(device="anemone")
 
     # Create CHSH experiment with optimal theta angle for Bell violation
     exp = CHSH(
-        experiment_name="chsh_bell_qulacs",
-        shots_per_circuit=2000,  # More shots for better statistics
+        experiment_name="chsh_bell_qpu_parallel",
+        shots_per_circuit=2000,
         theta=math.pi / 4,
     )
 
-    # Run CHSH experiment with optimal theta = π/4 (45°) for maximum CHSH violation
-
+    # Run CHSH experiment
     result = exp.run_parallel(backend=backend, shots=2000)
 
     # Analyze results

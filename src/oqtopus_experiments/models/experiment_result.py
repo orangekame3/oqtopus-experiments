@@ -36,23 +36,26 @@ class ExperimentResult:
         self._analyzed_results = None
 
     def analyze(
-        self, save_data: bool = True, **kwargs
+        self, 
+        plot: bool = True, 
+        save_data: bool = True, 
+        save_image: bool = True
     ) -> pd.DataFrame:
         """
         Analyze the experiment results
 
         Args:
+            plot: Whether to generate plots
             save_data: Whether to save analysis results data
-            **kwargs: Additional parameters passed to experiment's analyze method
+            save_image: Whether to save generated images
 
         Returns:
             DataFrame with analysis results
         """
         if self._analyzed_results is None:
             # Perform analysis using the experiment's analyze method
-            analysis_params = {**self.analysis_params, **kwargs}
             self._analyzed_results = self.experiment.analyze(
-                self.raw_results, **analysis_params
+                self.raw_results, plot=plot, save_data=save_data, save_image=save_image
             )
 
         # Save results if requested (DataFrame is easily serializable)

@@ -31,7 +31,6 @@ def main():
             experiment_name="parity_oscillation_test",
             num_qubits=num_qubits,  # Fixed parameter name
             delay_us=0.0,  # Fixed parameter name
-            shots=1000,
         )
 
         print(f"Testing with N={exp.num_qubits} qubits")

@@ -35,22 +35,24 @@ class Rabi(BaseExperiment):
         self.max_amplitude = max_amplitude
 
     def analyze(
-        self, results: dict[str, list[dict[str, Any]]], **kwargs: Any
+        self, 
+        results: dict[str, list[dict[str, Any]]], 
+        plot: bool = True, 
+        save_data: bool = True, 
+        save_image: bool = True
     ) -> pd.DataFrame:
         """
         Analyze Rabi experiment results using embedded parameters
 
         Args:
             results: Raw measurement results with embedded parameters
-            **kwargs: Optional parameters (plot, save_data, save_image)
+            plot: Whether to generate plots
+            save_data: Whether to save analysis results data
+            save_image: Whether to save generated images
 
         Returns:
             DataFrame with π-pulse amplitude estimates and fitting results
         """
-        # Extract optional parameters
-        plot = kwargs.get("plot", False)
-        save_data = kwargs.get("save_data", False)
-        save_image = kwargs.get("save_image", False)
         if not results:
             return pd.DataFrame()  # Return empty DataFrame instead of dict
 

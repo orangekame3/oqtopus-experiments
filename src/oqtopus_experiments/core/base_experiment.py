@@ -45,7 +45,11 @@ class BaseExperiment(ABC):
 
     @abstractmethod
     def analyze(
-        self, results: dict[str, list[dict[str, Any]]], **kwargs
+        self, 
+        results: dict[str, list[dict[str, Any]]], 
+        plot: bool = True, 
+        save_data: bool = True, 
+        save_image: bool = True
     ) -> dict[str, Any]:
         """Experiment-specific result analysis (implemented in each experiment class)"""
         pass

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Parity Oscillation Experiment with Qulacs Simulator
+Parity Oscillation Experiment on QPU device
 Demonstrates GHZ state decoherence and parity oscillations
 """
 
@@ -9,18 +9,18 @@ from oqtopus_experiments.experiments import ParityOscillation
 
 
 def main():
-    print("=== Parity Oscillation: GHZ State Decoherence Study with Qulacs ===")
+    print("=== Parity Oscillation: GHZ State Decoherence Study on QPU ===")
 
-    # OQTOPUS backend for Qulacs
-    backend = OqtopusBackend(device="qulacs")
+    # OQTOPUS backend for QPU
+    backend = OqtopusBackend(device="anemone")
 
-    # Create Parity Oscillation experiment
+    # Create Parity Oscillation experiment with simplified parameters for testing
     for num_qubits in [
         3,
         4,
     ]:
         exp = ParityOscillation(
-            experiment_name="parity_oscillation_qulacs",
+            experiment_name="parity_oscillation_qpu",
             num_qubits=num_qubits,
             delay_us=0.0,
         )
@@ -30,7 +30,7 @@ def main():
         print(f"Phase points: {exp.phase_points}")
 
         # Run experiment
-        result = exp.run_parallel(backend=backend, shots=2000)
+        result = exp.run_parallel(backend=backend, shots=3000)
 
         # Analyze results
         df = result.analyze()

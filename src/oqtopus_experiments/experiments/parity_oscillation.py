@@ -44,7 +44,6 @@ class ParityOscillation(BaseExperiment):
         experiment_name: str | None = None,
         num_qubits: int = 2,
         delay_us: float = 0.0,
-        shots: int = 1000,
         **kwargs,
     ):
         """Initialize Parity Oscillation experiment with simplified parameters"""
@@ -63,7 +62,7 @@ class ParityOscillation(BaseExperiment):
             delays_us=[delay_us],  # Single delay
             phase_points=phase_points,
             no_delay=delay_us == 0.0,  # Auto-detect no_delay mode
-            shots_per_circuit=shots,
+            shots_per_circuit=1000,  # Default value, will be overridden by run()
         )
 
         # Store simplified parameters
@@ -71,7 +70,6 @@ class ParityOscillation(BaseExperiment):
         self.delay_us = delay_us
         self.phase_points = phase_points  # Auto-calculated from num_qubits
         self.no_delay = delay_us == 0.0
-        self.shots = shots
 
         # Backward compatibility for internal use
         self.num_qubits_list = [num_qubits]
@@ -342,21 +340,24 @@ class ParityOscillation(BaseExperiment):
             }
 
     def analyze(
-        self, results: dict[str, list[dict[str, Any]]], **kwargs
+        self, 
+        results: dict[str, list[dict[str, Any]]], 
+        plot: bool = True, 
+        save_data: bool = True, 
+        save_image: bool = True
     ) -> "pd.DataFrame":
         """
         Analyze parity oscillation results
 
         Args:
             results: Raw measurement results from quantum devices
-            **kwargs: Optional parameters (plot, save_data, save_image)
+            plot: Whether to generate plots
+            save_data: Whether to save analysis results data
+            save_image: Whether to save generated images
 
         Returns:
             DataFrame with coherence data for interface consistency
         """
-        plot = kwargs.get("plot", False)
-        save_data = kwargs.get("save_data", False)
-        save_image = kwargs.get("save_image", False)
         if not hasattr(self, "circuit_metadata"):
             raise ValueError("Circuit metadata not found. Run create_circuits first.")
 
