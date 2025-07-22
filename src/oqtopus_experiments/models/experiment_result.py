@@ -58,9 +58,11 @@ class ExperimentResult:
         # Save results if requested (DataFrame is easily serializable)
         if save_data:
             try:
-                if (hasattr(self.experiment, "save_experiment_data") 
+                if (
+                    hasattr(self.experiment, "save_experiment_data")
                     and self._analyzed_results is not None
-                    and hasattr(self._analyzed_results, "to_dict")):
+                    and hasattr(self._analyzed_results, "to_dict")
+                ):
                     # DataFrame to dict conversion for clean JSON storage
                     saved_path = self.experiment.save_experiment_data(
                         self._analyzed_results.to_dict(orient="records"),

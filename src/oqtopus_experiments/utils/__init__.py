@@ -62,11 +62,11 @@ try:
 except ImportError:
     _PLOTTING_AVAILABLE = False
 
-# Analysis functionality is in statistics module  
+# Analysis functionality is in statistics module
 try:
     from .statistics import (
-        calculate_probability,
         calculate_fidelity,
+        calculate_probability,
     )
 
     _ANALYSIS_AVAILABLE = True

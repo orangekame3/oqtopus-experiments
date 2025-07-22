@@ -47,7 +47,7 @@ result = exp.run(backend=backend, shots=1000)
 The local backend simulates common quantum errors:
 
 - **Gate errors**: Imperfect quantum operations
-- **Measurement errors**: Readout fidelity limitations  
+- **Measurement errors**: Readout fidelity limitations
 - **Decoherence**: T1 and T2 relaxation processes
 - **Crosstalk**: Inter-qubit coupling effects
 
@@ -111,11 +111,11 @@ results = {}
 
 for noise in noise_levels:
     backend = LocalBackend(device="noisy", noise_level=noise)
-    
+
     exp = CHSH()
     result = exp.run(backend=backend, shots=2000)
     df = result.analyze()
-    
+
     results[noise] = df['chsh_value'].iloc[0]
 
 # Compare CHSH values vs noise
@@ -143,11 +143,11 @@ predicted_t2_star = result.t2_star_time
 
 ### Execution Speed
 
-| Experiment Type | Simulation Time | Memory Usage |
-|----------------|-----------------|--------------|
-| **Single Qubit** | ~1 second | ~10 MB |
-| **Two Qubits** | ~5 seconds | ~50 MB |
-| **Multi-Qubit** | ~30 seconds | ~500 MB |
+| Experiment Type  | Simulation Time | Memory Usage |
+| ---------------- | --------------- | ------------ |
+| **Single Qubit** | ~1 second       | ~10 MB       |
+| **Two Qubits**   | ~5 seconds      | ~50 MB       |
+| **Multi-Qubit**  | ~30 seconds     | ~500 MB      |
 
 ### Optimization Tips
 

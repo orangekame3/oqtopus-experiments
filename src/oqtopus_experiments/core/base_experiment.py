@@ -34,14 +34,14 @@ class BaseExperiment(ABC):
             experiment_name or f"{self.__class__.__name__.lower()}_{int(time.time())}"
         )
         self.data_manager = ExperimentDataManager(self.experiment_name)
-        
+
         # Initialize optional attributes used by save methods
         self.transpiler_options: dict[str, Any] = {}
-        self.mitigation_options: dict[str, Any] = {}  
+        self.mitigation_options: dict[str, Any] = {}
         self.anemone_basis_gates: list[str] = []
         self.oqtopus_available: bool = False
         self.experiment_params: dict[str, Any] = {}
-        
+
         print(f"{self.__class__.__name__}: {self.experiment_name}")
 
     # Abstract methods: implemented in each experiment class

@@ -19,7 +19,7 @@ from oqtopus_experiments.backends import OqtopusBackend
 from oqtopus_experiments.experiments import Rabi
 
 # Connect to real quantum hardware
-backend = OqtopusBackend()
+backend = OqtopusBackend(device="anemone")  # Example device
 
 exp = Rabi(physical_qubit=0, amplitude_points=20, max_amplitude=2.0)
 result = exp.run(backend=backend, shots=1000)
@@ -50,11 +50,9 @@ OQTOPUS backend requires proper authentication:
 ### Device Selection
 
 ```python
-# Automatic device selection (recommended)
-backend = OqtopusBackend()
 
 # Specific device selection
-backend = OqtopusBackend(device="ibm_kyoto")
+backend = OqtopusBackend(device="anemone")  # Example device
 backend = OqtopusBackend(device="qulacs")
 ```
 
@@ -65,7 +63,7 @@ backend = OqtopusBackend(device="qulacs")
 The OQTOPUS backend automatically parallelizes circuit submission:
 
 ```python
-backend = OqtopusBackend()
+backend = OqtopusBackend("anemone")  # Real hardware
 
 # All circuits submitted in parallel
 exp = Rabi(amplitude_points=50, max_amplitude=3.0)
@@ -76,7 +74,7 @@ result = exp.run(backend=backend, shots=1000)
 
 ```python
 # Monitor job progress
-backend = OqtopusBackend()
+backend = OqtopusBackend("anemone")
 result = exp.run(backend=backend, shots=1000)
 
 # Access job metadata
@@ -113,36 +111,21 @@ except Exception as e:
 
 ## Performance Considerations
 
-| Feature | Real Hardware | Qulacs Simulation |
-|---------|---------------|-------------------|
-| **Latency** | Minutes-Hours | Seconds |
-| **Parallelization** | Automatic | Single-threaded |
-| **Noise** | Device-specific | None |
-| **Scalability** | Limited qubits | Memory-limited |
+| Feature             | Real Hardware   | Qulacs Simulation |
+| ------------------- | --------------- | ----------------- |
+| **Latency**         | Minutes-Hours   | Seconds           |
+| **Parallelization** | Automatic       | Single-threaded   |
+| **Noise**           | Device-specific | None              |
+| **Scalability**     | Limited qubits  | Memory-limited    |
 
 ## Troubleshooting
 
 ### Common Issues
 
-**Authentication Errors**:
-```bash
-# Check API credentials
-export OQTOPUS_API_KEY="your_key_here"
-```
-
 **Queue Timeouts**:
 ```python
 # Reduce job size
 exp = Rabi(amplitude_points=10, max_amplitude=2.0)  # Fewer points
-```
-
-**Device Unavailable**:
-```python
-# Use simulator as fallback
-try:
-    backend = OqtopusBackend(device="ibm_kyoto")
-except:
-    backend = OqtopusBackend(device="qulacs")  # Fallback
 ```
 
 ## API Reference

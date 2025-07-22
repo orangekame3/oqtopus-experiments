@@ -17,7 +17,7 @@ from oqtopus_experiments.backends import LocalBackend, OqtopusBackend
 from oqtopus_experiments.experiments import Rabi
 
 # Choose backend
-backend = OqtopusBackend()                # Real hardware (OQTOPUS)
+backend = OqtopusBackend(device="anemone") # Real hardware (OQTOPUS)
 # backend = OqtopusBackend(device="qulacs") # Noiseless simulation
 # backend = LocalBackend(device="noisy")  # Noisy simulation
 
@@ -75,4 +75,4 @@ Each experiment supports parallel execution, automatic data analysis, and visual
 
 ## License
 
-MIT License
+[Apache License 2.0](LICENSE)

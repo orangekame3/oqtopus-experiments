@@ -9,25 +9,20 @@ from oqtopus_experiments.experiments import CHSH
 
 
 def main():
-    print("=== CHSH Bell Inequality Test ===")
 
     # Local backend for Qiskit Aer simulator
-    backend = LocalBackend(
-        device="ideal"
-    )  # Use ideal simulator for perfect entanglement
+    backend = LocalBackend(device="ideal")
 
-    # Create CHSH experiment with optimal theta angle for Bell violation
+    # Create CHSH experiment
     exp = CHSH(
         experiment_name="chsh_bell_test",
-        shots_per_circuit=2000,  # More shots for better statistics
+        shots_per_circuit=2000,
     )
 
-    # Run CHSH experiment with optimal theta = π/4 (45°) for maximum CHSH violation
-    import math
+    # Run the experiment
+    result = exp.run(backend=backend, shots=2000)
 
-    result = exp.run(backend=backend, shots=2000, theta=math.pi / 4)
-
-    # Analyze results and check for Bell inequality violation
+    # Analyze results
     df = result.analyze(plot=True, save_data=True, save_image=True)
     print(df.head())
 

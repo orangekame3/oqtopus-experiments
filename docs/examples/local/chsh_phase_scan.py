@@ -11,28 +11,24 @@ from oqtopus_experiments.experiments import CHSHPhaseScan
 
 
 def main():
-    print("=== CHSH Phase Scan: S vs Phase ===")
-    print("Using the new CHSHPhase experiment class for improved analysis")
 
-    # Local backend for ideal simulation
+    # Local backend for Qiskit Aer simulator with noise
     backend = LocalBackend(device="noisy")
 
     # Create CHSH phase scan experiment
     exp = CHSHPhaseScan(
         experiment_name="chsh_phase_scan_updated",
         shots_per_circuit=1000,
-        phase_points=20,  # Same resolution as before
+        phase_points=20,
         phase_start=0.0,
-        phase_end=math.pi * 3,  # 0° to 540°
+        phase_end=math.pi * 3,
     )
 
-    print(f"Scanning {exp.phase_points} phase points from 0° to 540°")
-
-    # Run experiment with unified interface
+    # Run the experiment
     result = exp.run(backend=backend, shots=1000)
 
-    # Analyze results with the new visualization
-    df = result.analyze(plot=True, save_data=True, save_image=True)
+    # Analyze results
+    df = result.analyze()
 
     print(df.head())
 
