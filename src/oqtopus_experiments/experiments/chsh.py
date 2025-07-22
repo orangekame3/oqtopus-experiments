@@ -169,7 +169,9 @@ class CHSH(BaseExperiment):
 
         return circuits
 
-    def run(self, backend: Any, shots: int = 1024, theta: float = math.pi / 4, **kwargs: Any) -> Any:
+    def run(
+        self, backend: Any, shots: int = 1024, theta: float = math.pi / 4, **kwargs: Any
+    ) -> Any:
         """
         Run CHSH experiment with specified theta angle
 
@@ -182,7 +184,7 @@ class CHSH(BaseExperiment):
         # Store theta temporarily for use in circuits method
         original_theta = self.theta
         self.theta = theta
-        
+
         try:
             # Use BaseExperiment's run method
             result = super().run(backend=backend, shots=shots, **kwargs)

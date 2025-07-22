@@ -594,7 +594,10 @@ class ParityOscillation(BaseExperiment):
             print(f"Plot creation failed: {e}")
 
     def save_experiment_data(
-        self, results: dict[str, Any], metadata: dict[str, Any] | None = None, experiment_type: str | None = None
+        self,
+        results: dict[str, Any],
+        metadata: dict[str, Any] | None = None,
+        experiment_type: str | None = None,
     ) -> str:
         """
         Save parity oscillation experiment data

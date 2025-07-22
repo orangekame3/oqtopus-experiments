@@ -56,7 +56,10 @@ class OqtopusBackend:
         self._device_info_loaded = False
 
     def run(
-        self, circuit: Any, shots: int = 1024, circuit_params: dict[str, Any] | None = None
+        self,
+        circuit: Any,
+        shots: int = 1024,
+        circuit_params: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """
         Run circuit on OQTOPUS backend
@@ -140,7 +143,9 @@ class OqtopusBackend:
                                     f"✅ OQTOPUS job completed successfully (status: {status})"
                                 )
                                 return {
-                                    "counts": self._normalize_counts({str(k): int(v) for k, v in counts.items()}),
+                                    "counts": self._normalize_counts(
+                                        {str(k): int(v) for k, v in counts.items()}
+                                    ),
                                     "job_id": job.job_id,
                                     "shots": shots,
                                     "backend": "oqtopus",
@@ -175,7 +180,9 @@ class OqtopusBackend:
 
                                 print(f"OQTOPUS job completed (status: {status})")
                                 return {
-                                    "counts": self._normalize_counts({str(k): int(v) for k, v in counts.items()}),
+                                    "counts": self._normalize_counts(
+                                        {str(k): int(v) for k, v in counts.items()}
+                                    ),
                                     "job_id": job.job_id,
                                     "shots": shots,
                                     "backend": "oqtopus",
@@ -384,7 +391,7 @@ class OqtopusBackend:
 
         if single_circuit:
             circuits = [circuits]
-        elif circuit_collection_input and hasattr(circuits, 'to_list'):
+        elif circuit_collection_input and hasattr(circuits, "to_list"):
             circuits = circuits.to_list()  # type: ignore
 
         # Get physical qubits
@@ -637,7 +644,10 @@ class OqtopusBackend:
                                         )
                                         return idx, {
                                             "counts": self._normalize_counts(
-                                                {str(k): int(v) for k, v in counts.items()}
+                                                {
+                                                    str(k): int(v)
+                                                    for k, v in counts.items()
+                                                }
                                             ),
                                             "job_id": job_id,
                                             "shots": sum(counts.values()),
@@ -710,7 +720,10 @@ class OqtopusBackend:
                                         )
                                         return idx, {
                                             "counts": self._normalize_counts(
-                                                {str(k): int(v) for k, v in counts.items()}
+                                                {
+                                                    str(k): int(v)
+                                                    for k, v in counts.items()
+                                                }
                                             ),
                                             "job_id": job_id,
                                             "shots": sum(counts.values()),

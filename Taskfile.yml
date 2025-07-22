@@ -3,25 +3,25 @@ version: '3'
 tasks:
   fmt:
     cmds:
-      - uv run ruff check --fix src workspace
-      - uv run ruff check --fix --unsafe-fixes src workspace
-      - uv run ruff format src workspace
-      - uv run black src workspace
+      - uv run ruff check --fix src tests
+      - uv run ruff check --fix --unsafe-fixes src tests
+      - uv run ruff format src tests
+      - uv run black src tests
     desc: "Auto-fix lint issues and format code"
 
   lint:
     cmds:
-      - uv run ruff check src workspace
+      - uv run ruff check src tests
     desc: "Check code with ruff"
 
   mypy:
     cmds:
-      - uv run mypy src --ignore-missing-imports --no-strict-optional
+      - uv run mypy src tests --ignore-missing-imports --no-strict-optional
     desc: "Run type checking with mypy"
-      
+
   mypy-strict:
     cmds:
-      - uv run mypy src --strict
+      - uv run mypy src tests --strict
     desc: "Run strict type checking with mypy"
 
   check:
