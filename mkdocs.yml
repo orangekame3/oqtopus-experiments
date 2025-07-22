@@ -1,0 +1,86 @@
+site_name: OQTOPUS Experiments
+site_description: A modular quantum computing experiment library for the OQTOPUS platform
+site_url: https://orangekame3.github.io/oqtopus-experiments/
+repo_url: https://github.com/orangekame3/oqtopus-experiments
+repo_name: orangekame3/oqtopus-experiments
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: blue
+      accent: light blue
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: blue
+      accent: light blue
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.highlight
+    - search.share
+    - content.code.copy
+    - content.code.annotate
+
+plugins:
+  - search
+  - gen-files:
+      scripts:
+        - docs/gen_ref_pages.py
+        - docs/gen_experiment_docs.py
+  - literate-nav:
+      nav_file: SUMMARY.md
+  - section-index
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Installation: getting-started/installation.md
+    - Quick Start: getting-started/quickstart.md
+  - Experiments:
+    - Overview: experiments/index.md
+    - Rabi: experiments/rabi.md
+    - T1: experiments/t1.md
+    - T2 Echo: experiments/t2_echo.md
+    - CHSH: experiments/chsh.md
+    - Ramsey: experiments/ramsey.md
+    - Parity Oscillation: experiments/parity_oscillation.md
+    - CHSH Phase Scan: experiments/chsh_phase_scan.md
+  - Backends:
+    - Overview: backends/index.md
+    - OQTOPUS Backend: backends/oqtopus.md
+    - Local Backend: backends/local.md
+  - Examples:
+    - Overview: examples/index.md
+    - Real Hardware: examples/qpu.md
+    - Simulation: examples/simulation.md
+  - API Reference: reference/
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tabbed:
+      alternate_style: true
+  - attr_list
+  - md_in_html
+  - toc:
+      permalink: true
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/orangekame3/oqtopus-experiments
