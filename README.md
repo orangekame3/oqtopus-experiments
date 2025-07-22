@@ -47,7 +47,7 @@ print(df.head())
 ### Backends
 
 - **OqtopusBackend()**: Run on real quantum hardware via OQTOPUS platform
-- **LocalBackend(device="qulacs")**: Fast noiseless simulation
+- **OqtopusBackend(device="qulacs")**: Fast noiseless simulation
 - **LocalBackend(device="noisy")**: Realistic noisy simulation using Qiskit Aer
 
 ## Examples
@@ -58,7 +58,7 @@ See `docs/examples/` for comprehensive examples:
 # Real hardware
 python docs/examples/qpu/rabi.py
 
-# Noiseless simulation
+# Noiseless simulation (OQTOPUS with qulacs)
 python docs/examples/qulacs/rabi.py
 
 # Noisy simulation

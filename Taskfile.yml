@@ -30,3 +30,39 @@ tasks:
       - task: lint
       - task: mypy
     desc: "Run all fixes and checks"
+
+  docs-serve:
+    cmds:
+      - uv run mkdocs serve
+    desc: "Start local documentation server"
+
+  docs-build:
+    cmds:
+      - uv run mkdocs build --clean
+    desc: "Build documentation"
+
+  docs-build-strict:
+    cmds:
+      - uv run mkdocs build --clean --strict
+    desc: "Build documentation with strict mode"
+
+  docs-deploy:
+    cmds:
+      - uv run mkdocs gh-deploy --force
+    desc: "Deploy documentation to GitHub Pages"
+
+  docs-clean:
+    cmds:
+      - rm -rf site/
+    desc: "Clean built documentation"
+
+  docs-gen:
+    cmds:
+      - uv run python docs/gen_experiment_docs.py
+    desc: "Generate experiment documentation from source code"
+
+  docs:
+    cmds:
+      - task: docs-build
+      - task: docs-serve
+    desc: "Build and serve documentation locally"

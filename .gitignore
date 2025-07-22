@@ -65,3 +65,4 @@ data/raw/*.txt
 # Experiment results
 .results/
 .claude/
+site/
