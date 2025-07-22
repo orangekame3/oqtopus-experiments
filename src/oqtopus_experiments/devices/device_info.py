@@ -470,12 +470,14 @@ class DeviceInfo:
                     "colorscale": "RdYlGn",  # Red-Yellow-Green for intuitive fidelity mapping
                     "colorbar": {
                         "title": {
-                            "text": f"<b>{color_by.replace('_', ' ').title()}</b>",
+                            "text": f"<b>Node {color_by.replace('_', ' ').title()}</b>",
                             "font": {"size": 14}
                         },
                         "tickfont": {"size": 12},
-                        "len": 0.7,
+                        "len": 0.4,  # Shorter colorbar
                         "thickness": 15,
+                        "x": 1.02,  # Position to the right
+                        "y": 0.8,   # Position at top
                     },
                     "showscale": True,
                     "line": {"color": "black", "width": 3},  # Thicker border for larger nodes
@@ -559,12 +561,12 @@ class DeviceInfo:
             width=1000,
             legend={
                 "title": {
-                    "text": "<b>Coupling Gate Fidelity</b>",
+                    "text": "<b>Edge Coupling Fidelity</b>",
                     "font": {"size": 12}
                 },
                 "font": {"size": 11},
                 "x": 1.02,
-                "y": 0.5,
+                "y": 0.3,  # Position below the colorbar
                 "bgcolor": "rgba(255, 255, 255, 0.8)",
                 "bordercolor": "black",
                 "borderwidth": 1,
