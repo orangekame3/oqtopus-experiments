@@ -113,7 +113,7 @@ class CHSH(BaseExperiment):
 
         return df
 
-    def circuits(self, **kwargs: Any) -> list[Any]:
+    def circuits(self, **kwargs: Any) -> list["QuantumCircuit"]:
         """Generate CHSH circuits for sampling-based measurement"""
         circuits = []
 
@@ -167,9 +167,9 @@ class CHSH(BaseExperiment):
             # For now, keep circuits as-is for local simulation
             pass
 
-        return circuits  # type: ignore
+        return circuits
 
-    def run(self, backend, shots: int = 1024, theta: float = math.pi / 4, **kwargs):
+    def run(self, backend: Any, shots: int = 1024, theta: float = math.pi / 4, **kwargs: Any) -> Any:
         """
         Run CHSH experiment with specified theta angle
 
@@ -179,17 +179,17 @@ class CHSH(BaseExperiment):
             theta: Measurement angle for Alice (radians), default π/4 for optimal violation
             **kwargs: Additional arguments
         """
-        # Override circuits to use the specified theta
-        original_circuits = self.circuits
-        self.circuits = lambda **kw: original_circuits(theta=theta, **kw)
-
+        # Store theta temporarily for use in circuits method
+        original_theta = self.theta
+        self.theta = theta
+        
         try:
             # Use BaseExperiment's run method
             result = super().run(backend=backend, shots=shots, **kwargs)
             return result
         finally:
-            # Restore original circuits method
-            self.circuits = original_circuits
+            # Restore original theta
+            self.theta = original_theta
 
     def _analyze_chsh_data(
         self, all_results: list[dict[str, Any]]

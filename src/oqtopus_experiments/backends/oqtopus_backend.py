@@ -35,13 +35,14 @@ class OqtopusBackend:
         self.backend_type = "oqtopus"
         self.device_name = device
         self.timeout_seconds = timeout_seconds
-        self._device_info = None
+        self._device_info: Any = None
 
         # Try to initialize OQTOPUS
         try:
             from quri_parts_oqtopus.backend import OqtopusSamplingBackend
 
-            self.backend = OqtopusSamplingBackend()
+            backend_instance = OqtopusSamplingBackend()
+            self.backend: Any = backend_instance
             self.available = True
             print(
                 f"OQTOPUS backend initialized (device: {device}, timeout: {timeout_seconds}s)"
@@ -55,7 +56,7 @@ class OqtopusBackend:
         self._device_info_loaded = False
 
     def run(
-        self, circuit: Any, shots: int = 1024, circuit_params: dict[str, Any] = None
+        self, circuit: Any, shots: int = 1024, circuit_params: dict[str, Any] | None = None
     ) -> dict[str, Any]:
         """
         Run circuit on OQTOPUS backend
@@ -139,7 +140,7 @@ class OqtopusBackend:
                                     f"✅ OQTOPUS job completed successfully (status: {status})"
                                 )
                                 return {
-                                    "counts": self._normalize_counts(dict(counts)),
+                                    "counts": self._normalize_counts({str(k): int(v) for k, v in counts.items()}),
                                     "job_id": job.job_id,
                                     "shots": shots,
                                     "backend": "oqtopus",
@@ -174,7 +175,7 @@ class OqtopusBackend:
 
                                 print(f"OQTOPUS job completed (status: {status})")
                                 return {
-                                    "counts": self._normalize_counts(dict(counts)),
+                                    "counts": self._normalize_counts({str(k): int(v) for k, v in counts.items()}),
                                     "job_id": job.job_id,
                                     "shots": shots,
                                     "backend": "oqtopus",
@@ -308,7 +309,7 @@ class OqtopusBackend:
         else:
             print(f"Device information not available for {self.device_name}")
 
-    def save_device_info(self, filename: str = None) -> str:
+    def save_device_info(self, filename: str | None = None) -> str:
         """
         Save device information to file (usage.py style)
 
@@ -319,7 +320,7 @@ class OqtopusBackend:
             Path to saved file
         """
         if self.device and self.device.available:
-            return self.device.save_data(filename)
+            return str(self.device.save_data(filename))
         else:
             error_msg = f"❌ Device information not available for {self.device_name}"
             print(error_msg)
@@ -356,7 +357,7 @@ class OqtopusBackend:
     def transpile(
         self,
         circuits: Any | list[Any] | CircuitCollection,
-        physical_qubits: list[int] = None,
+        physical_qubits: list[int] | None = None,
         optimization_level: int = 1,
         **kwargs,
     ) -> Any | list[Any] | CircuitCollection:
@@ -383,8 +384,8 @@ class OqtopusBackend:
 
         if single_circuit:
             circuits = [circuits]
-        elif circuit_collection_input:
-            circuits = circuits.to_list()
+        elif circuit_collection_input and hasattr(circuits, 'to_list'):
+            circuits = circuits.to_list()  # type: ignore
 
         # Get physical qubits
         if physical_qubits is None:
@@ -459,9 +460,9 @@ class OqtopusBackend:
         self,
         circuits: Any,
         shots: int = 1024,
-        circuit_params: list[dict] = None,
+        circuit_params: list[dict] | None = None,
         disable_transpilation: bool = False,
-    ) -> list[str]:
+    ) -> list[str | None]:
         """
         Submit circuits in parallel to OQTOPUS cloud with parameter tracking
 
@@ -499,7 +500,7 @@ class OqtopusBackend:
 
                     # Configure transpiler based on disable_transpilation flag
                     if disable_transpilation:
-                        transpiler_info = {"transpiler_lib": None}
+                        transpiler_info: dict[str, Any] = {"transpiler_lib": None}
                         print(
                             f"Circuit {index + 1}: physical qubit specified, disabling OQTOPUS transpilation"
                         )
@@ -528,7 +529,7 @@ class OqtopusBackend:
                     return index, None
 
             # Submit circuits in parallel with parameters
-            job_ids = [None] * len(circuits)
+            job_ids: list[str | None] = [None] * len(circuits)
 
             with ThreadPoolExecutor(max_workers=4) as executor:
                 # Create circuit-params-index tuples
@@ -636,7 +637,7 @@ class OqtopusBackend:
                                         )
                                         return idx, {
                                             "counts": self._normalize_counts(
-                                                dict(counts)
+                                                {str(k): int(v) for k, v in counts.items()}
                                             ),
                                             "job_id": job_id,
                                             "shots": sum(counts.values()),
@@ -709,7 +710,7 @@ class OqtopusBackend:
                                         )
                                         return idx, {
                                             "counts": self._normalize_counts(
-                                                dict(counts)
+                                                {str(k): int(v) for k, v in counts.items()}
                                             ),
                                             "job_id": job_id,
                                             "shots": sum(counts.values()),
@@ -758,7 +759,7 @@ class OqtopusBackend:
             print("Collecting results from OQTOPUS...")
 
             # First collection attempt
-            results = [None] * len(job_ids)
+            results: list[dict[Any, Any]] = [{}] * len(job_ids)
             with ThreadPoolExecutor(max_workers=4) as executor:
                 future_to_job = {
                     executor.submit(collect_single_job, (job_id, i)): i
@@ -781,7 +782,7 @@ class OqtopusBackend:
 
             # Check for retryable failures
             if retry_failed:
-                retry_indices = []
+                retry_indices: list[int] = []
                 for i, result in enumerate(results):
                     if result and result.get("status") in [
                         "timeout",
@@ -827,9 +828,9 @@ class OqtopusBackend:
             # Only raise error if there are permanently failed jobs
             if failed_count > 0:
                 failed_jobs = [
-                    (i, r.get("error", "unknown"))
+                    (i, r.get("error", "unknown") if r is not None else "unknown")
                     for i, r in enumerate(results)
-                    if r and r.get("status") == "failed"
+                    if r is not None and r.get("status") == "failed"
                 ]
                 print(f"{failed_count} jobs permanently failed:")
                 for job_idx, error in failed_jobs:

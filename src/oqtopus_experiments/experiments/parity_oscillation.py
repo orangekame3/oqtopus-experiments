@@ -242,7 +242,7 @@ class ParityOscillation(BaseExperiment):
                     binary_key = str(key)
                 binary_counts[binary_key] = count
         else:
-            binary_counts = counts
+            binary_counts = {str(k): v for k, v in counts.items()}
 
         for bitstring, count in binary_counts.items():
             # Ensure string format
@@ -594,7 +594,7 @@ class ParityOscillation(BaseExperiment):
             print(f"Plot creation failed: {e}")
 
     def save_experiment_data(
-        self, results: dict[str, Any], metadata: dict[str, Any] = None
+        self, results: dict[str, Any], metadata: dict[str, Any] | None = None, experiment_type: str | None = None
     ) -> str:
         """
         Save parity oscillation experiment data
@@ -768,7 +768,7 @@ class ParityOscillation(BaseExperiment):
         return plot_filename
 
     def create_plots(
-        self, analysis_results: dict[str, Any], save_dir: str = None
+        self, analysis_results: dict[str, Any], save_dir: str | None = None
     ) -> None:
         """
         Create plots for parity oscillation experiment results (legacy method)

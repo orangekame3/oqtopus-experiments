@@ -90,7 +90,7 @@ class ExperimentDataManager:
     def save_results(
         self,
         results: dict[str, Any],
-        metadata: dict[str, Any] = None,
+        metadata: dict[str, Any] | None = None,
         experiment_type: str = "generic",
     ) -> str:
         """

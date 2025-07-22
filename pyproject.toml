@@ -132,7 +132,29 @@ disallow_untyped_defs = false
 disallow_incomplete_defs = false
 check_untyped_defs = true
 disallow_untyped_decorators = false
-no_implicit_optional = true
+
+# External libraries that don't have stubs
+[[tool.mypy.overrides]]
+module = [
+    "pandas.*",
+    "pandas-stubs.*", 
+    "scipy.*",
+    "scipy-stubs.*",
+    "qiskit.*",
+    "qiskit_aer.*",
+    "plotly.*",
+    "rich.*",
+    "tranqu.*",
+    "quri_parts_oqtopus.*"
+]
+ignore_missing_imports = true
+
+# Exclude workspace scripts that use removed CLI
+[[tool.mypy.overrides]]
+module = [
+    "workspace.*"
+]
+ignore_errors = true
 
 [tool.pytest.ini_options]
 minversion = "6.0"

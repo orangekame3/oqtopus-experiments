@@ -96,7 +96,7 @@ class Rabi(BaseExperiment):
 
         return df
 
-    def circuits(self, **kwargs: Any) -> list[Any]:
+    def circuits(self, **kwargs: Any) -> list["QuantumCircuit"]:
         """Generate Rabi circuits with automatic transpilation"""
         amplitudes = np.linspace(0, self.max_amplitude, self.amplitude_points)
         circuits = []
@@ -124,7 +124,7 @@ class Rabi(BaseExperiment):
                 circuits, 0, self.physical_qubit
             )
 
-        return circuits  # type: ignore
+        return circuits
 
     def _fit_rabi_data(
         self, all_results: list[dict[str, Any]]

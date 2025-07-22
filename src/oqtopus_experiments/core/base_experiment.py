@@ -34,7 +34,14 @@ class BaseExperiment(ABC):
             experiment_name or f"{self.__class__.__name__.lower()}_{int(time.time())}"
         )
         self.data_manager = ExperimentDataManager(self.experiment_name)
-
+        
+        # Initialize optional attributes used by save methods
+        self.transpiler_options: dict[str, Any] = {}
+        self.mitigation_options: dict[str, Any] = {}  
+        self.anemone_basis_gates: list[str] = []
+        self.oqtopus_available: bool = False
+        self.experiment_params: dict[str, Any] = {}
+        
         print(f"{self.__class__.__name__}: {self.experiment_name}")
 
     # Abstract methods: implemented in each experiment class
@@ -72,7 +79,7 @@ class BaseExperiment(ABC):
     def save_job_ids(
         self,
         job_ids: dict[str, list[str]],
-        metadata: dict[str, Any] = None,
+        metadata: dict[str, Any] | None = None,
         filename: str = "job_ids",
     ) -> str:
         """Save job IDs"""
@@ -92,7 +99,7 @@ class BaseExperiment(ABC):
     def save_raw_results(
         self,
         results: dict[str, Any],
-        metadata: dict[str, Any] = None,
+        metadata: dict[str, Any] | None = None,
         filename: str = "raw_results",
     ) -> str:
         """Save raw results"""
@@ -376,51 +383,6 @@ class BaseExperiment(ABC):
             experiment_type=self.__class__.__name__.lower().replace("experiment", ""),
         )
 
-    def _auto_transpile_if_needed(self, circuits, backend):
-        """
-        Auto-transpile circuits if physical qubit is specified and differs from logical
-
-        Args:
-            circuits: Circuit collection or list
-            backend: Backend instance
-
-        Returns:
-            Tuple of (circuits, was_transpiled)
-            - circuits: Transpiled circuits if needed, otherwise original circuits
-            - was_transpiled: Boolean indicating if transpilation occurred
-        """
-        # Check if physical qubit was explicitly specified
-        if (
-            hasattr(self, "_physical_qubit_specified")
-            and self._physical_qubit_specified
-        ):
-            physical_qubit = self.experiment_params.get("physical_qubit")
-            logical_qubit = self.experiment_params.get("logical_qubit", 0)
-        else:
-            # No explicit physical qubit - let OQTOPUS handle transpilation
-            return circuits, False
-
-        # Transpile if physical qubit was explicitly specified
-        if physical_qubit is not None:
-            if hasattr(backend, "transpile"):
-                print(
-                    f"Auto-transpiling circuits: logical qubit {logical_qubit} → physical qubit {physical_qubit}"
-                )
-                try:
-                    transpiled = backend.transpile(
-                        circuits, physical_qubits=[physical_qubit]
-                    )
-                    print("Transpilation successful")
-                    return transpiled, True
-                except Exception as e:
-                    print(f"Transpilation failed: {e}, using original circuits")
-                    return circuits, False
-            else:
-                print("Backend does not support transpilation, using original circuits")
-                return circuits, False
-
-        return circuits, False
-
     def _should_disable_transpilation(self) -> bool:
         """
         Check if OQTOPUS transpilation should be disabled
@@ -429,7 +391,7 @@ class BaseExperiment(ABC):
         """
         # Check if experiment has explicit physical qubit specification
         if hasattr(self, "_physical_qubit_specified"):
-            return self._physical_qubit_specified
+            return bool(self._physical_qubit_specified)
 
         # Fallback: check experiment params (legacy compatibility)
         if not hasattr(self, "experiment_params") or not self.experiment_params:

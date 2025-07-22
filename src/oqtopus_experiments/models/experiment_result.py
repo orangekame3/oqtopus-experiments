@@ -58,9 +58,9 @@ class ExperimentResult:
         # Save results if requested (DataFrame is easily serializable)
         if save_data:
             try:
-                if hasattr(self.experiment, "save_experiment_data") and hasattr(
-                    self._analyzed_results, "to_dict"
-                ):
+                if (hasattr(self.experiment, "save_experiment_data") 
+                    and self._analyzed_results is not None
+                    and hasattr(self._analyzed_results, "to_dict")):
                     # DataFrame to dict conversion for clean JSON storage
                     saved_path = self.experiment.save_experiment_data(
                         self._analyzed_results.to_dict(orient="records"),
@@ -81,7 +81,7 @@ class ExperimentResult:
     def results(self) -> pd.DataFrame:
         """Get analyzed results (lazy evaluation)"""
         if self._analyzed_results is None:
-            self.analyze(save_data=False)
+            self._analyzed_results = self.analyze(save_data=False)
         return self._analyzed_results
 
     def __repr__(self) -> str:
