@@ -321,7 +321,6 @@ class DeviceInfo:
     def plot_layout(
         self,
         color_by: str = "fidelity",
-        size_by: str = "fidelity",
         show_edges: bool = True,
         renderer: str = "browser",
     ):
@@ -352,26 +351,37 @@ class DeviceInfo:
                 if src in pos and tgt in pos:
                     x0, y0 = pos[src]
                     x1, y1 = pos[tgt]
+                    
+                    # Get coupling properties
+                    fidelity = c.get("fidelity", "N/A")
+                    duration_ns = c.get("duration_ns", "N/A")
+                    
+                    # Create hover text with coupling information
+                    hover_text = (
+                        f"Coupling: {src} → {tgt}<br>"
+                        f"Control: {src}<br>"
+                        f"Target: {tgt}<br>"
+                        f"Fidelity: {fidelity:.4f}<br>" if isinstance(fidelity, (int, float)) else f"Fidelity: {fidelity}<br>"
+                        f"Duration: {duration_ns} ns" if isinstance(duration_ns, (int, float)) else f"Duration: {duration_ns}"
+                    )
+                    
                     fig_data.append(
                         go.Scatter(
                             x=[x0, x1],
                             y=[y0, y1],
                             mode="lines",
-                            line={"color": "lightgray", "width": 1},
-                            hoverinfo="skip",
+                            line={"color": "lightgray", "width": 2},
+                            hoverinfo="text",
+                            hovertext=hover_text,
                             showlegend=False,
                         )
                     )
 
         # Add qubit nodes
         color_values = df[color_by]
-        size_values = df[size_by] if size_by in df.columns else df["fidelity"]
 
-        # Normalize sizes for better visualization
-        size_values = (size_values - size_values.min()) / (
-            size_values.max() - size_values.min()
-        )
-        sizes = 8 + size_values * 12  # Scale to 8-20
+        # Use fixed size for all nodes
+        fixed_size = 15
 
         fig_data.append(
             go.Scatter(
@@ -379,7 +389,7 @@ class DeviceInfo:
                 y=df["y"],
                 mode="markers+text",
                 marker={
-                    "size": sizes,
+                    "size": fixed_size,
                     "color": color_values,
                     "colorscale": "Viridis",
                     "colorbar": {"title": color_by.replace("_", " ").title()},

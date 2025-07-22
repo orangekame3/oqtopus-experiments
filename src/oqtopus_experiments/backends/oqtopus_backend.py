@@ -296,16 +296,15 @@ class OqtopusBackend:
             print(f"Device information not available for {self.device_name}")
             return None
 
-    def plot_device_layout(self, color_by: str = "fidelity", show_edges: bool = True):
+    def plot_device_layout(self, color_by: str = "fidelity"):
         """
         Plot device layout (usage.py style)
 
         Args:
             color_by: Property to color qubits by
-            show_edges: Whether to show coupling edges
         """
         if self.device and self.device.available:
-            self.device.plot_layout(color_by=color_by, show_edges=show_edges)
+            self.device.plot_layout(color_by=color_by, show_edges=True)
         else:
             print(f"Device information not available for {self.device_name}")
 
