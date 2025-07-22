@@ -21,7 +21,7 @@ from oqtopus_experiments.backends import LocalBackend, OqtopusBackend
 from oqtopus_experiments.experiments import Rabi
 
 # Choose your backend
-backend = OqtopusBackend()  # Real hardware
+backend = OqtopusBackend(device="anemone")  # Real hardware
 # backend = LocalBackend(device="qulacs")  # Noiseless simulation
 # backend = LocalBackend(device="noisy")   # Noisy simulation
 
@@ -39,14 +39,14 @@ df = result.analyze(plot=True, save_data=True)
 
 ## Available Experiments
 
-| Experiment | Purpose | Description |
-|-----------|---------|-------------|
-| **Rabi** | Qubit Calibration | Measure Rabi oscillations for π-pulse calibration |
-| **T1** | Relaxation Time | Characterize qubit energy decay time |
-| **T2 Echo** | Coherence Time | Measure dephasing time with echo sequences |
-| **CHSH** | Entanglement | Bell inequality tests for quantum correlations |
-| **Ramsey** | Frequency Measurement | Precision qubit frequency characterization |
-| **Parity Oscillation** | Decoherence Studies | Multi-qubit GHZ state evolution |
+| Experiment             | Purpose               | Description                                       |
+| ---------------------- | --------------------- | ------------------------------------------------- |
+| **Rabi**               | Qubit Calibration     | Measure Rabi oscillations for π-pulse calibration |
+| **T1**                 | Relaxation Time       | Characterize qubit energy decay time              |
+| **T2 Echo**            | Coherence Time        | Measure dephasing time with echo sequences        |
+| **CHSH**               | Entanglement          | Bell inequality tests for quantum correlations    |
+| **Ramsey**             | Frequency Measurement | Precision qubit frequency characterization        |
+| **Parity Oscillation** | Decoherence Studies   | Multi-qubit GHZ state evolution                   |
 
 ## Next Steps
 

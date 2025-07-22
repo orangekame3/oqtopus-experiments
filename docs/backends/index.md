@@ -10,7 +10,7 @@ OQTOPUS Experiments supports multiple execution backends, allowing you to run th
 ```python
 from oqtopus_experiments.backends import OqtopusBackend
 
-backend = OqtopusBackend()
+backend = OqtopusBackend(device="anemone")
 ```
 
 - **Use case**: Production experiments, real hardware characterization
@@ -22,7 +22,7 @@ backend = OqtopusBackend()
 **Fast, noiseless quantum simulation**
 
 ```python
-backend = LocalBackend(device="qulacs")
+backend = OqtopusBackend(device="qulacs")
 ```
 
 - **Use case**: Algorithm development, ideal case studies
@@ -69,17 +69,17 @@ Write your experiments once and run them anywhere:
 ```python
 def run_characterization(backend, qubit=0):
     """Run complete qubit characterization on any backend."""
-    
+
     # Rabi calibration
     rabi = Rabi(physical_qubit=qubit, amplitude_points=20, max_amplitude=2.0)
     rabi_result = rabi.run(backend=backend, shots=1000)
     rabi_df = rabi_result.analyze(plot=True)
-    
+
     # T1 measurement
     t1 = T1(physical_qubit=qubit, delay_points=15, max_delay=50000.0)
     t1_result = t1.run(backend=backend, shots=1000)
     t1_df = t1_result.analyze(plot=True)
-    
+
     return {
         'pi_amplitude': rabi_df['pi_amplitude'].iloc[0],
         't1_time': t1_df['t1_time'].iloc[0] if 't1_time' in t1_df.columns else None,
@@ -102,17 +102,17 @@ for name, backend in backends.items():
 
 ### Execution Speed
 - **Qulacs**: Microseconds per circuit
-- **Noisy**: Seconds per circuit  
+- **Noisy**: Seconds per circuit
 - **OQTOPUS**: Minutes per circuit (including queue time)
 
 ### Parallel Execution
 ```python
 # Automatic parallelization for OQTOPUS
-backend = OqtopusBackend()
+backend = OqtopusBackend(device="anemone")
 result = exp.run(backend=backend, shots=1000)  # Circuits submitted in parallel
 
 # Sequential execution for local backends
-backend = LocalBackend(device="qulacs")
+backend = LocalBackend(device="noisy")
 result = exp.run(backend=backend, shots=1000)  # Fast enough to be sequential
 ```
 
