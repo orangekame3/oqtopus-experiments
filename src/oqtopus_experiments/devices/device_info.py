@@ -369,16 +369,16 @@ class DeviceInfo:
                 fidelity = c.get("fidelity", 0.0)
                 duration_ns = c.get("duration_ns", "N/A")
                 
-                # Color-code edge based on fidelity (red=low, green=high)
+                # Color-code edge based on fidelity (red=low, green=high) with thicker lines
                 if fidelity >= 0.95:
                     edge_color = "rgba(34, 139, 34, 0.8)"  # Green for high fidelity
-                    edge_width = 3
+                    edge_width = 6  # Much thicker for better visibility
                 elif fidelity >= 0.90:
                     edge_color = "rgba(255, 165, 0, 0.8)"  # Orange for medium fidelity
-                    edge_width = 2.5
+                    edge_width = 5
                 else:
                     edge_color = "rgba(220, 20, 60, 0.8)"  # Red for low fidelity
-                    edge_width = 2
+                    edge_width = 4
                 
                 # Create hover text with coupling information
                 hover_text = (
@@ -418,7 +418,7 @@ class DeviceInfo:
                     text_x = mid_x + offset * np.sin(angle)
                     text_y = mid_y - offset * np.cos(angle)
                     
-                    # Add white background text for better contrast
+                    # Add text directly on the edge without background circle
                     fig_data.append(
                         go.Scatter(
                             x=[text_x],
@@ -427,26 +427,8 @@ class DeviceInfo:
                             text=[f"{fidelity:.3f}"],
                             textposition="middle center",
                             textfont={
-                                "size": 11,
+                                "size": 12,
                                 "color": "white",
-                                "family": "Arial Bold",
-                            },
-                            showlegend=False,
-                            hoverinfo="skip",
-                        )
-                    )
-                    
-                    # Add black text on top for better readability
-                    fig_data.append(
-                        go.Scatter(
-                            x=[text_x],
-                            y=[text_y],
-                            mode="text",
-                            text=[f"{fidelity:.3f}"],
-                            textposition="middle center",
-                            textfont={
-                                "size": 10,
-                                "color": "black",
                                 "family": "Arial Bold",
                             },
                             showlegend=False,
@@ -457,14 +439,14 @@ class DeviceInfo:
         # Add qubit nodes
         color_values = df[color_by]
 
-        # Enhanced node appearance
+        # Enhanced node appearance with larger size
         fig_data.append(
             go.Scatter(
                 x=df["x"],
                 y=df["y"],
                 mode="markers+text",
                 marker={
-                    "size": 28,  # Larger for better text readability
+                    "size": 40,  # Much larger for better text accommodation
                     "color": color_values,
                     "colorscale": "RdYlGn",  # Red-Yellow-Green for intuitive fidelity mapping
                     "colorbar": {
@@ -477,13 +459,13 @@ class DeviceInfo:
                         "thickness": 15,
                     },
                     "showscale": True,
-                    "line": {"color": "black", "width": 2},  # Black border for better contrast
+                    "line": {"color": "black", "width": 3},  # Thicker border for larger nodes
                     "opacity": 0.9,
                 },
-                text=[f"{row['id']}<br><sub>{row['fidelity']:.3f}</sub>" for _, row in df.iterrows()],
+                text=[f"{int(row['id'])}<br><span style='font-size:10px'>{row['fidelity']:.3f}</span>" for _, row in df.iterrows()],
                 textposition="middle center",
                 textfont={
-                    "size": 12, 
+                    "size": 14, 
                     "color": "white", 
                     "family": "Arial Black"
                 },
@@ -507,21 +489,21 @@ class DeviceInfo:
             go.Scatter(
                 x=[None], y=[None],
                 mode="lines",
-                line={"color": "rgba(34, 139, 34, 0.8)", "width": 3},
+                line={"color": "rgba(34, 139, 34, 0.8)", "width": 6},
                 name="High Fidelity (≥0.95)",
                 showlegend=True,
             ),
             go.Scatter(
                 x=[None], y=[None],
                 mode="lines", 
-                line={"color": "rgba(255, 165, 0, 0.8)", "width": 2.5},
+                line={"color": "rgba(255, 165, 0, 0.8)", "width": 5},
                 name="Medium Fidelity (0.90-0.95)",
                 showlegend=True,
             ),
             go.Scatter(
                 x=[None], y=[None],
                 mode="lines",
-                line={"color": "rgba(220, 20, 60, 0.8)", "width": 2},
+                line={"color": "rgba(220, 20, 60, 0.8)", "width": 4},
                 name="Low Fidelity (<0.90)",
                 showlegend=True,
             ),
