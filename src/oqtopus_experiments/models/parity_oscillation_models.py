@@ -67,18 +67,20 @@ class ParityOscillationAnalysisResult(BaseModel):
     coherence_matrix: dict[str, float] = Field(
         description="Coherence C(N,τ) for all combinations"
     )
-    max_coherence: float = Field(description="Maximum coherence across all measurements")
+    max_coherence: float = Field(
+        description="Maximum coherence across all measurements"
+    )
     decoherence_rates: dict[int, float] = Field(
         description="Decoherence rates γ for each qubit count"
     )
 
     def get_num_qubits_list(self) -> list[int]:
         """Get list of unique qubit counts"""
-        return sorted(list(set(point.num_qubits for point in self.measurement_points)))
+        return sorted({point.num_qubits for point in self.measurement_points})
 
     def get_delays_list(self) -> list[float]:
         """Get list of unique delay times"""
-        return sorted(list(set(point.delay_us for point in self.measurement_points)))
+        return sorted({point.delay_us for point in self.measurement_points})
 
     def get_coherence_for_qubits(self, num_qubits: int) -> dict[float, float]:
         """Get coherence vs delay for specific qubit count"""
@@ -102,9 +104,13 @@ class ParityOscillationCircuitParams(BaseModel):
 class ParityOscillationExperimentResult(BaseModel):
     """Complete experiment result for Parity Oscillation"""
 
-    analysis_result: ParityOscillationAnalysisResult = Field(description="Analysis results")
+    analysis_result: ParityOscillationAnalysisResult = Field(
+        description="Analysis results"
+    )
     dataframe: Any = Field(description="Results as pandas DataFrame")
-    metadata: dict[str, Any] = Field(default_factory=dict, description="Experiment metadata")
+    metadata: dict[str, Any] = Field(
+        default_factory=dict, description="Experiment metadata"
+    )
 
     class Config:
         arbitrary_types_allowed = True

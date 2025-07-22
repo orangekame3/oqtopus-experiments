@@ -128,7 +128,7 @@ class CHSH(BaseExperiment):
             ("XX", True, True),  # H gates on both qubits
         ]
 
-        for basis_name, alice_x, bob_x in measurement_bases:
+        for _basis_name, alice_x, bob_x in measurement_bases:
             qc = QuantumCircuit(2, 2)
 
             # Create Bell state |Φ+⟩ = (|00⟩ + |11⟩)/√2
@@ -338,7 +338,6 @@ class CHSH(BaseExperiment):
             from plotly.subplots import make_subplots
 
             from ..utils.visualization import (
-                apply_experiment_layout,
                 get_experiment_colors,
                 get_plotly_config,
                 save_plotly_figure,
@@ -368,7 +367,7 @@ class CHSH(BaseExperiment):
                 go.Bar(
                     x=settings,
                     y=correlations,
-                    error_y=dict(type="data", array=errors),
+                    error_y={"type": "data", "array": errors},
                     name="Correlations",
                     marker_color=colors[1],
                     showlegend=False,
@@ -390,7 +389,7 @@ class CHSH(BaseExperiment):
                 go.Bar(
                     x=chsh_categories,
                     y=chsh_values,
-                    error_y=dict(type="data", array=[0, analysis.chsh_std_error, 0]),
+                    error_y={"type": "data", "array": [0, analysis.chsh_std_error, 0]},
                     name="CHSH Comparison",
                     marker_color=chsh_colors,
                     showlegend=False,
@@ -428,7 +427,7 @@ class CHSH(BaseExperiment):
                 xref="paper",
                 yref="paper",
                 showarrow=False,
-                font=dict(size=12, color=violation_color),
+                font={"size": 12, "color": violation_color},
                 bgcolor="rgba(255,255,255,0.9)",
                 bordercolor=violation_color,
                 borderwidth=2,
@@ -494,7 +493,7 @@ class CHSH(BaseExperiment):
         physical_qubit_1 = self.experiment_params.get("physical_qubit_1", 1)
 
         circuit_params = []
-        for i, (basis_name, alice_x, bob_x) in enumerate(measurement_bases):
+        for i, (basis_name, _alice_x, _bob_x) in enumerate(measurement_bases):
             param_model = CHSHCircuitParams(
                 measurement_setting=basis_name,
                 alice_angle=theta,  # Single angle parameter

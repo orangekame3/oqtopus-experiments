@@ -51,7 +51,7 @@ class T2Echo(BaseExperiment):
         results: dict[str, list[dict[str, Any]]],
         plot: bool = True,
         save_data: bool = True,
-        save_image: bool = True
+        save_image: bool = True,
     ) -> pd.DataFrame:
         """Analyze T2 Echo results with simplified single-result processing"""
 
@@ -84,7 +84,10 @@ class T2Echo(BaseExperiment):
         analysis_result = T2EchoAnalysisResult(
             fitting_result=fitting_result,
             dataframe=df,
-            metadata={"experiment_type": "t2_echo", "physical_qubit": self.physical_qubit},
+            metadata={
+                "experiment_type": "t2_echo",
+                "physical_qubit": self.physical_qubit,
+            },
         )
 
         # Optional actions
@@ -106,19 +109,19 @@ class T2Echo(BaseExperiment):
 
         for delay in delay_times:
             qc = QuantumCircuit(1, 1)
-            qc.ry(np.pi/2, 0)  # First π/2 pulse (creates superposition)
+            qc.ry(np.pi / 2, 0)  # First π/2 pulse (creates superposition)
 
             # First half of the delay
             if delay > 0:
-                qc.delay(delay/2, 0, unit="ns")  # τ/2 delay
+                qc.delay(delay / 2, 0, unit="ns")  # τ/2 delay
 
             qc.x(0)  # π pulse (echo pulse)
 
             # Second half of the delay
             if delay > 0:
-                qc.delay(delay/2, 0, unit="ns")  # τ/2 delay
+                qc.delay(delay / 2, 0, unit="ns")  # τ/2 delay
 
-            qc.ry(np.pi/2, 0)  # Second π/2 pulse (analysis pulse)
+            qc.ry(np.pi / 2, 0)  # Second π/2 pulse (analysis pulse)
             qc.measure(0, 0)  # Measure final state
             circuits.append(qc)
 
@@ -267,7 +270,9 @@ class T2Echo(BaseExperiment):
         ss_tot = np.sum((probabilities - np.mean(probabilities)) ** 2)
         return 1 - (ss_res / ss_tot) if ss_tot > 0 else 0
 
-    def _create_dataframe(self, fitting_result: T2EchoFittingResult, device_name: str = "unknown") -> pd.DataFrame:
+    def _create_dataframe(
+        self, fitting_result: T2EchoFittingResult, device_name: str = "unknown"
+    ) -> pd.DataFrame:
         """Create DataFrame from fitting results"""
         df_data = []
         for delay, prob in zip(
@@ -332,11 +337,11 @@ class T2Echo(BaseExperiment):
 
             # Fit curve
             if not result.error_info:
-                x_fine = np.linspace(df["delay_time"].min(), df["delay_time"].max(), 200)
+                x_fine = np.linspace(
+                    df["delay_time"].min(), df["delay_time"].max(), 200
+                )
                 y_fine = (
-                    result.amplitude
-                    * np.exp(-x_fine / result.t2_time)
-                    + result.offset
+                    result.amplitude * np.exp(-x_fine / result.t2_time) + result.offset
                 )
 
                 fig.add_trace(
@@ -367,11 +372,11 @@ class T2Echo(BaseExperiment):
                 fig.add_annotation(
                     x=0.98,
                     y=0.02,
-                    text=f"Device: {device_name}<br>T₂ = {result.t2_time:.1f} ns ({result.t2_time/1000:.2f} μs)<br>R² = {result.r_squared:.3f}",
+                    text=f"Device: {device_name}<br>T₂ = {result.t2_time:.1f} ns ({result.t2_time / 1000:.2f} μs)<br>R² = {result.r_squared:.3f}",
                     xref="paper",
                     yref="paper",
                     showarrow=False,
-                    font=dict(size=10, color="#666666"),
+                    font={"size": 10, "color": "#666666"},
                     bgcolor="rgba(255,255,255,0.9)",
                     bordercolor="#CCCCCC",
                     borderwidth=1,

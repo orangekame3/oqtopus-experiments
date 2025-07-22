@@ -119,7 +119,7 @@ class LocalBackend:
                 if instruction.operation.name == "delay":
                     return True
             return False
-        except:
+        except Exception:
             return False
 
     def _get_delay_time_ns(self, circuit: Any) -> float:
@@ -150,7 +150,7 @@ class LocalBackend:
                         # Fallback: assume nanoseconds
                         total_delay += float(delay_op.params[0])
             return total_delay
-        except:
+        except Exception:
             return 0.0
 
     def _create_coherence_noise_model(self, delay_time_ns: float) -> "NoiseModel":
@@ -200,7 +200,9 @@ class LocalBackend:
 
         return noise_model
 
-    def run(self, circuit: Any, shots: int = 1024, circuit_params: dict[str, Any] = None) -> dict[str, Any]:
+    def run(
+        self, circuit: Any, shots: int = 1024, circuit_params: dict[str, Any] = None
+    ) -> dict[str, Any]:
         """
         Run circuit on local simulator
 

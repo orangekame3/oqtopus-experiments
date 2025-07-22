@@ -28,15 +28,17 @@ def setup_plotly_environment():
         pass
 
 
-def get_plotly_config(filename: str = "experiment", width: int = 600, height: int = 300) -> dict[str, Any]:
+def get_plotly_config(
+    filename: str = "experiment", width: int = 600, height: int = 300
+) -> dict[str, Any]:
     """
     Get standard plotly configuration for experiments
-    
+
     Args:
         filename: Base filename for image export
         width: Image width for export
         height: Image height for export
-        
+
     Returns:
         Plotly configuration dictionary
     """
@@ -57,7 +59,7 @@ def get_plotly_config(filename: str = "experiment", width: int = 600, height: in
 def get_experiment_colors() -> list[str]:
     """
     Get standard color palette for experiment plots
-    
+
     Returns:
         List of hex color codes
     """
@@ -84,7 +86,7 @@ def save_plotly_figure(
 ) -> str | None:
     """
     Save plotly figure as image file with automatic naming
-    
+
     Args:
         fig: Plotly figure object
         name: Base name for the image file
@@ -93,7 +95,7 @@ def save_plotly_figure(
         width: Image width in pixels
         height: Image height in pixels
         scale: Scale factor for image resolution
-        
+
     Returns:
         Path to saved image file, or None if saving failed
     """
@@ -137,7 +139,7 @@ def save_plotly_figure(
 def show_plotly_figure(fig, config: dict[str, Any] | None = None):
     """
     Display plotly figure with fallback options
-    
+
     Args:
         fig: Plotly figure object
         config: Optional plotly configuration
@@ -148,7 +150,7 @@ def show_plotly_figure(fig, config: dict[str, Any] | None = None):
 
         iplot(fig)
         print("Interactive plot displayed inline (iplot)")
-    except:
+    except Exception:
         # Fallback to show() with proper renderer and config
         fig.show(config=config or {})
         print("Interactive plot created with plotly (show)")
@@ -164,7 +166,7 @@ def apply_experiment_layout(
 ):
     """
     Apply standard layout settings for experiment plots
-    
+
     Args:
         fig: Plotly figure object
         title: Plot title
@@ -176,30 +178,30 @@ def apply_experiment_layout(
     colors = get_experiment_colors()
 
     fig.update_layout(
-        title=dict(
-            text=title,
-            font=dict(size=16, color="#2C3E50"),
-            x=0.5,
-        ),
+        title={
+            "text": title,
+            "font": {"size": 16, "color": "#2C3E50"},
+            "x": 0.5,
+        },
         xaxis_title=xaxis_title,
         yaxis_title=yaxis_title,
         height=height,
         width=width,
         showlegend=True,
         hovermode="closest",
-        font=dict(size=12, color="#2C3E50"),
+        font={"size": 12, "color": "#2C3E50"},
         plot_bgcolor="white",
         paper_bgcolor="white",
         template=None,  # Disable template to avoid default colors
         colorway=colors,  # Use experiment color palette
-        margin=dict(l=70, r=40, t=70, b=60),  # Better margins for labels
-        legend=dict(
-            x=0.02,
-            y=0.98,
-            bgcolor="rgba(255,255,255,0.8)",
-            bordercolor="#CCCCCC",
-            borderwidth=1,
-        ),
+        margin={"l": 70, "r": 40, "t": 70, "b": 60},  # Better margins for labels
+        legend={
+            "x": 0.02,
+            "y": 0.98,
+            "bgcolor": "rgba(255,255,255,0.8)",
+            "bordercolor": "#CCCCCC",
+            "borderwidth": 1,
+        },
     )
 
     # Update axes styling

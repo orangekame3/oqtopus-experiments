@@ -36,10 +36,7 @@ class ExperimentResult:
         self._analyzed_results = None
 
     def analyze(
-        self,
-        plot: bool = True,
-        save_data: bool = True,
-        save_image: bool = True
+        self, plot: bool = True, save_data: bool = True, save_image: bool = True
     ) -> pd.DataFrame:
         """
         Analyze the experiment results
@@ -61,7 +58,9 @@ class ExperimentResult:
         # Save results if requested (DataFrame is easily serializable)
         if save_data:
             try:
-                if hasattr(self.experiment, "save_experiment_data") and hasattr(self._analyzed_results, "to_dict"):
+                if hasattr(self.experiment, "save_experiment_data") and hasattr(
+                    self._analyzed_results, "to_dict"
+                ):
                     # DataFrame to dict conversion for clean JSON storage
                     saved_path = self.experiment.save_experiment_data(
                         self._analyzed_results.to_dict(orient="records"),

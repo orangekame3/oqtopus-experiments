@@ -24,15 +24,9 @@ class CHSHPhaseScanParameters(BaseModel):
     shots_per_circuit: int = Field(
         default=1000, description="Number of shots per circuit"
     )
-    phase_points: int = Field(
-        default=21, description="Number of phase points to scan"
-    )
-    phase_start: float = Field(
-        default=0.0, description="Starting phase in radians"
-    )
-    phase_end: float = Field(
-        default=2*np.pi, description="Ending phase in radians"
-    )
+    phase_points: int = Field(default=21, description="Number of phase points to scan")
+    phase_start: float = Field(default=0.0, description="Starting phase in radians")
+    phase_end: float = Field(default=2 * np.pi, description="Ending phase in radians")
 
 
 class CHSHPhaseScanPoint(BaseModel):
@@ -45,18 +39,28 @@ class CHSHPhaseScanPoint(BaseModel):
     chsh_max: float = Field(description="Maximum of |CHSH1| and |CHSH2|")
     bell_violation: bool = Field(description="Whether Bell inequality is violated")
     correlations: dict[str, float] = Field(description="ZZ, ZX, XZ, XX correlations")
-    correlation_errors: dict[str, float] = Field(description="Correlation standard errors")
+    correlation_errors: dict[str, float] = Field(
+        description="Correlation standard errors"
+    )
     total_shots: int = Field(description="Total shots for this phase point")
 
 
 class CHSHPhaseScanAnalysisResult(BaseModel):
     """Complete analysis results for CHSH phase scan"""
 
-    phase_points: list[CHSHPhaseScanPoint] = Field(description="Results for each phase point")
+    phase_points: list[CHSHPhaseScanPoint] = Field(
+        description="Results for each phase point"
+    )
     max_chsh_value: float = Field(description="Maximum CHSH value across all phases")
-    max_chsh_phase: float = Field(description="Phase (radians) where maximum CHSH occurs")
-    violation_count: int = Field(description="Number of phase points with Bell violation")
-    theoretical_max: float = Field(default=2*np.sqrt(2), description="Theoretical CHSH maximum")
+    max_chsh_phase: float = Field(
+        description="Phase (radians) where maximum CHSH occurs"
+    )
+    violation_count: int = Field(
+        description="Number of phase points with Bell violation"
+    )
+    theoretical_max: float = Field(
+        default=2 * np.sqrt(2), description="Theoretical CHSH maximum"
+    )
 
     def get_phases(self) -> np.ndarray:
         """Get array of phase values in radians"""
@@ -95,7 +99,9 @@ class CHSHPhaseScanExperimentResult(BaseModel):
 
     analysis_result: CHSHPhaseScanAnalysisResult = Field(description="Analysis results")
     dataframe: Any = Field(description="Results as pandas DataFrame")
-    metadata: dict[str, Any] = Field(default_factory=dict, description="Experiment metadata")
+    metadata: dict[str, Any] = Field(
+        default_factory=dict, description="Experiment metadata"
+    )
 
     class Config:
         arbitrary_types_allowed = True

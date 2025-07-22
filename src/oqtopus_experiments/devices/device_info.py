@@ -355,7 +355,7 @@ class DeviceInfo:
                 src, tgt = c["control"], c["target"]
                 if src in pos and tgt in pos:
                     fidelity = c.get("fidelity", 0.0)
-                    if isinstance(fidelity, (int, float)):
+                    if isinstance(fidelity, int | float):
                         coupling_fidelities.append(fidelity)
                         valid_couplings.append(c)
 
@@ -388,7 +388,7 @@ class DeviceInfo:
                     f"Control: {src}<br>"
                     f"Target: {tgt}<br>"
                     f"Duration: {duration_ns} ns"
-                    if isinstance(duration_ns, (int, float))
+                    if isinstance(duration_ns, int | float)
                     else f"Duration: {duration_ns}"
                 )
 

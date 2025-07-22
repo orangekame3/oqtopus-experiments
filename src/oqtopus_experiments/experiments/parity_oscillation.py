@@ -344,7 +344,7 @@ class ParityOscillation(BaseExperiment):
         results: dict[str, list[dict[str, Any]]],
         plot: bool = True,
         save_data: bool = True,
-        save_image: bool = True
+        save_image: bool = True,
     ) -> "pd.DataFrame":
         """
         Analyze parity oscillation results
@@ -522,12 +522,12 @@ class ParityOscillation(BaseExperiment):
                     y=parity_array,
                     mode="markers+lines",
                     name="Data",
-                    marker=dict(
-                        size=7,
-                        color=colors[1],  # Green like Rabi
-                        line=dict(width=1, color="white"),
-                    ),
-                    line=dict(width=2, color=colors[1]),
+                    marker={
+                        "size": 7,
+                        "color": colors[1],  # Green like Rabi
+                        "line": {"width": 1, "color": "white"},
+                    },
+                    line={"width": 2, "color": colors[1]},
                     showlegend=True,
                 )
             )
