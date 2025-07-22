@@ -387,7 +387,9 @@ class DeviceInfo:
                     f"<b>Fidelity: {fidelity:.4f}</b><br>"
                     f"Control: {src}<br>"
                     f"Target: {tgt}<br>"
-                    f"Duration: {duration_ns} ns" if isinstance(duration_ns, (int, float)) else f"Duration: {duration_ns}"
+                    f"Duration: {duration_ns} ns"
+                    if isinstance(duration_ns, (int, float))
+                    else f"Duration: {duration_ns}"
                 )
 
                 fig_data.append(
@@ -413,8 +415,8 @@ class DeviceInfo:
                 arrow_y = y0 + 0.75 * (y1 - y0)
 
                 # Calculate arrow endpoints with wider angle for better visibility
-                arrow_angle1 = angle + np.pi - np.pi/4  # 45 degrees for wider arrow
-                arrow_angle2 = angle + np.pi + np.pi/4  # 45 degrees for wider arrow
+                arrow_angle1 = angle + np.pi - np.pi / 4  # 45 degrees for wider arrow
+                arrow_angle2 = angle + np.pi + np.pi / 4  # 45 degrees for wider arrow
 
                 arrow_x1 = arrow_x + arrow_length * np.cos(arrow_angle1)
                 arrow_y1 = arrow_y + arrow_length * np.sin(arrow_angle1)
@@ -427,7 +429,10 @@ class DeviceInfo:
                         x=[arrow_x1, arrow_x, arrow_x2],
                         y=[arrow_y1, arrow_y, arrow_y2],
                         mode="lines",
-                        line={"color": edge_color, "width": max(3, edge_width-1)},  # Thicker arrow
+                        line={
+                            "color": edge_color,
+                            "width": max(3, edge_width - 1),
+                        },  # Thicker arrow
                         hoverinfo="skip",
                         showlegend=False,
                         opacity=1.0,  # Full opacity for better visibility
@@ -455,7 +460,7 @@ class DeviceInfo:
                 mid_y = (y0 + y1) / 2
 
                 # Calculate edge length to determine if we should show text
-                edge_length = ((x1 - x0)**2 + (y1 - y0)**2)**0.5
+                edge_length = ((x1 - x0) ** 2 + (y1 - y0) ** 2) ** 0.5
 
                 # Only show text on edges that are long enough to avoid overcrowding
                 if edge_length > 1.0:  # Minimum edge length threshold
@@ -514,29 +519,35 @@ class DeviceInfo:
                 marker={
                     "size": 40,  # Much larger for better text accommodation
                     "color": color_values,
-                    "colorscale": [[0, "#FF2C00"], [0.5, "#FF9500"], [1, "#00B945"]],  # Experiment colors
+                    "colorscale": [
+                        [0, "#FF2C00"],
+                        [0.5, "#FF9500"],
+                        [1, "#00B945"],
+                    ],  # Experiment colors
                     "colorbar": {
                         "title": {
                             "text": f"<b>Node {color_by.replace('_', ' ').title()}</b>",
-                            "font": {"size": 14}
+                            "font": {"size": 14},
                         },
                         "tickfont": {"size": 12},
                         "len": 0.4,  # Shorter colorbar
                         "thickness": 15,
                         "x": 1.02,  # Position to the right
-                        "y": 0.8,   # Position at top
+                        "y": 0.8,  # Position at top
                     },
                     "showscale": True,
-                    "line": {"color": "black", "width": 3},  # Thicker border for larger nodes
+                    "line": {
+                        "color": "black",
+                        "width": 3,
+                    },  # Thicker border for larger nodes
                     "opacity": 0.9,
                 },
-                text=[f"{int(row['id'])}<br><span style='font-size:10px'>{row['fidelity']:.3f}</span>" for _, row in df.iterrows()],
+                text=[
+                    f"{int(row['id'])}<br><span style='font-size:10px'>{row['fidelity']:.3f}</span>"
+                    for _, row in df.iterrows()
+                ],
                 textposition="middle center",
-                textfont={
-                    "size": 14,
-                    "color": "white",
-                    "family": "Arial Black"
-                },
+                textfont={"size": 14, "color": "white", "family": "Arial Black"},
                 hoverinfo="text",
                 hovertext=[
                     f"<b>Qubit {row['id']}</b><br>"
@@ -555,21 +566,24 @@ class DeviceInfo:
         # Add invisible legend traces for coupling edge colors using experiment colors
         legend_traces = [
             go.Scatter(
-                x=[None], y=[None],
+                x=[None],
+                y=[None],
                 mode="lines",
                 line={"color": "#00B945", "width": 6},
                 name="High Fidelity (≥0.95)",
                 showlegend=True,
             ),
             go.Scatter(
-                x=[None], y=[None],
+                x=[None],
+                y=[None],
                 mode="lines",
                 line={"color": "#FF9500", "width": 5},
                 name="Medium Fidelity (0.90-0.95)",
                 showlegend=True,
             ),
             go.Scatter(
-                x=[None], y=[None],
+                x=[None],
+                y=[None],
                 mode="lines",
                 line={"color": "#FF2C00", "width": 4},
                 name="Low Fidelity (<0.90)",
@@ -582,15 +596,15 @@ class DeviceInfo:
         fig.update_layout(
             title={
                 "text": f"<b>{self.device_name.upper()} Device Topology</b><br>"
-                        f"<sub>Nodes: {color_by.replace('_', ' ').title()} | "
-                        f"Edges: Coupling Gate Fidelity</sub>",
+                f"<sub>Nodes: {color_by.replace('_', ' ').title()} | "
+                f"Edges: Coupling Gate Fidelity</sub>",
                 "x": 0.5,
-                "font": {"size": 16, "color": "#2C3E50"}  # Experiment title color
+                "font": {"size": 16, "color": "#2C3E50"},  # Experiment title color
             },
             xaxis={
                 "title": {
                     "text": "<b>X Position</b>",
-                    "font": {"size": 14, "color": "#2C3E50"}
+                    "font": {"size": 14, "color": "#2C3E50"},
                 },
                 "showgrid": True,
                 "gridcolor": "#E8E8E8",
@@ -601,7 +615,7 @@ class DeviceInfo:
             yaxis={
                 "title": {
                     "text": "<b>Y Position</b>",
-                    "font": {"size": 14, "color": "#2C3E50"}
+                    "font": {"size": 14, "color": "#2C3E50"},
                 },
                 "showgrid": True,
                 "gridcolor": "#E8E8E8",
@@ -617,7 +631,7 @@ class DeviceInfo:
             legend={
                 "title": {
                     "text": "<b>Edge Coupling Fidelity</b>",
-                    "font": {"size": 12}
+                    "font": {"size": 12},
                 },
                 "font": {"size": 11},
                 "x": 1.02,
@@ -629,12 +643,14 @@ class DeviceInfo:
             annotations=[
                 {
                     "text": "📊 Nodes show Qubit ID + Fidelity | Edges show Coupling Fidelity",
-                    "x": 0.5, "y": -0.1,
-                    "xref": "paper", "yref": "paper",
+                    "x": 0.5,
+                    "y": -0.1,
+                    "xref": "paper",
+                    "yref": "paper",
                     "showarrow": False,
-                    "font": {"size": 12, "color": "#2C3E50"}  # Experiment text color
+                    "font": {"size": 12, "color": "#2C3E50"},  # Experiment text color
                 }
-            ]
+            ],
         )
 
         fig.show()
@@ -754,7 +770,7 @@ class DeviceInfo:
         if filename is None:
             filename = f"device_{self.device_name}_info.json"
 
-        data = {
+        data: dict = {
             "device_summary": self.summary(),
             "qubit_statistics": self.get_qubit_stats(),
             "qubits": (

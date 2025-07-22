@@ -49,16 +49,21 @@ class BaseExperiment(ABC):
         results: dict[str, list[dict[str, Any]]],
         plot: bool = True,
         save_data: bool = True,
-        save_image: bool = True
+        save_image: bool = True,
     ) -> dict[str, Any]:
         """Experiment-specific result analysis (implemented in each experiment class)"""
         pass
 
     def save_experiment_data(
-        self, results: dict[str, Any], metadata: dict[str, Any] | None = None, experiment_type: str | None = None
+        self,
+        results: dict[str, Any],
+        metadata: dict[str, Any] | None = None,
+        experiment_type: str | None = None,
     ) -> str:
         """Save experiment data using data manager"""
-        exp_type = experiment_type or self.__class__.__name__.lower().replace("experiment", "")
+        exp_type = experiment_type or self.__class__.__name__.lower().replace(
+            "experiment", ""
+        )
         return self.data_manager.save_results(
             results=results, metadata=metadata or {}, experiment_type=exp_type
         )
@@ -131,9 +136,9 @@ class BaseExperiment(ABC):
             print(f"Created default circuits: {len(circuits)} circuits")
 
         # Store backend info for device name resolution
-        if hasattr(backend, 'device_name'):
+        if hasattr(backend, "device_name"):
             self._last_backend_device = backend.device_name
-        elif hasattr(backend, 'backend_type'):
+        elif hasattr(backend, "backend_type"):
             self._last_backend_device = backend.backend_type
         else:
             self._last_backend_device = "unknown"
@@ -155,7 +160,9 @@ class BaseExperiment(ABC):
                 if circuit_params and i < len(circuit_params):
                     single_circuit_params = circuit_params[i]
 
-                result = backend.run(circuit, shots, circuit_params=single_circuit_params)
+                result = backend.run(
+                    circuit, shots, circuit_params=single_circuit_params
+                )
                 raw_results[f"circuit_{i}"] = [result]
             except Exception as e:
                 print(f"Backend execution failed: {e}")
@@ -172,18 +179,21 @@ class BaseExperiment(ABC):
     def _auto_transpile_if_needed(self, circuits, backend):
         """
         Auto-transpile circuits if physical qubit is specified and differs from logical
-        
+
         Args:
             circuits: Circuit collection or list
             backend: Backend instance
-            
+
         Returns:
             Tuple of (circuits, was_transpiled)
             - circuits: Transpiled circuits if needed, otherwise original circuits
             - was_transpiled: Boolean indicating if transpilation occurred
         """
         # Check if physical qubit was explicitly specified
-        if hasattr(self, "_physical_qubit_specified") and self._physical_qubit_specified:
+        if (
+            hasattr(self, "_physical_qubit_specified")
+            and self._physical_qubit_specified
+        ):
             physical_qubit = self.experiment_params.get("physical_qubit")
             logical_qubit = self.experiment_params.get("logical_qubit", 0)
         else:
@@ -193,9 +203,13 @@ class BaseExperiment(ABC):
         # Transpile if physical qubit was explicitly specified
         if physical_qubit is not None:
             if hasattr(backend, "transpile"):
-                print(f"Auto-transpiling circuits: logical qubit {logical_qubit} → physical qubit {physical_qubit}")
+                print(
+                    f"Auto-transpiling circuits: logical qubit {logical_qubit} → physical qubit {physical_qubit}"
+                )
                 try:
-                    transpiled = backend.transpile(circuits, physical_qubits=[physical_qubit])
+                    transpiled = backend.transpile(
+                        circuits, physical_qubits=[physical_qubit]
+                    )
                     print("Transpilation successful")
                     return transpiled, True
                 except Exception as e:
@@ -207,15 +221,17 @@ class BaseExperiment(ABC):
 
         return circuits, False
 
-    def _transpile_circuits_with_tranqu(self, circuits, logical_qubit=0, physical_qubit=None):
+    def _transpile_circuits_with_tranqu(
+        self, circuits, logical_qubit=0, physical_qubit=None
+    ):
         """
         Transpile circuits using Tranqu (backend-independent)
-        
+
         Args:
             circuits: Circuit collection or list
             logical_qubit: Logical qubit index (default: 0)
             physical_qubit: Target physical qubit
-            
+
         Returns:
             Transpiled circuits or original circuits if transpilation fails
         """
@@ -255,7 +271,9 @@ class BaseExperiment(ABC):
                     print(f"Circuit {i+1} transpilation failed: {e}")
                     transpiled_circuits.append(circuit)
 
-            print(f"Transpiled {len(transpiled_circuits)} circuits to physical qubit {physical_qubit}")
+            print(
+                f"Transpiled {len(transpiled_circuits)} circuits to physical qubit {physical_qubit}"
+            )
             return transpiled_circuits
 
         except ImportError:
@@ -315,7 +333,9 @@ class BaseExperiment(ABC):
             # Check if physical qubit mapping is needed (disable OQTOPUS transpilation)
             disable_transpilation = self._should_disable_transpilation()
 
-            job_ids = backend.submit_parallel(circuits, shots, circuit_params, disable_transpilation)
+            job_ids = backend.submit_parallel(
+                circuits, shots, circuit_params, disable_transpilation
+            )
             print(f"Collecting {len(job_ids)} results")
             results = backend.collect_parallel(job_ids)
 
@@ -340,7 +360,9 @@ class BaseExperiment(ABC):
                     if circuit_params and i < len(circuit_params):
                         single_circuit_params = circuit_params[i]
 
-                    result = backend.run(circuit, shots, circuit_params=single_circuit_params)
+                    result = backend.run(
+                        circuit, shots, circuit_params=single_circuit_params
+                    )
                     raw_results[f"circuit_{i}"] = [result]
                 except Exception as e:
                     print(f"Backend execution failed: {e}")
@@ -357,18 +379,21 @@ class BaseExperiment(ABC):
     def _auto_transpile_if_needed(self, circuits, backend):
         """
         Auto-transpile circuits if physical qubit is specified and differs from logical
-        
+
         Args:
             circuits: Circuit collection or list
             backend: Backend instance
-            
+
         Returns:
             Tuple of (circuits, was_transpiled)
             - circuits: Transpiled circuits if needed, otherwise original circuits
             - was_transpiled: Boolean indicating if transpilation occurred
         """
         # Check if physical qubit was explicitly specified
-        if hasattr(self, "_physical_qubit_specified") and self._physical_qubit_specified:
+        if (
+            hasattr(self, "_physical_qubit_specified")
+            and self._physical_qubit_specified
+        ):
             physical_qubit = self.experiment_params.get("physical_qubit")
             logical_qubit = self.experiment_params.get("logical_qubit", 0)
         else:
@@ -378,9 +403,13 @@ class BaseExperiment(ABC):
         # Transpile if physical qubit was explicitly specified
         if physical_qubit is not None:
             if hasattr(backend, "transpile"):
-                print(f"Auto-transpiling circuits: logical qubit {logical_qubit} → physical qubit {physical_qubit}")
+                print(
+                    f"Auto-transpiling circuits: logical qubit {logical_qubit} → physical qubit {physical_qubit}"
+                )
                 try:
-                    transpiled = backend.transpile(circuits, physical_qubits=[physical_qubit])
+                    transpiled = backend.transpile(
+                        circuits, physical_qubits=[physical_qubit]
+                    )
                     print("Transpilation successful")
                     return transpiled, True
                 except Exception as e:
@@ -395,7 +424,7 @@ class BaseExperiment(ABC):
     def _should_disable_transpilation(self) -> bool:
         """
         Check if OQTOPUS transpilation should be disabled
-        
+
         Returns True if physical qubit was explicitly specified by user
         """
         # Check if experiment has explicit physical qubit specification
