@@ -346,83 +346,181 @@ class DeviceInfo:
 
         # Add coupling edges if requested
         if show_edges and self._device_info:
+            # Collect all coupling fidelities for color mapping
+            coupling_fidelities = []
+            valid_couplings = []
+            
             for c in self._device_info["couplings"]:
                 src, tgt = c["control"], c["target"]
                 if src in pos and tgt in pos:
-                    x0, y0 = pos[src]
-                    x1, y1 = pos[tgt]
-                    
-                    # Get coupling properties
-                    fidelity = c.get("fidelity", "N/A")
-                    duration_ns = c.get("duration_ns", "N/A")
-                    
-                    # Create hover text with coupling information
-                    hover_text = (
-                        f"Coupling: {src} → {tgt}<br>"
-                        f"Control: {src}<br>"
-                        f"Target: {tgt}<br>"
-                        f"Fidelity: {fidelity:.4f}<br>" if isinstance(fidelity, (int, float)) else f"Fidelity: {fidelity}<br>"
-                        f"Duration: {duration_ns} ns" if isinstance(duration_ns, (int, float)) else f"Duration: {duration_ns}"
+                    fidelity = c.get("fidelity", 0.0)
+                    if isinstance(fidelity, (int, float)):
+                        coupling_fidelities.append(fidelity)
+                        valid_couplings.append(c)
+            
+            # Create individual traces for each coupling edge with color-coded fidelity
+            for c in valid_couplings:
+                src, tgt = c["control"], c["target"]
+                x0, y0 = pos[src]
+                x1, y1 = pos[tgt]
+                
+                # Get coupling properties
+                fidelity = c.get("fidelity", 0.0)
+                duration_ns = c.get("duration_ns", "N/A")
+                
+                # Color-code edge based on fidelity (red=low, green=high)
+                if fidelity >= 0.95:
+                    edge_color = "rgba(34, 139, 34, 0.8)"  # Green for high fidelity
+                    edge_width = 3
+                elif fidelity >= 0.90:
+                    edge_color = "rgba(255, 165, 0, 0.8)"  # Orange for medium fidelity
+                    edge_width = 2.5
+                else:
+                    edge_color = "rgba(220, 20, 60, 0.8)"  # Red for low fidelity
+                    edge_width = 2
+                
+                # Create hover text with coupling information
+                hover_text = (
+                    f"<b>Coupling Gate</b><br>"
+                    f"{src} → {tgt}<br>"
+                    f"<b>Fidelity: {fidelity:.4f}</b><br>"
+                    f"Control: {src}<br>"
+                    f"Target: {tgt}<br>"
+                    f"Duration: {duration_ns} ns" if isinstance(duration_ns, (int, float)) else f"Duration: {duration_ns}"
+                )
+                
+                fig_data.append(
+                    go.Scatter(
+                        x=[x0, x1],
+                        y=[y0, y1],
+                        mode="lines",
+                        line={"color": edge_color, "width": edge_width},
+                        hoverinfo="text",
+                        hovertext=hover_text,
+                        showlegend=False,
+                        opacity=0.8,
                     )
-                    
-                    fig_data.append(
-                        go.Scatter(
-                            x=[x0, x1],
-                            y=[y0, y1],
-                            mode="lines",
-                            line={"color": "lightgray", "width": 2},
-                            hoverinfo="text",
-                            hovertext=hover_text,
-                            showlegend=False,
-                        )
-                    )
+                )
 
         # Add qubit nodes
         color_values = df[color_by]
 
-        # Use fixed size for all nodes
-        fixed_size = 15
-
+        # Enhanced node appearance
         fig_data.append(
             go.Scatter(
                 x=df["x"],
                 y=df["y"],
                 mode="markers+text",
                 marker={
-                    "size": fixed_size,
+                    "size": 18,  # Slightly larger for better visibility
                     "color": color_values,
-                    "colorscale": "Viridis",
-                    "colorbar": {"title": color_by.replace("_", " ").title()},
+                    "colorscale": "RdYlGn",  # Red-Yellow-Green for intuitive fidelity mapping
+                    "colorbar": {
+                        "title": {
+                            "text": f"<b>{color_by.replace('_', ' ').title()}</b>",
+                            "font": {"size": 14}
+                        },
+                        "tickfont": {"size": 12},
+                        "len": 0.7,
+                        "thickness": 15,
+                    },
                     "showscale": True,
-                    "line": {"color": "white", "width": 1},
+                    "line": {"color": "black", "width": 2},  # Black border for better contrast
+                    "opacity": 0.9,
                 },
                 text=df["id"],
-                textposition="top center",
-                textfont={"size": 10, "color": "black"},
+                textposition="middle center",
+                textfont={"size": 11, "color": "white", "family": "Arial Black"},
                 hoverinfo="text",
                 hovertext=[
-                    f"Qubit {row['id']}<br>"
+                    f"<b>Qubit {row['id']}</b><br>"
                     f"Physical ID: {row['physical_id']}<br>"
                     f"Position: ({row['x']:.1f}, {row['y']:.1f})<br>"
-                    f"Fidelity: {row['fidelity']:.5f}<br>"
+                    f"<b>Fidelity: {row['fidelity']:.5f}</b><br>"
                     f"T₁: {row['t1']:.1f} μs<br>"
                     f"T₂: {row['t2']:.1f} μs<br>"
-                    f"Readout Error: {row['readout_error']:.3f}"
+                    f"Readout Error: {row['readout_error']:.4f}"
                     for _, row in df.iterrows()
                 ],
                 showlegend=False,
             )
         )
 
-        # Create figure
-        fig = go.Figure(data=fig_data)
+        # Add invisible legend traces for coupling edge colors
+        legend_traces = [
+            go.Scatter(
+                x=[None], y=[None],
+                mode="lines",
+                line={"color": "rgba(34, 139, 34, 0.8)", "width": 3},
+                name="High Fidelity (≥0.95)",
+                showlegend=True,
+            ),
+            go.Scatter(
+                x=[None], y=[None],
+                mode="lines", 
+                line={"color": "rgba(255, 165, 0, 0.8)", "width": 2.5},
+                name="Medium Fidelity (0.90-0.95)",
+                showlegend=True,
+            ),
+            go.Scatter(
+                x=[None], y=[None],
+                mode="lines",
+                line={"color": "rgba(220, 20, 60, 0.8)", "width": 2},
+                name="Low Fidelity (<0.90)",
+                showlegend=True,
+            ),
+        ]
+        
+        # Create figure with all data and legend
+        fig = go.Figure(data=fig_data + legend_traces)
         fig.update_layout(
-            title=f"Device Layout: {self.device_name} (colored by {color_by.replace('_', ' ').title()})",
-            xaxis={"title": "X Position", "showgrid": True, "gridcolor": "lightgray"},
-            yaxis={"title": "Y Position", "showgrid": True, "gridcolor": "lightgray"},
+            title={
+                "text": f"<b>{self.device_name.upper()} Device Topology</b><br>"
+                        f"<sub>Nodes: {color_by.replace('_', ' ').title()} | "
+                        f"Edges: Coupling Gate Fidelity</sub>",
+                "x": 0.5,
+                "font": {"size": 16}
+            },
+            xaxis={
+                "title": {
+                    "text": "<b>X Position</b>",
+                    "font": {"size": 14}
+                },
+                "showgrid": True, 
+                "gridcolor": "lightgray"
+            },
+            yaxis={
+                "title": {
+                    "text": "<b>Y Position</b>",
+                    "font": {"size": 14}
+                },
+                "showgrid": True, 
+                "gridcolor": "lightgray"
+            },
             plot_bgcolor="white",
-            height=600,
-            width=800,
+            height=700,
+            width=900,
+            legend={
+                "title": {
+                    "text": "<b>Coupling Gate Fidelity</b>",
+                    "font": {"size": 12}
+                },
+                "font": {"size": 11},
+                "x": 1.02,
+                "y": 0.5,
+                "bgcolor": "rgba(255, 255, 255, 0.8)",
+                "bordercolor": "black",
+                "borderwidth": 1,
+            },
+            annotations=[
+                {
+                    "text": "💡 Hover over nodes and edges for detailed information",
+                    "x": 0.5, "y": -0.12,
+                    "xref": "paper", "yref": "paper",
+                    "showarrow": False,
+                    "font": {"size": 11, "color": "gray"}
+                }
+            ]
         )
 
         fig.show()
