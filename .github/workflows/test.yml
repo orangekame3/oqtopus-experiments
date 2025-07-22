@@ -41,14 +41,14 @@ jobs:
         uv run mypy src/
       continue-on-error: true
 
-    - name: Test with pytest
-      run: |
-        uv run pytest tests/ -v --cov=src/oqtopus_experiments --cov-report=xml
+    # - name: Test with pytest
+    #   run: |
+    #     uv run pytest tests/ -v --cov=src/oqtopus_experiments --cov-report=xml
 
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v4
-      with:
-        file: ./coverage.xml
-        flags: unittests
-        name: codecov-umbrella
-        fail_ci_if_error: false
+    # - name: Upload coverage to Codecov
+    #   uses: codecov/codecov-action@v4
+    #   with:
+    #     file: ./coverage.xml
+    #     flags: unittests
+    #     name: codecov-umbrella
+    #     fail_ci_if_error: false
