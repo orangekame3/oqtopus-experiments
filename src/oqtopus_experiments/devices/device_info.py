@@ -405,32 +405,48 @@ class DeviceInfo:
                 
                 # Add arrowhead to show direction from control to target
                 # Calculate arrow position and angle
-                arrow_length = 0.3  # Length of the arrow
+                arrow_length = 0.5  # Longer arrow for better visibility
                 angle = np.arctan2(y1 - y0, x1 - x0)
                 
-                # Position arrow closer to target (80% along the edge)
-                arrow_x = x0 + 0.8 * (x1 - x0)
-                arrow_y = y0 + 0.8 * (y1 - y0)
+                # Position arrow closer to target (75% along the edge)
+                arrow_x = x0 + 0.75 * (x1 - x0)
+                arrow_y = y0 + 0.75 * (y1 - y0)
                 
-                # Calculate arrow endpoints
-                arrow_angle1 = angle + np.pi - np.pi/6  # 30 degrees
-                arrow_angle2 = angle + np.pi + np.pi/6  # 30 degrees
+                # Calculate arrow endpoints with wider angle for better visibility
+                arrow_angle1 = angle + np.pi - np.pi/4  # 45 degrees for wider arrow
+                arrow_angle2 = angle + np.pi + np.pi/4  # 45 degrees for wider arrow
                 
                 arrow_x1 = arrow_x + arrow_length * np.cos(arrow_angle1)
                 arrow_y1 = arrow_y + arrow_length * np.sin(arrow_angle1)
                 arrow_x2 = arrow_x + arrow_length * np.cos(arrow_angle2)
                 arrow_y2 = arrow_y + arrow_length * np.sin(arrow_angle2)
                 
-                # Add arrow lines
+                # Add thicker arrow lines with higher contrast
                 fig_data.append(
                     go.Scatter(
                         x=[arrow_x1, arrow_x, arrow_x2],
                         y=[arrow_y1, arrow_y, arrow_y2],
                         mode="lines",
-                        line={"color": edge_color, "width": max(2, edge_width-2)},
+                        line={"color": edge_color, "width": max(3, edge_width-1)},  # Thicker arrow
                         hoverinfo="skip",
                         showlegend=False,
-                        opacity=0.8,
+                        opacity=1.0,  # Full opacity for better visibility
+                    )
+                )
+                
+                # Add a small filled circle at arrow tip for even better visibility
+                fig_data.append(
+                    go.Scatter(
+                        x=[arrow_x],
+                        y=[arrow_y],
+                        mode="markers",
+                        marker={
+                            "size": 6,
+                            "color": edge_color,
+                            "opacity": 1.0,
+                        },
+                        hoverinfo="skip",
+                        showlegend=False,
                     )
                 )
                 
