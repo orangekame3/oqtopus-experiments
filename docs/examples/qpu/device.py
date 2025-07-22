@@ -13,7 +13,7 @@ def main():
     print(f"Device: {backend.device_name}")
 
     # Show device information
-    backend.show_device(show_qubits=True, show_couplings=True)
+    backend.show_device()
 
     # Create and show topology plot
     print("\nCreating device topology plot...")
