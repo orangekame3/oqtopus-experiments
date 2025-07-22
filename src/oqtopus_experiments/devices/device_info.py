@@ -6,6 +6,7 @@ DeviceInfo Class - Simple device information access and visualization
 import json
 from typing import Any
 
+import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.io as pio
@@ -401,6 +402,57 @@ class DeviceInfo:
                         opacity=0.8,
                     )
                 )
+                
+                # Add coupling fidelity text at the midpoint of the edge
+                mid_x = (x0 + x1) / 2
+                mid_y = (y0 + y1) / 2
+                
+                # Calculate edge length to determine if we should show text
+                edge_length = ((x1 - x0)**2 + (y1 - y0)**2)**0.5
+                
+                # Only show text on edges that are long enough to avoid overcrowding
+                if edge_length > 1.0:  # Minimum edge length threshold
+                    # Offset text slightly to avoid overlap with the line
+                    offset = 0.1
+                    angle = np.arctan2(y1 - y0, x1 - x0)
+                    text_x = mid_x + offset * np.sin(angle)
+                    text_y = mid_y - offset * np.cos(angle)
+                    
+                    # Add white background text for better contrast
+                    fig_data.append(
+                        go.Scatter(
+                            x=[text_x],
+                            y=[text_y],
+                            mode="text",
+                            text=[f"{fidelity:.3f}"],
+                            textposition="middle center",
+                            textfont={
+                                "size": 11,
+                                "color": "white",
+                                "family": "Arial Bold",
+                            },
+                            showlegend=False,
+                            hoverinfo="skip",
+                        )
+                    )
+                    
+                    # Add black text on top for better readability
+                    fig_data.append(
+                        go.Scatter(
+                            x=[text_x],
+                            y=[text_y],
+                            mode="text",
+                            text=[f"{fidelity:.3f}"],
+                            textposition="middle center",
+                            textfont={
+                                "size": 10,
+                                "color": "black",
+                                "family": "Arial Bold",
+                            },
+                            showlegend=False,
+                            hoverinfo="skip",
+                        )
+                    )
 
         # Add qubit nodes
         color_values = df[color_by]
@@ -412,7 +464,7 @@ class DeviceInfo:
                 y=df["y"],
                 mode="markers+text",
                 marker={
-                    "size": 18,  # Slightly larger for better visibility
+                    "size": 28,  # Larger for better text readability
                     "color": color_values,
                     "colorscale": "RdYlGn",  # Red-Yellow-Green for intuitive fidelity mapping
                     "colorbar": {
@@ -428,9 +480,13 @@ class DeviceInfo:
                     "line": {"color": "black", "width": 2},  # Black border for better contrast
                     "opacity": 0.9,
                 },
-                text=df["id"],
+                text=[f"{row['id']}<br><sub>{row['fidelity']:.3f}</sub>" for _, row in df.iterrows()],
                 textposition="middle center",
-                textfont={"size": 11, "color": "white", "family": "Arial Black"},
+                textfont={
+                    "size": 12, 
+                    "color": "white", 
+                    "family": "Arial Black"
+                },
                 hoverinfo="text",
                 hovertext=[
                     f"<b>Qubit {row['id']}</b><br>"
@@ -498,8 +554,8 @@ class DeviceInfo:
                 "gridcolor": "lightgray"
             },
             plot_bgcolor="white",
-            height=700,
-            width=900,
+            height=800,
+            width=1000,
             legend={
                 "title": {
                     "text": "<b>Coupling Gate Fidelity</b>",
@@ -514,11 +570,11 @@ class DeviceInfo:
             },
             annotations=[
                 {
-                    "text": "💡 Hover over nodes and edges for detailed information",
-                    "x": 0.5, "y": -0.12,
+                    "text": "📊 Nodes show Qubit ID + Fidelity | Edges show Coupling Fidelity",
+                    "x": 0.5, "y": -0.1,
                     "xref": "paper", "yref": "paper",
                     "showarrow": False,
-                    "font": {"size": 11, "color": "gray"}
+                    "font": {"size": 12, "color": "darkblue"}
                 }
             ]
         )
