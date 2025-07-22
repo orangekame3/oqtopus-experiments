@@ -201,7 +201,7 @@ class LocalBackend:
         return noise_model
 
     def run(
-        self, circuit: Any, shots: int = 1024, circuit_params: dict[str, Any] = None
+        self, circuit: Any, shots: int = 1024, circuit_params: dict[str, Any] | None = None
     ) -> dict[str, Any]:
         """
         Run circuit on local simulator

@@ -95,7 +95,7 @@ class T1(BaseExperiment):
 
         return df
 
-    def circuits(self, **kwargs: Any) -> list[Any]:
+    def circuits(self, **kwargs: Any) -> list["QuantumCircuit"]:
         """Generate T1 circuits with automatic transpilation"""
         delay_times = np.logspace(
             np.log10(1.0),
@@ -127,7 +127,7 @@ class T1(BaseExperiment):
                 circuits, 0, self.physical_qubit
             )
 
-        return circuits  # type: ignore
+        return circuits
 
     def _fit_t1_data(self, all_results: list[dict[str, Any]]) -> T1FittingResult | None:
         """Fit T1 decay for all data combined"""

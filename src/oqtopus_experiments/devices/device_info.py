@@ -43,10 +43,10 @@ class DeviceInfo:
             device_name: Name of the quantum device to query
         """
         self.device_name = device_name
-        self._device_data = None
-        self._device_info = None
-        self._qubits_df = None
-        self._couplings_df = None
+        self._device_data: Any = None
+        self._device_info: dict[str, Any] | None = None
+        self._qubits_df: pd.DataFrame | None = None
+        self._couplings_df: pd.DataFrame | None = None
         self.console = Console()
 
         # Load device information
@@ -60,14 +60,18 @@ class DeviceInfo:
 
         try:
             backend = OqtopusDeviceBackend()
-            self._device_data = backend.get_device(self.device_name)
+            device_data = backend.get_device(self.device_name)
+            self._device_data = device_data
 
             # Parse device_info
-            self._device_info = (
-                json.loads(self._device_data.device_info)
-                if isinstance(self._device_data.device_info, str)
-                else self._device_data.device_info
-            )
+            if device_data is not None:
+                self._device_info = (
+                    json.loads(device_data.device_info)
+                    if isinstance(device_data.device_info, str)
+                    else device_data.device_info
+                )
+            else:
+                self._device_info = None
 
             # Create DataFrames for easy analysis
             self._create_dataframes()
@@ -99,8 +103,9 @@ class DeviceInfo:
             )
         self._qubits_df = pd.DataFrame(qubit_data)
         # Ensure ID columns are integers
-        self._qubits_df["id"] = self._qubits_df["id"].astype(int)
-        self._qubits_df["physical_id"] = self._qubits_df["physical_id"].astype(int)
+        if self._qubits_df is not None and not self._qubits_df.empty:
+            self._qubits_df["id"] = self._qubits_df["id"].astype(int)
+            self._qubits_df["physical_id"] = self._qubits_df["physical_id"].astype(int)
 
         # Couplings DataFrame
         coupling_data = []
@@ -115,8 +120,9 @@ class DeviceInfo:
             )
         self._couplings_df = pd.DataFrame(coupling_data)
         # Ensure ID columns are integers
-        self._couplings_df["control"] = self._couplings_df["control"].astype(int)
-        self._couplings_df["target"] = self._couplings_df["target"].astype(int)
+        if self._couplings_df is not None and not self._couplings_df.empty:
+            self._couplings_df["control"] = self._couplings_df["control"].astype(int)
+            self._couplings_df["target"] = self._couplings_df["target"].astype(int)
 
     @property
     def available(self) -> bool:
@@ -140,7 +146,7 @@ class DeviceInfo:
 
     def summary(self) -> dict[str, Any]:
         """Get device summary information"""
-        if not self.available:
+        if not self.available or self._device_data is None:
             return {"error": "Device information not available"}
 
         device = self._device_data
@@ -236,7 +242,7 @@ class DeviceInfo:
             show_qubits: Whether to show qubit table
             show_couplings: Whether to show coupling map
         """
-        if not self.available:
+        if not self.available or self._device_data is None:
             self.console.print("[red]❌ Device information not available[/red]")
             return
 
@@ -310,6 +316,8 @@ class DeviceInfo:
 
     def _show_coupling_tree(self):
         """Display coupling map as tree"""
+        if self._device_info is None:
+            return
         tree = Tree("🔗 Coupling Map (control → target)")
         for c in self._device_info["couplings"]:
             tree.add(

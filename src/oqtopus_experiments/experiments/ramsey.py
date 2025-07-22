@@ -101,7 +101,7 @@ class Ramsey(BaseExperiment):
 
         return df
 
-    def circuits(self, **kwargs: Any) -> list[Any]:
+    def circuits(self, **kwargs: Any) -> list["QuantumCircuit"]:
         """Generate Ramsey circuits with automatic transpilation"""
         delay_times = np.linspace(0, self.max_delay, self.delay_points)
         circuits = []
@@ -142,7 +142,7 @@ class Ramsey(BaseExperiment):
                 circuits, 0, self.physical_qubit
             )
 
-        return circuits  # type: ignore
+        return circuits
 
     def _fit_ramsey_data(
         self, all_results: list[dict[str, Any]]
