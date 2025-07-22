@@ -50,10 +50,10 @@ class Ramsey(BaseExperiment):
         self.detuning_frequency = self.params.detuning_frequency
 
     def analyze(
-        self, 
-        results: dict[str, list[dict[str, Any]]], 
-        plot: bool = True, 
-        save_data: bool = True, 
+        self,
+        results: dict[str, list[dict[str, Any]]],
+        plot: bool = True,
+        save_data: bool = True,
         save_image: bool = True
     ) -> pd.DataFrame:
         """Analyze Ramsey results with simplified single-result processing"""

@@ -48,11 +48,11 @@ class Rabi(BaseExperiment):
         self.max_amplitude = self.params.max_amplitude
 
     def analyze(
-        self, 
-        results: dict[str, list[dict[str, Any]]], 
-        plot: bool = True, 
-        save_data: bool = True, 
-        save_image: bool = True
+        self,
+        results: dict[str, list[dict[str, Any]]],
+        plot: bool = True,
+        save_data: bool = True,
+        save_image: bool = True,
     ) -> pd.DataFrame:
         """Analyze Rabi results with simplified single-result processing"""
 
@@ -116,7 +116,10 @@ class Rabi(BaseExperiment):
         }
 
         # Auto-transpile if physical qubit explicitly specified using base class method
-        if hasattr(self, '_physical_qubit_specified') and self._physical_qubit_specified:
+        if (
+            hasattr(self, "_physical_qubit_specified")
+            and self._physical_qubit_specified
+        ):
             circuits = self._transpile_circuits_with_tranqu(
                 circuits, 0, self.physical_qubit
             )
@@ -261,7 +264,9 @@ class Rabi(BaseExperiment):
         ss_tot = np.sum((probabilities - np.mean(probabilities)) ** 2)
         return 1 - (ss_res / ss_tot) if ss_tot > 0 else 0
 
-    def _create_dataframe(self, fitting_result: RabiFittingResult, device_name: str = "unknown") -> pd.DataFrame:
+    def _create_dataframe(
+        self, fitting_result: RabiFittingResult, device_name: str = "unknown"
+    ) -> pd.DataFrame:
         """Create DataFrame from fitting results"""
         df_data = []
         for amp, prob in zip(

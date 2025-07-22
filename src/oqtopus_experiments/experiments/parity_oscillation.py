@@ -340,10 +340,10 @@ class ParityOscillation(BaseExperiment):
             }
 
     def analyze(
-        self, 
-        results: dict[str, list[dict[str, Any]]], 
-        plot: bool = True, 
-        save_data: bool = True, 
+        self,
+        results: dict[str, list[dict[str, Any]]],
+        plot: bool = True,
+        save_data: bool = True,
         save_image: bool = True
     ) -> "pd.DataFrame":
         """

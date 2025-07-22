@@ -31,15 +31,19 @@ class CHSHPhaseScan(BaseExperiment):
         shots_per_circuit: int = 1000,
         phase_points: int = 21,
         phase_start: float = 0.0,
-        phase_end: float = 2*math.pi,
+        phase_end: float = 2 * math.pi,
     ):
         """Initialize CHSH phase scan experiment with explicit parameters"""
         # Track if physical qubits were explicitly specified
         self._physical_qubits_specified = (
             physical_qubit_0 is not None and physical_qubit_1 is not None
         )
-        actual_physical_qubit_0 = physical_qubit_0 if physical_qubit_0 is not None else 0
-        actual_physical_qubit_1 = physical_qubit_1 if physical_qubit_1 is not None else 1
+        actual_physical_qubit_0 = (
+            physical_qubit_0 if physical_qubit_0 is not None else 0
+        )
+        actual_physical_qubit_1 = (
+            physical_qubit_1 if physical_qubit_1 is not None else 1
+        )
 
         self.params = CHSHPhaseScanParameters(
             experiment_name=experiment_name,
@@ -63,11 +67,11 @@ class CHSHPhaseScan(BaseExperiment):
         self.phases = np.linspace(self.phase_start, self.phase_end, self.phase_points)
 
     def analyze(
-        self, 
-        results: dict[str, list[dict[str, Any]]], 
-        plot: bool = True, 
-        save_data: bool = True, 
-        save_image: bool = True
+        self,
+        results: dict[str, list[dict[str, Any]]],
+        plot: bool = True,
+        save_data: bool = True,
+        save_image: bool = True,
     ) -> pd.DataFrame:
         """Analyze CHSH phase scan results"""
 
@@ -118,9 +122,9 @@ class CHSHPhaseScan(BaseExperiment):
         # The four measurement bases for CHSH: ZZ, ZX, XZ, XX
         measurement_bases = [
             ("ZZ", False, False),  # No additional rotations
-            ("ZX", False, True),   # H gate on qubit 1 (Bob)
-            ("XZ", True, False),   # H gate on qubit 0 (Alice)
-            ("XX", True, True),    # H gates on both qubits
+            ("ZX", False, True),  # H gate on qubit 1 (Bob)
+            ("XZ", True, False),  # H gate on qubit 0 (Alice)
+            ("XX", True, True),  # H gates on both qubits
         ]
 
         # Generate circuits for each phase and each measurement basis
@@ -138,7 +142,7 @@ class CHSHPhaseScan(BaseExperiment):
                 # Apply measurement basis rotations
                 if alice_x:  # Measure Alice in X basis
                     qc.h(0)
-                if bob_x:    # Measure Bob in X basis
+                if bob_x:  # Measure Bob in X basis
                     qc.h(1)
 
                 # Measurements
@@ -170,7 +174,7 @@ class CHSHPhaseScan(BaseExperiment):
             # Process results for each phase
             for i, phase in enumerate(self.phases):
                 # Extract results for this phase (4 circuits per phase)
-                phase_results = all_results[i*num_bases:(i+1)*num_bases]
+                phase_results = all_results[i * num_bases : (i + 1) * num_bases]
 
                 if len(phase_results) != num_bases:
                     continue
@@ -189,8 +193,18 @@ class CHSHPhaseScan(BaseExperiment):
                     total_shots += shots
 
                 # Calculate CHSH quantities
-                chsh1 = correlations["ZZ"] - correlations["ZX"] + correlations["XZ"] + correlations["XX"]
-                chsh2 = correlations["ZZ"] + correlations["ZX"] - correlations["XZ"] + correlations["XX"]
+                chsh1 = (
+                    correlations["ZZ"]
+                    - correlations["ZX"]
+                    + correlations["XZ"]
+                    + correlations["XX"]
+                )
+                chsh2 = (
+                    correlations["ZZ"]
+                    + correlations["ZX"]
+                    - correlations["XZ"]
+                    + correlations["XX"]
+                )
                 chsh_max = max(abs(chsh1), abs(chsh2))
 
                 # Create phase point
@@ -252,24 +266,28 @@ class CHSHPhaseScan(BaseExperiment):
 
         return correlation, std_error, total_shots
 
-    def _create_dataframe(self, analysis_result: CHSHPhaseScanAnalysisResult) -> pd.DataFrame:
+    def _create_dataframe(
+        self, analysis_result: CHSHPhaseScanAnalysisResult
+    ) -> pd.DataFrame:
         """Create DataFrame from CHSH phase analysis results"""
         df_data = []
 
         for point in analysis_result.phase_points:
-            df_data.append({
-                "phase_radians": point.phase_radians,
-                "phase_degrees": point.phase_degrees,
-                "chsh1_value": point.chsh1_value,
-                "chsh2_value": point.chsh2_value,
-                "chsh_max": point.chsh_max,
-                "bell_violation": point.bell_violation,
-                "correlation_ZZ": point.correlations["ZZ"],
-                "correlation_ZX": point.correlations["ZX"],
-                "correlation_XZ": point.correlations["XZ"],
-                "correlation_XX": point.correlations["XX"],
-                "total_shots": point.total_shots,
-            })
+            df_data.append(
+                {
+                    "phase_radians": point.phase_radians,
+                    "phase_degrees": point.phase_degrees,
+                    "chsh1_value": point.chsh1_value,
+                    "chsh2_value": point.chsh2_value,
+                    "chsh_max": point.chsh_max,
+                    "bell_violation": point.bell_violation,
+                    "correlation_ZZ": point.correlations["ZZ"],
+                    "correlation_ZX": point.correlations["ZX"],
+                    "correlation_XZ": point.correlations["XZ"],
+                    "correlation_XX": point.correlations["XX"],
+                    "total_shots": point.total_shots,
+                }
+            )
 
         return pd.DataFrame(df_data)
 
@@ -304,19 +322,19 @@ class CHSHPhaseScan(BaseExperiment):
 
             # Add filled regions only for quantum violation areas
             x_full = list(phases_deg) + list(phases_deg[::-1])
-            quantum_max = 2*np.sqrt(2)
+            quantum_max = 2 * np.sqrt(2)
 
             # Upper quantum violation region: 2 < CHSH ≤ 2√2
             fig.add_trace(
                 go.Scatter(
                     x=x_full,
-                    y=[quantum_max]*len(phases_deg) + [2]*len(phases_deg),
-                    fill='toself',
-                    fillcolor='rgba(100, 150, 200, 0.2)',  # Light blue for quantum violation
-                    line=dict(color='rgba(100, 150, 200, 0)'),
-                    name='Bell Violation Region',
-                    hoverinfo='skip',
-                    showlegend=True
+                    y=[quantum_max] * len(phases_deg) + [2] * len(phases_deg),
+                    fill="toself",
+                    fillcolor="rgba(100, 150, 200, 0.2)",  # Light blue for quantum violation
+                    line=dict(color="rgba(100, 150, 200, 0)"),
+                    name="Bell Violation Region",
+                    hoverinfo="skip",
+                    showlegend=True,
                 )
             )
 
@@ -324,13 +342,13 @@ class CHSHPhaseScan(BaseExperiment):
             fig.add_trace(
                 go.Scatter(
                     x=x_full,
-                    y=[-2]*len(phases_deg) + [-quantum_max]*len(phases_deg),
-                    fill='toself',
-                    fillcolor='rgba(100, 150, 200, 0.2)',  # Same light blue
-                    line=dict(color='rgba(100, 150, 200, 0)'),
-                    name='Bell Violation Region',
-                    hoverinfo='skip',
-                    showlegend=False  # Don't duplicate legend
+                    y=[-2] * len(phases_deg) + [-quantum_max] * len(phases_deg),
+                    fill="toself",
+                    fillcolor="rgba(100, 150, 200, 0.2)",  # Same light blue
+                    line=dict(color="rgba(100, 150, 200, 0)"),
+                    name="Bell Violation Region",
+                    hoverinfo="skip",
+                    showlegend=False,  # Don't duplicate legend
                 )
             )
 
@@ -339,10 +357,10 @@ class CHSHPhaseScan(BaseExperiment):
                 go.Scatter(
                     x=phases_deg,
                     y=chsh1_values,
-                    mode='lines+markers',
+                    mode="lines+markers",
                     name="CHSH1",
                     line=dict(color=colors[0], width=3),
-                    marker=dict(size=6)
+                    marker=dict(size=6),
                 )
             )
 
@@ -350,29 +368,49 @@ class CHSHPhaseScan(BaseExperiment):
                 go.Scatter(
                     x=phases_deg,
                     y=chsh2_values,
-                    mode='lines+markers',
+                    mode="lines+markers",
                     name="CHSH2",
                     line=dict(color=colors[1], width=3),
-                    marker=dict(size=6)
+                    marker=dict(size=6),
                 )
             )
 
             # Add reference lines
             # Classical limits
-            fig.add_hline(y=2.0, line_dash="dash", line_color="gray", line_width=2,
-                         annotation_text="Classical Limit (+2)",
-                         annotation_position="top right")
-            fig.add_hline(y=-2.0, line_dash="dash", line_color="gray", line_width=2,
-                         annotation_text="Classical Limit (-2)",
-                         annotation_position="bottom right")
+            fig.add_hline(
+                y=2.0,
+                line_dash="dash",
+                line_color="gray",
+                line_width=2,
+                annotation_text="Classical Limit (+2)",
+                annotation_position="top right",
+            )
+            fig.add_hline(
+                y=-2.0,
+                line_dash="dash",
+                line_color="gray",
+                line_width=2,
+                annotation_text="Classical Limit (-2)",
+                annotation_position="bottom right",
+            )
 
             # Quantum limits
-            fig.add_hline(y=quantum_max, line_dash="dot", line_color="red", line_width=2,
-                         annotation_text=f"Quantum Maximum (+{quantum_max:.3f})",
-                         annotation_position="top right")
-            fig.add_hline(y=-quantum_max, line_dash="dot", line_color="red", line_width=2,
-                         annotation_text=f"Quantum Maximum (-{quantum_max:.3f})",
-                         annotation_position="bottom right")
+            fig.add_hline(
+                y=quantum_max,
+                line_dash="dot",
+                line_color="red",
+                line_width=2,
+                annotation_text=f"Quantum Maximum (+{quantum_max:.3f})",
+                annotation_position="top right",
+            )
+            fig.add_hline(
+                y=-quantum_max,
+                line_dash="dot",
+                line_color="red",
+                line_width=2,
+                annotation_text=f"Quantum Maximum (-{quantum_max:.3f})",
+                annotation_position="bottom right",
+            )
 
             # Update layout with white background to match other experiments
             fig.update_layout(
@@ -382,43 +420,39 @@ class CHSHPhaseScan(BaseExperiment):
                 height=600,
                 width=900,
                 showlegend=True,
-                legend=dict(
-                    yanchor="top",
-                    y=0.99,
-                    xanchor="left",
-                    x=0.01
-                ),
-                plot_bgcolor='white',  # White background
-                paper_bgcolor='white'  # White paper background
+                legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01),
+                plot_bgcolor="white",  # White background
+                paper_bgcolor="white",  # White paper background
             )
 
             # Update axes with grid for consistency with other experiments
             fig.update_xaxes(
-                range=[phases_deg.min()-5, phases_deg.max()+5],
+                range=[phases_deg.min() - 5, phases_deg.max() + 5],
                 showgrid=True,
                 gridwidth=1,
-                gridcolor='lightgray'
+                gridcolor="lightgray",
             )
             fig.update_yaxes(
-                range=[-3.2, 3.2],
-                showgrid=True,
-                gridwidth=1,
-                gridcolor='lightgray'
+                range=[-3.2, 3.2], showgrid=True, gridwidth=1, gridcolor="lightgray"
             )
 
             # Add summary annotation
             max_violation = analysis.max_chsh_value
             max_phase_deg = math.degrees(analysis.max_chsh_phase)
-            violation_percent = 100 * analysis.violation_count / len(analysis.phase_points)
+            violation_percent = (
+                100 * analysis.violation_count / len(analysis.phase_points)
+            )
 
             fig.add_annotation(
-                x=0.98, y=0.02,
-                text="<b>Summary</b><br>" +
-                     f"Max |CHSH|: {max_violation:.3f}<br>" +
-                     f"Optimal θ: {max_phase_deg:.1f}°<br>" +
-                     f"Bell Violations: {violation_percent:.1f}%<br>" +
-                     f"Theoretical Max: {quantum_max:.3f}",
-                xref="paper", yref="paper",
+                x=0.98,
+                y=0.02,
+                text="<b>Summary</b><br>"
+                + f"Max |CHSH|: {max_violation:.3f}<br>"
+                + f"Optimal θ: {max_phase_deg:.1f}°<br>"
+                + f"Bell Violations: {violation_percent:.1f}%<br>"
+                + f"Theoretical Max: {quantum_max:.3f}",
+                xref="paper",
+                yref="paper",
                 showarrow=False,
                 font=dict(size=11),
                 bgcolor="rgba(255,255,255,0.9)",
@@ -442,7 +476,8 @@ class CHSHPhaseScan(BaseExperiment):
 
             config = get_plotly_config(
                 f"chsh_phase_Q{self.physical_qubit_0}_Q{self.physical_qubit_1}",
-                width=900, height=600
+                width=900,
+                height=600,
             )
             show_plotly_figure(fig, config)
 

@@ -47,10 +47,10 @@ class T2Echo(BaseExperiment):
         self.max_delay = self.params.max_delay
 
     def analyze(
-        self, 
-        results: dict[str, list[dict[str, Any]]], 
-        plot: bool = True, 
-        save_data: bool = True, 
+        self,
+        results: dict[str, list[dict[str, Any]]],
+        plot: bool = True,
+        save_data: bool = True,
         save_image: bool = True
     ) -> pd.DataFrame:
         """Analyze T2 Echo results with simplified single-result processing"""

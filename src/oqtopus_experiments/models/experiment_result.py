@@ -36,9 +36,9 @@ class ExperimentResult:
         self._analyzed_results = None
 
     def analyze(
-        self, 
-        plot: bool = True, 
-        save_data: bool = True, 
+        self,
+        plot: bool = True,
+        save_data: bool = True,
         save_image: bool = True
     ) -> pd.DataFrame:
         """

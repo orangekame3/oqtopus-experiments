@@ -350,7 +350,7 @@ class DeviceInfo:
             # Collect all coupling fidelities for color mapping
             coupling_fidelities = []
             valid_couplings = []
-            
+
             for c in self._device_info["couplings"]:
                 src, tgt = c["control"], c["target"]
                 if src in pos and tgt in pos:
@@ -358,17 +358,17 @@ class DeviceInfo:
                     if isinstance(fidelity, (int, float)):
                         coupling_fidelities.append(fidelity)
                         valid_couplings.append(c)
-            
+
             # Create individual traces for each coupling edge with color-coded fidelity
             for c in valid_couplings:
                 src, tgt = c["control"], c["target"]
                 x0, y0 = pos[src]
                 x1, y1 = pos[tgt]
-                
+
                 # Get coupling properties
                 fidelity = c.get("fidelity", 0.0)
                 duration_ns = c.get("duration_ns", "N/A")
-                
+
                 # Color-code edge based on fidelity using experiment colors
                 if fidelity >= 0.95:
                     edge_color = "#00B945"  # Experiment green for high fidelity
@@ -379,7 +379,7 @@ class DeviceInfo:
                 else:
                     edge_color = "#FF2C00"  # Experiment red for low fidelity
                     edge_width = 4
-                
+
                 # Create hover text with coupling information
                 hover_text = (
                     f"<b>Coupling Gate</b><br>"
@@ -389,7 +389,7 @@ class DeviceInfo:
                     f"Target: {tgt}<br>"
                     f"Duration: {duration_ns} ns" if isinstance(duration_ns, (int, float)) else f"Duration: {duration_ns}"
                 )
-                
+
                 fig_data.append(
                     go.Scatter(
                         x=[x0, x1],
@@ -402,25 +402,25 @@ class DeviceInfo:
                         opacity=0.8,
                     )
                 )
-                
+
                 # Add arrowhead to show direction from control to target
                 # Calculate arrow position and angle
                 arrow_length = 0.5  # Longer arrow for better visibility
                 angle = np.arctan2(y1 - y0, x1 - x0)
-                
+
                 # Position arrow closer to target (75% along the edge)
                 arrow_x = x0 + 0.75 * (x1 - x0)
                 arrow_y = y0 + 0.75 * (y1 - y0)
-                
+
                 # Calculate arrow endpoints with wider angle for better visibility
                 arrow_angle1 = angle + np.pi - np.pi/4  # 45 degrees for wider arrow
                 arrow_angle2 = angle + np.pi + np.pi/4  # 45 degrees for wider arrow
-                
+
                 arrow_x1 = arrow_x + arrow_length * np.cos(arrow_angle1)
                 arrow_y1 = arrow_y + arrow_length * np.sin(arrow_angle1)
                 arrow_x2 = arrow_x + arrow_length * np.cos(arrow_angle2)
                 arrow_y2 = arrow_y + arrow_length * np.sin(arrow_angle2)
-                
+
                 # Add thicker arrow lines with higher contrast
                 fig_data.append(
                     go.Scatter(
@@ -433,7 +433,7 @@ class DeviceInfo:
                         opacity=1.0,  # Full opacity for better visibility
                     )
                 )
-                
+
                 # Add a small filled circle at arrow tip for even better visibility
                 fig_data.append(
                     go.Scatter(
@@ -449,14 +449,14 @@ class DeviceInfo:
                         showlegend=False,
                     )
                 )
-                
+
                 # Add coupling fidelity text at the midpoint of the edge
                 mid_x = (x0 + x1) / 2
                 mid_y = (y0 + y1) / 2
-                
+
                 # Calculate edge length to determine if we should show text
                 edge_length = ((x1 - x0)**2 + (y1 - y0)**2)**0.5
-                
+
                 # Only show text on edges that are long enough to avoid overcrowding
                 if edge_length > 1.0:  # Minimum edge length threshold
                     # Offset text slightly to avoid overlap with the line
@@ -464,7 +464,7 @@ class DeviceInfo:
                     angle = np.arctan2(y1 - y0, x1 - x0)
                     text_x = mid_x + offset * np.sin(angle)
                     text_y = mid_y - offset * np.cos(angle)
-                    
+
                     # Add text with black outline for better visibility
                     # First add white background text for outline effect
                     fig_data.append(
@@ -483,7 +483,7 @@ class DeviceInfo:
                             hoverinfo="skip",
                         )
                     )
-                    
+
                     # Then add black text on top for better contrast
                     fig_data.append(
                         go.Scatter(
@@ -533,8 +533,8 @@ class DeviceInfo:
                 text=[f"{int(row['id'])}<br><span style='font-size:10px'>{row['fidelity']:.3f}</span>" for _, row in df.iterrows()],
                 textposition="middle center",
                 textfont={
-                    "size": 14, 
-                    "color": "white", 
+                    "size": 14,
+                    "color": "white",
                     "family": "Arial Black"
                 },
                 hoverinfo="text",
@@ -563,7 +563,7 @@ class DeviceInfo:
             ),
             go.Scatter(
                 x=[None], y=[None],
-                mode="lines", 
+                mode="lines",
                 line={"color": "#FF9500", "width": 5},
                 name="Medium Fidelity (0.90-0.95)",
                 showlegend=True,
@@ -576,7 +576,7 @@ class DeviceInfo:
                 showlegend=True,
             ),
         ]
-        
+
         # Create figure with all data and legend
         fig = go.Figure(data=fig_data + legend_traces)
         fig.update_layout(
@@ -592,7 +592,7 @@ class DeviceInfo:
                     "text": "<b>X Position</b>",
                     "font": {"size": 14, "color": "#2C3E50"}
                 },
-                "showgrid": True, 
+                "showgrid": True,
                 "gridcolor": "#E8E8E8",
                 "showline": True,
                 "linewidth": 1.5,
@@ -603,7 +603,7 @@ class DeviceInfo:
                     "text": "<b>Y Position</b>",
                     "font": {"size": 14, "color": "#2C3E50"}
                 },
-                "showgrid": True, 
+                "showgrid": True,
                 "gridcolor": "#E8E8E8",
                 "showline": True,
                 "linewidth": 1.5,

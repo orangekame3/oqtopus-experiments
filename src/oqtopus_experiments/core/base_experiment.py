@@ -45,10 +45,10 @@ class BaseExperiment(ABC):
 
     @abstractmethod
     def analyze(
-        self, 
-        results: dict[str, list[dict[str, Any]]], 
-        plot: bool = True, 
-        save_data: bool = True, 
+        self,
+        results: dict[str, list[dict[str, Any]]],
+        plot: bool = True,
+        save_data: bool = True,
         save_image: bool = True
     ) -> dict[str, Any]:
         """Experiment-specific result analysis (implemented in each experiment class)"""
@@ -145,7 +145,7 @@ class BaseExperiment(ABC):
         circuit_params = None
         if hasattr(self, "_get_circuit_params"):
             circuit_params = self._get_circuit_params()
-        
+
         # Sequential execution
         raw_results = {}
         for i, circuit in enumerate(circuits):
@@ -154,7 +154,7 @@ class BaseExperiment(ABC):
                 single_circuit_params = None
                 if circuit_params and i < len(circuit_params):
                     single_circuit_params = circuit_params[i]
-                
+
                 result = backend.run(circuit, shots, circuit_params=single_circuit_params)
                 raw_results[f"circuit_{i}"] = [result]
             except Exception as e:
@@ -326,12 +326,12 @@ class BaseExperiment(ABC):
         else:
             # Sequential execution for backends without parallel support
             print("Backend does not support parallel execution, running sequentially")
-            
+
             # Get circuit parameters if available from experiment
             circuit_params = None
             if hasattr(self, "_get_circuit_params"):
                 circuit_params = self._get_circuit_params()
-            
+
             raw_results = {}
             for i, circuit in enumerate(circuits):
                 try:
@@ -339,7 +339,7 @@ class BaseExperiment(ABC):
                     single_circuit_params = None
                     if circuit_params and i < len(circuit_params):
                         single_circuit_params = circuit_params[i]
-                    
+
                     result = backend.run(circuit, shots, circuit_params=single_circuit_params)
                     raw_results[f"circuit_{i}"] = [result]
                 except Exception as e:
@@ -401,12 +401,12 @@ class BaseExperiment(ABC):
         # Check if experiment has explicit physical qubit specification
         if hasattr(self, "_physical_qubit_specified"):
             return self._physical_qubit_specified
-            
+
         # Fallback: check experiment params (legacy compatibility)
         if not hasattr(self, "experiment_params") or not self.experiment_params:
             return False
 
         physical_qubit = self.experiment_params.get("physical_qubit")
-        
+
         # Disable OQTOPUS transpilation if physical qubit is specified
         return physical_qubit is not None

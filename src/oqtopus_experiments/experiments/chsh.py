@@ -67,11 +67,11 @@ class CHSH(BaseExperiment):
         self.theta = theta
 
     def analyze(
-        self, 
-        results: dict[str, list[dict[str, Any]]], 
-        plot: bool = True, 
-        save_data: bool = True, 
-        save_image: bool = True
+        self,
+        results: dict[str, list[dict[str, Any]]],
+        plot: bool = True,
+        save_data: bool = True,
+        save_image: bool = True,
     ) -> pd.DataFrame:
         """Analyze CHSH results and calculate Bell inequality violation"""
 
