@@ -418,7 +418,8 @@ class DeviceInfo:
                     text_x = mid_x + offset * np.sin(angle)
                     text_y = mid_y - offset * np.cos(angle)
                     
-                    # Add text directly on the edge without background circle
+                    # Add text with black outline for better visibility
+                    # First add white background text for outline effect
                     fig_data.append(
                         go.Scatter(
                             x=[text_x],
@@ -427,8 +428,26 @@ class DeviceInfo:
                             text=[f"{fidelity:.3f}"],
                             textposition="middle center",
                             textfont={
-                                "size": 12,
+                                "size": 13,
                                 "color": "white",
+                                "family": "Arial Bold",
+                            },
+                            showlegend=False,
+                            hoverinfo="skip",
+                        )
+                    )
+                    
+                    # Then add black text on top for better contrast
+                    fig_data.append(
+                        go.Scatter(
+                            x=[text_x],
+                            y=[text_y],
+                            mode="text",
+                            text=[f"{fidelity:.3f}"],
+                            textposition="middle center",
+                            textfont={
+                                "size": 11,
+                                "color": "black",
                                 "family": "Arial Bold",
                             },
                             showlegend=False,
