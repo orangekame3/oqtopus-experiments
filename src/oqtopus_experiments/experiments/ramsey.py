@@ -54,7 +54,7 @@ class Ramsey(BaseExperiment):
         results: dict[str, list[dict[str, Any]]],
         plot: bool = True,
         save_data: bool = True,
-        save_image: bool = True
+        save_image: bool = True,
     ) -> pd.DataFrame:
         """Analyze Ramsey results with simplified single-result processing"""
 
@@ -423,11 +423,11 @@ class Ramsey(BaseExperiment):
                 fig.add_annotation(
                     x=0.98,
                     y=0.02,
-                    text=f"Device: {device_name}<br>T₂* = {result.t2_star_time:.1f} ns ({result.t2_star_time/1000:.2f} μs)<br>f = {result.frequency/1e6:.2f} MHz<br>R² = {result.r_squared:.3f}",
+                    text=f"Device: {device_name}<br>T₂* = {result.t2_star_time:.1f} ns ({result.t2_star_time / 1000:.2f} μs)<br>f = {result.frequency / 1e6:.2f} MHz<br>R² = {result.r_squared:.3f}",
                     xref="paper",
                     yref="paper",
                     showarrow=False,
-                    font=dict(size=10, color="#666666"),
+                    font={"size": 10, "color": "#666666"},
                     bgcolor="rgba(255,255,255,0.9)",
                     bordercolor="#CCCCCC",
                     borderwidth=1,

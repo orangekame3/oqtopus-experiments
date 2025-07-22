@@ -129,7 +129,7 @@ class CHSHPhaseScan(BaseExperiment):
 
         # Generate circuits for each phase and each measurement basis
         for phase in self.phases:
-            for basis_name, alice_x, bob_x in measurement_bases:
+            for _basis_name, alice_x, bob_x in measurement_bases:
                 qc = QuantumCircuit(2, 2)
 
                 # Create Bell state |Φ+⟩ = (|00⟩ + |11⟩)/√2
@@ -299,7 +299,6 @@ class CHSHPhaseScan(BaseExperiment):
             import plotly.graph_objects as go
 
             from ..utils.visualization import (
-                apply_experiment_layout,
                 get_experiment_colors,
                 get_plotly_config,
                 save_plotly_figure,
@@ -331,7 +330,7 @@ class CHSHPhaseScan(BaseExperiment):
                     y=[quantum_max] * len(phases_deg) + [2] * len(phases_deg),
                     fill="toself",
                     fillcolor="rgba(100, 150, 200, 0.2)",  # Light blue for quantum violation
-                    line=dict(color="rgba(100, 150, 200, 0)"),
+                    line={"color": "rgba(100, 150, 200, 0)"},
                     name="Bell Violation Region",
                     hoverinfo="skip",
                     showlegend=True,
@@ -345,7 +344,7 @@ class CHSHPhaseScan(BaseExperiment):
                     y=[-2] * len(phases_deg) + [-quantum_max] * len(phases_deg),
                     fill="toself",
                     fillcolor="rgba(100, 150, 200, 0.2)",  # Same light blue
-                    line=dict(color="rgba(100, 150, 200, 0)"),
+                    line={"color": "rgba(100, 150, 200, 0)"},
                     name="Bell Violation Region",
                     hoverinfo="skip",
                     showlegend=False,  # Don't duplicate legend
@@ -359,8 +358,8 @@ class CHSHPhaseScan(BaseExperiment):
                     y=chsh1_values,
                     mode="lines+markers",
                     name="CHSH1",
-                    line=dict(color=colors[0], width=3),
-                    marker=dict(size=6),
+                    line={"color": colors[0], "width": 3},
+                    marker={"size": 6},
                 )
             )
 
@@ -370,8 +369,8 @@ class CHSHPhaseScan(BaseExperiment):
                     y=chsh2_values,
                     mode="lines+markers",
                     name="CHSH2",
-                    line=dict(color=colors[1], width=3),
-                    marker=dict(size=6),
+                    line={"color": colors[1], "width": 3},
+                    marker={"size": 6},
                 )
             )
 
@@ -420,7 +419,7 @@ class CHSHPhaseScan(BaseExperiment):
                 height=600,
                 width=900,
                 showlegend=True,
-                legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01),
+                legend={"yanchor": "top", "y": 0.99, "xanchor": "left", "x": 0.01},
                 plot_bgcolor="white",  # White background
                 paper_bgcolor="white",  # White paper background
             )
@@ -454,7 +453,7 @@ class CHSHPhaseScan(BaseExperiment):
                 xref="paper",
                 yref="paper",
                 showarrow=False,
-                font=dict(size=11),
+                font={"size": 11},
                 bgcolor="rgba(255,255,255,0.9)",
                 bordercolor="black",
                 borderwidth=1,
