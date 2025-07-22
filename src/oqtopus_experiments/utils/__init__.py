@@ -37,6 +37,14 @@ from .statistics import (
     exponential_decay,
     rabi_oscillation,
 )
+from .visualization import (
+    apply_experiment_layout,
+    get_experiment_colors,
+    get_plotly_config,
+    save_plotly_figure,
+    setup_plotly_environment,
+    show_plotly_figure,
+)
 
 # Advanced utilities (optional dependencies)
 try:
@@ -93,6 +101,13 @@ __all__ = [
     "load_experiment_data",
     "generate_experiment_metadata",
     "create_backup_copy",
+    # Visualization utilities
+    "setup_plotly_environment",
+    "get_plotly_config",
+    "get_experiment_colors",
+    "apply_experiment_layout",
+    "save_plotly_figure",
+    "show_plotly_figure",
 ]
 
 # Conditionally add advanced utilities to __all__ if available

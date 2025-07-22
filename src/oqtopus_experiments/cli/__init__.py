@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-CLI Framework for OQTOPUS Experiments Experiments
+OQTOPUS Experiments CLI - Simplified CLI interface using usage.py style API
 """
 
-from .base_cli import BaseExperimentCLI, DeviceType, ExperimentBackend
+from .main import app
 
-__all__ = ["BaseExperimentCLI", "DeviceType", "ExperimentBackend"]
+__all__ = ["app"]

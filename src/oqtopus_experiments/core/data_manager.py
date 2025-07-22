@@ -12,14 +12,15 @@ from typing import Any
 import matplotlib.pyplot as plt
 
 
-class SimpleDataManager:
+class ExperimentDataManager:
     """
-    Simple data management system
+    Data management system for quantum experiments
+    Handles saving results, plots, and metadata
     """
 
     def __init__(self, experiment_name: str | None = None):
         """
-        Initialize simple data manager
+        Initialize experiment data manager
 
         Args:
             experiment_name: Experiment name (auto-generated if omitted)
@@ -86,6 +87,42 @@ class SimpleDataManager:
         print(f"Saved: {filename}")
         return path
 
+    def save_results(
+        self,
+        results: dict[str, Any],
+        metadata: dict[str, Any] = None,
+        experiment_type: str = "generic",
+    ) -> str:
+        """
+        Save experiment results with metadata
+
+        Args:
+            results: Experiment results to save
+            metadata: Additional metadata
+            experiment_type: Type of experiment
+
+        Returns:
+            Save path
+        """
+        save_data = {
+            "experiment_type": experiment_type,
+            "timestamp": self.timestamp,
+            "results": results,
+            "metadata": metadata or {},
+        }
+
+        filename = f"{experiment_type}_results_{self.timestamp}.json"
+        path = f"{self.session_dir}/data/{filename}"
+
+        # JSON save with numpy support
+        json_data = self._convert_for_json(save_data)
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(json_data, f, indent=2, ensure_ascii=False)
+
+        self.files.append(path)
+        print(f"📊 Saved {experiment_type} results: {filename}")
+        return path
+
     def summary(self) -> str:
         """
         Create session summary
@@ -132,7 +169,7 @@ class SimpleDataManager:
 
 def main():
     """Demo"""
-    manager = SimpleDataManager("demo")
+    manager = ExperimentDataManager("demo")
 
     # Save plot
     fig, ax = plt.subplots()

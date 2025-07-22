@@ -1,716 +1,476 @@
 #!/usr/bin/env python3
 """
-Rabi Experiment Class - Specialized class for Rabi oscillation experiments
-Inherits from BaseExperiment and provides implementation specialized for Rabi experiments
+Rabi Experiment Class
 """
 
-import time
 from typing import Any
 
 import numpy as np
+import pandas as pd
+from qiskit import QuantumCircuit
+from scipy.optimize import curve_fit
+from scipy.signal import find_peaks
 
-from ...core.base_experiment import BaseExperiment
+from ..core.base_experiment import BaseExperiment
+from ..models.rabi_models import (
+    RabiAnalysisResult,
+    RabiCircuitParams,
+    RabiFittingResult,
+    RabiParameters,
+)
 
 
-class RabiExperiment(BaseExperiment):
-    """
-    Rabi oscillation experiment class
+class Rabi(BaseExperiment):
+    """Rabi experiment"""
 
-    Specialized features:
-    - Automatic Rabi oscillation circuit generation
-    - Excitation probability calculation
-    - Drive amplitude scan experiments
-    - Rabi frequency fitting
-    """
+    def __init__(
+        self,
+        experiment_name: str | None = None,
+        physical_qubit: int | None = None,
+        amplitude_points: int = 10,
+        max_amplitude: float = 2.0,
+    ):
+        """Initialize Rabi experiment with explicit parameters"""
+        # Track if physical_qubit was explicitly specified
+        self._physical_qubit_specified = physical_qubit is not None
+        actual_physical_qubit = physical_qubit if physical_qubit is not None else 0
 
-    def __init__(self, experiment_name: str = None, **kwargs):
-        # Extract Rabi experiment-specific parameters (not passed to BaseExperiment)
-        rabi_specific_params = {
-            "amplitude_points",
-            "max_amplitude",
-            "drive_time",
-            "drive_frequency",
-            "points",
-        }
-
-        # Filter kwargs to pass to BaseExperiment
-        base_kwargs = {k: v for k, v in kwargs.items() if k not in rabi_specific_params}
-        super().__init__(experiment_name, **base_kwargs)
-
-        # Rabi experiment-specific settings
-        self.expected_pi_pulse = np.pi  # Expected π pulse angle
-
-        print(f"Rabi experiment: Expected π pulse ≈ {self.expected_pi_pulse:.3f} rad")
-
-    @classmethod
-    def create_rabi_circuits(
-        cls,
-        amplitude_points: int = 20,
-        max_amplitude: float = 2 * np.pi,
-        drive_time: float = 1.0,
-        drive_frequency: float = 0.0,
-        amplitude_range: list[float] | None = None,
-        basis_gates: list[str] | None = None,
-        optimization_level: int = 1,
-    ) -> tuple[list[Any], dict[str, Any]]:
-        """
-        Create Rabi experiment circuits (stateless)
-
-        Args:
-            amplitude_points: Number of amplitude points (default: 20)
-            max_amplitude: Maximum amplitude (default: 2π)
-            drive_time: Drive time (default: 1.0)
-            drive_frequency: Drive frequency (default: 0.0)
-            amplitude_range: Directly specified amplitude range (optional)
-            basis_gates: Basis gates for transpilation (optional)
-            optimization_level: Qiskit transpiler optimization level (default: 1)
-
-        Returns:
-            Tuple of (circuits, metadata)
-        """
-        # Handle amplitude range
-        if amplitude_range is not None:
-            amplitude_range_array = np.array(amplitude_range)
-        else:
-            amplitude_range_array = np.linspace(0, max_amplitude, amplitude_points)
-
-        # Create circuits
-        circuits = []
-        for amplitude in amplitude_range_array:
-            circuit = cls._create_single_rabi_circuit(
-                drive_amplitude=amplitude,
-                drive_time=drive_time,
-                drive_frequency=drive_frequency,
-                basis_gates=basis_gates,
-                optimization_level=optimization_level,
-            )
-            circuits.append(circuit)
-
-        # Create metadata
-        metadata = {
-            "amplitude_range": amplitude_range_array.tolist(),
-            "amplitude_points": len(amplitude_range_array),
-            "max_amplitude": max_amplitude,
-            "drive_time": drive_time,
-            "drive_frequency": drive_frequency,
-            "experiment_type": "Rabi",
-            "basis_gates": basis_gates,
-            "optimization_level": optimization_level,
-        }
-
-        return circuits, metadata
-
-    @staticmethod
-    def _create_single_rabi_circuit(
-        drive_amplitude: float,
-        drive_time: float = 1.0,
-        drive_frequency: float = 0.0,
-        basis_gates: list[str] | None = None,
-        optimization_level: int = 1,
-    ) -> Any:
-        """Create single Rabi circuit (pure function)"""
-        from qiskit import ClassicalRegister, QuantumCircuit, QuantumRegister, transpile
-
-        # 1 quantum bit + 1 classical bit
-        qubits = QuantumRegister(1, "q")
-        bits = ClassicalRegister(1, "c")
-        circuit = QuantumCircuit(qubits, bits)
-
-        # Rabi drive: RX rotation (amplitude × time = rotation angle)
-        angle = drive_amplitude * drive_time
-
-        # Consider phase due to frequency
-        if drive_frequency != 0.0:
-            circuit.rz(drive_frequency, 0)  # Z-axis phase rotation
-
-        # Rotation around X-axis (Rabi drive)
-        circuit.rx(angle, 0)
-
-        # Z-basis measurement
-        circuit.measure(0, 0)
-
-        # Transpile if requested
-        if basis_gates is not None:
-            circuit = transpile(
-                circuit, basis_gates=basis_gates, optimization_level=optimization_level
-            )
-
-        return circuit
-
-    def create_circuits(self, **kwargs) -> list[Any]:
-        """
-        Create Rabi experiment circuits (compatibility wrapper)
-
-        Args:
-            amplitude_points: Number of amplitude points (default: 20)
-            max_amplitude: Maximum amplitude (default: 2π)
-            drive_time: Drive time (default: 1.0)
-            drive_frequency: Drive frequency (default: 0.0)
-            amplitude_range: Directly specified amplitude range (optional)
-
-        Returns:
-            List of Rabi circuits
-        """
-        # Get parameters with defaults
-        amplitude_points = kwargs.get("amplitude_points", 20)
-        max_amplitude = kwargs.get("max_amplitude", 2 * np.pi)
-        drive_time = kwargs.get("drive_time", 1.0)
-        drive_frequency = kwargs.get("drive_frequency", 0.0)
-        amplitude_range = kwargs.get("amplitude_range")
-        basis_gates = kwargs.get("basis_gates")
-        optimization_level = kwargs.get("optimization_level", 1)
-
-        # Use classmethod implementation
-        circuits, metadata = self.create_rabi_circuits(
+        self.params = RabiParameters(
+            experiment_name=experiment_name,
+            physical_qubit=actual_physical_qubit,
             amplitude_points=amplitude_points,
             max_amplitude=max_amplitude,
-            drive_time=drive_time,
-            drive_frequency=drive_frequency,
-            amplitude_range=amplitude_range,
-            basis_gates=basis_gates,
-            optimization_level=optimization_level,
         )
+        super().__init__(self.params.experiment_name or "rabi_experiment")
 
-        # Store metadata for compatibility
-        self.experiment_params = {
-            "amplitude_range": metadata["amplitude_range"],
-            "amplitude_points": metadata["amplitude_points"],
-            "drive_time": metadata["drive_time"],
-            "drive_frequency": metadata["drive_frequency"],
-        }
+        self.physical_qubit = self.params.physical_qubit
+        self.amplitude_points = self.params.amplitude_points
+        self.max_amplitude = self.params.max_amplitude
 
-        print(
-            f"Rabi circuits: drive_time={metadata['drive_time']:.3f}, frequency={metadata['drive_frequency']:.3f}"
-        )
-        print(
-            f"Amplitude range: {len(metadata['amplitude_range'])} points from {metadata['amplitude_range'][0]:.3f} to {metadata['amplitude_range'][-1]:.3f}"
-        )
+    def analyze(
+        self,
+        results: dict[str, list[dict[str, Any]]],
+        plot: bool = True,
+        save_data: bool = True,
+        save_image: bool = True,
+    ) -> pd.DataFrame:
+        """Analyze Rabi results with simplified single-result processing"""
 
-        return circuits
-
-    def analyze_results(
-        self, results: dict[str, list[dict[str, Any]]], **kwargs
-    ) -> dict[str, Any]:
-        """
-        Analyze Rabi experiment results
-
-        Args:
-            results: Raw measurement results
-
-        Returns:
-            Rabi analysis results
-        """
         if not results:
-            return {"error": "No results to analyze"}
+            return pd.DataFrame()
 
-        amplitude_range = np.array(self.experiment_params["amplitude_range"])
-        drive_time = self.experiment_params["drive_time"]
-        drive_frequency = self.experiment_params["drive_frequency"]
+        # Flatten all results into single list (no device separation)
+        all_results = []
+        for device_data in results.values():
+            all_results.extend(device_data)
 
-        analysis = {
-            "experiment_info": {
-                "drive_time": drive_time,
-                "drive_frequency": drive_frequency,
-                "amplitude_points": len(amplitude_range),
-                "expected_pi_pulse": self.expected_pi_pulse,
-            },
-            "theoretical_values": {
-                "amplitude_range": amplitude_range.tolist(),
-                "excitation_theoretical": (
-                    np.sin(amplitude_range * drive_time / 2) ** 2
-                ).tolist(),
-            },
-            "device_results": {},
+        if not all_results:
+            return pd.DataFrame()
+
+        # Fit the data
+        fitting_result = self._fit_rabi_data(all_results)
+        if not fitting_result:
+            return pd.DataFrame()
+
+        # Get device name from results
+        device_name = "unknown"
+        if all_results:
+            # Get device name from first result's backend field
+            device_name = all_results[0].get("backend", "unknown")
+
+        # Create DataFrame
+        df = self._create_dataframe(fitting_result, device_name)
+
+        # Create analysis result
+        analysis_result = RabiAnalysisResult(
+            fitting_result=fitting_result,
+            dataframe=df,
+            metadata={"experiment_type": "rabi", "physical_qubit": self.physical_qubit},
+        )
+
+        # Optional actions
+        if plot:
+            self._create_plot(analysis_result, save_image)
+        if save_data:
+            self._save_results(analysis_result)
+
+        return df
+
+    def circuits(self, **kwargs: Any) -> list[Any]:
+        """Generate Rabi circuits with automatic transpilation"""
+        amplitudes = np.linspace(0, self.max_amplitude, self.amplitude_points)
+        circuits = []
+
+        for amplitude in amplitudes:
+            qc = QuantumCircuit(1, 1)
+            if amplitude > 0:
+                qc.rx(amplitude * np.pi, 0)
+            qc.measure(0, 0)
+            circuits.append(qc)
+
+        # Store parameters for analysis and OQTOPUS
+        self.experiment_params = {
+            "amplitudes": amplitudes,
+            "logical_qubit": 0,
+            "physical_qubit": self.physical_qubit,
         }
 
-        for device, device_results in results.items():
-            if not device_results:
+        # Auto-transpile if physical qubit explicitly specified using base class method
+        if (
+            hasattr(self, "_physical_qubit_specified")
+            and self._physical_qubit_specified
+        ):
+            circuits = self._transpile_circuits_with_tranqu(
+                circuits, 0, self.physical_qubit
+            )
+
+        return circuits  # type: ignore
+
+    def _fit_rabi_data(
+        self, all_results: list[dict[str, Any]]
+    ) -> RabiFittingResult | None:
+        """Fit Rabi oscillation for all data combined"""
+        try:
+            # Extract data points
+            amplitudes, probabilities = self._extract_data_points(all_results)
+            if len(amplitudes) < 4:
+                return None
+
+            # Perform fitting
+            popt = self._perform_rabi_fit(amplitudes, probabilities)
+            if popt is None:
+                return None
+
+            fitted_amplitude, fitted_freq, fitted_offset = popt
+            pi_amplitude = 0.5 / fitted_freq
+            r_squared = self._calculate_r_squared(amplitudes, probabilities, popt)
+
+            return RabiFittingResult(
+                pi_amplitude=pi_amplitude,
+                frequency=fitted_freq,
+                fit_amplitude=fitted_amplitude,
+                offset=fitted_offset,
+                r_squared=r_squared,
+                amplitudes=amplitudes.tolist(),
+                probabilities=probabilities.tolist(),
+            )
+
+        except Exception as e:
+            return RabiFittingResult(
+                pi_amplitude=1.0,
+                frequency=0.5,
+                fit_amplitude=0.5,
+                offset=0.5,
+                r_squared=0.0,
+                amplitudes=[],
+                probabilities=[],
+                error_info=str(e),
+            )
+
+    def _extract_data_points(
+        self, all_results: list[dict[str, Any]]
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """Extract amplitude and probability data points"""
+        amplitudes: list[float] = []
+        probabilities: list[float] = []
+
+        for result in all_results:
+            # Get amplitude from embedded params
+            amplitude = None
+            if "params" in result and "amplitude" in result["params"]:
+                amplitude = result["params"]["amplitude"]
+            elif (
+                hasattr(self, "experiment_params")
+                and "amplitudes" in self.experiment_params
+            ):
+                # Fallback to experiment params
+                circuit_idx = result.get("params", {}).get(
+                    "circuit_index", len(amplitudes)
+                )
+                amplitudes_data = self.experiment_params["amplitudes"]
+                if (
+                    hasattr(amplitudes_data, "__len__")
+                    and hasattr(amplitudes_data, "__getitem__")
+                    and circuit_idx < len(amplitudes_data)
+                ):
+                    amplitude = amplitudes_data[circuit_idx]
+
+            if amplitude is None:
                 continue
 
-            device_analysis = self._analyze_device_results(
-                device_results, amplitude_range
-            )
-            analysis["device_results"][device] = device_analysis
+            # Extract probability of |1⟩
+            counts = result.get("counts", {})
+            total = sum(counts.values())
+            if total > 0:
+                prob_1 = counts.get("1", counts.get(1, 0)) / total
+                amplitudes.append(amplitude)
+                probabilities.append(prob_1)
 
-            # Estimate Rabi frequency
-            rabi_freq = self._estimate_rabi_frequency(
-                device_analysis["excitation_probabilities"], amplitude_range
-            )
-            analysis["device_results"][device]["rabi_frequency"] = rabi_freq
+        if not amplitudes:
+            return np.array([]), np.array([])
 
-            print(f"{device}: Estimated Rabi frequency = {rabi_freq:.3f} rad/amplitude")
+        amplitudes_array = np.array(amplitudes)
+        probabilities_array = np.array(probabilities)
 
-        # Inter-device comparison
-        analysis["comparison"] = self._compare_devices(analysis["device_results"])
+        # Sort by amplitude
+        sort_indices = np.argsort(amplitudes_array)
+        return amplitudes_array[sort_indices], probabilities_array[sort_indices]
 
-        return analysis
+    def _perform_rabi_fit(
+        self, amplitudes: np.ndarray, probabilities: np.ndarray
+    ) -> np.ndarray | None:
+        """Perform Rabi oscillation fitting"""
 
-    def _analyze_device_results(
-        self, device_results: list[dict[str, Any]], amplitude_range: np.ndarray
-    ) -> dict[str, Any]:
-        """
-        Single device result analysis
-        """
-        excitation_probs = []
+        def rabi_func(amp, amplitude, frequency, offset):
+            return amplitude * np.sin(np.pi * amp * frequency) ** 2 + offset
 
-        for _i, result in enumerate(device_results):
-            if result and result["success"]:
-                counts = result["counts"]
+        # Estimate initial parameters
+        amplitude_guess = np.max(probabilities) - np.min(probabilities)
+        offset_guess = np.min(probabilities)
 
-                # Calculate excitation probability
-                excitation_prob = self._calculate_excitation_probability(counts)
-                excitation_probs.append(excitation_prob)
-            else:
-                excitation_probs.append(np.nan)
+        # Estimate frequency from peaks
+        threshold = offset_guess + 0.6 * amplitude_guess
+        peaks, _ = find_peaks(probabilities, height=threshold, distance=2)
 
-        # 統計計算
-        valid_probs = np.array([p for p in excitation_probs if not np.isnan(p)])
-
-        return {
-            "excitation_probabilities": excitation_probs,
-            "amplitude_range": amplitude_range.tolist(),
-            "statistics": {
-                "max_excitation": (
-                    float(np.max(valid_probs)) if len(valid_probs) > 0 else 0
-                ),
-                "min_excitation": (
-                    float(np.min(valid_probs)) if len(valid_probs) > 0 else 0
-                ),
-                "success_rate": (
-                    len(valid_probs) / len(excitation_probs) if excitation_probs else 0
-                ),
-                "mean_excitation": float(np.nanmean(excitation_probs)),
-            },
-        }
-
-    def _calculate_excitation_probability(self, counts: dict[str | int, int]) -> float:
-        """
-        励起確率計算
-        """
-        total = sum(counts.values())
-        if total == 0:
-            return 0.0
-
-        # |1⟩状態の確率
-        if isinstance(list(counts.keys())[0], str):
-            # String format
-            n_1 = counts.get("1", 0)
+        if len(peaks) >= 2:
+            peak_amps = amplitudes[peaks]
+            frequency_guess = 1.0 / np.mean(np.diff(peak_amps))
         else:
-            # Numeric format
-            n_1 = counts.get(1, 0)
+            frequency_guess = 0.75
 
-        excitation_prob = n_1 / total
-        return excitation_prob
-
-    def _estimate_rabi_frequency(
-        self, excitation_probs: list[float], amplitude_range: np.ndarray
-    ) -> float:
-        """
-        Rabi周波数推定（簡単なフィッティング）
-        """
-        # NaNを除去
-        valid_data = [
-            (amp, prob)
-            for amp, prob in zip(amplitude_range, excitation_probs, strict=False)
-            if not np.isnan(prob)
-        ]
-
-        if len(valid_data) < 3:
-            return 0.0
-
-        amplitudes = np.array([d[0] for d in valid_data])
-        probs = np.array([d[1] for d in valid_data])
-
-        # 最初の最大値を見つける（π/2パルスに対応）
-        max_idx = np.argmax(probs)
-        if max_idx > 0:
-            pi_half_amplitude = amplitudes[max_idx]
-            # Rabi周波数 = π/(2 * amplitude_for_pi_half_pulse)
-            rabi_freq = np.pi / (2 * pi_half_amplitude)
-        else:
-            # フォールバック：理論値
-            rabi_freq = 1.0
-
-        return rabi_freq
-
-    def _compare_devices(
-        self, device_results: dict[str, dict[str, Any]]
-    ) -> dict[str, Any]:
-        """
-        デバイス間比較分析
-        """
-        if len(device_results) < 2:
-            return {"note": "Multiple devices required for comparison"}
-
-        comparison = {
-            "device_count": len(device_results),
-            "rabi_frequency_comparison": {},
-            "max_excitation_comparison": {},
-        }
-
-        for device, analysis in device_results.items():
-            stats = analysis["statistics"]
-            comparison["rabi_frequency_comparison"][device] = analysis.get(
-                "rabi_frequency", 0.0
-            )
-            comparison["max_excitation_comparison"][device] = stats["max_excitation"]
-
-        return comparison
-
-    def save_experiment_data(
-        self, results: dict[str, Any], metadata: dict[str, Any] = None
-    ) -> str:
-        """
-        Rabi実験データ保存
-        """
-        # Rabi実験専用の保存形式
-        rabi_data = {
-            "experiment_type": "Rabi_Oscillation",
-            "experiment_timestamp": time.time(),
-            "experiment_parameters": self.experiment_params,
-            "analysis_results": results,
-            "oqtopus_configuration": {
-                "transpiler_options": self.transpiler_options,
-                "mitigation_options": self.mitigation_options,
-                "basis_gates": self.anemone_basis_gates,
-            },
-            "metadata": metadata or {},
-        }
-
-        # メイン結果保存
-        main_file = self.data_manager.save_data(rabi_data, "rabi_experiment_results")
-
-        # 追加ファイル保存
-        if "device_results" in results:
-            # デバイス別サマリー
-            device_summary = {
-                device: analysis["statistics"]
-                for device, analysis in results["device_results"].items()
-            }
-            self.data_manager.save_data(device_summary, "device_performance_summary")
-
-            # 励起確率データ（プロット用）
-            excitation_data = {
-                "amplitude_range": self.experiment_params["amplitude_range"],
-                "theoretical_excitation": results["theoretical_values"][
-                    "excitation_theoretical"
-                ],
-                "device_excitation_probs": {
-                    device: analysis["excitation_probabilities"]
-                    for device, analysis in results["device_results"].items()
-                },
-            }
-            self.data_manager.save_data(
-                excitation_data, "excitation_probabilities_for_plotting"
-            )
-
-        return main_file
-
-    def generate_rabi_plot(
-        self, results: dict[str, Any], save_plot: bool = True, show_plot: bool = False
-    ) -> str | None:
-        """Generate Rabi experiment plot with all formatting"""
         try:
-            import matplotlib.pyplot as plt
+            popt, _ = curve_fit(
+                rabi_func,
+                amplitudes,
+                probabilities,
+                p0=[amplitude_guess, frequency_guess, offset_guess],
+                bounds=([0, 0.1, 0], [1, 5, 1]),
+                maxfev=2000,
+            )
+            return popt  # type: ignore
+        except Exception:
+            return None
+
+    def _calculate_r_squared(
+        self, amplitudes: np.ndarray, probabilities: np.ndarray, popt: np.ndarray
+    ) -> float:
+        """Calculate R-squared for fit quality"""
+
+        def rabi_func(amp, amplitude, frequency, offset):
+            return amplitude * np.sin(np.pi * amp * frequency) ** 2 + offset
+
+        y_pred = rabi_func(amplitudes, *popt)
+        ss_res = np.sum((probabilities - y_pred) ** 2)
+        ss_tot = np.sum((probabilities - np.mean(probabilities)) ** 2)
+        return 1 - (ss_res / ss_tot) if ss_tot > 0 else 0
+
+    def _create_dataframe(
+        self, fitting_result: RabiFittingResult, device_name: str = "unknown"
+    ) -> pd.DataFrame:
+        """Create DataFrame from fitting results"""
+        df_data = []
+        for amp, prob in zip(
+            fitting_result.amplitudes, fitting_result.probabilities, strict=True
+        ):
+            df_data.append(
+                {
+                    "device": device_name,
+                    "amplitude": amp,
+                    "probability": prob,
+                    "pi_amplitude": fitting_result.pi_amplitude,
+                    "frequency": fitting_result.frequency,
+                    "r_squared": fitting_result.r_squared,
+                }
+            )
+        return pd.DataFrame(df_data) if df_data else pd.DataFrame()
+
+    def _create_plot(
+        self, analysis_result: RabiAnalysisResult, save_image: bool = False
+    ):
+        """Create visualization using utilities"""
+        try:
+            import plotly.graph_objects as go
+
+            from ..utils.visualization import (
+                apply_experiment_layout,
+                get_experiment_colors,
+                get_plotly_config,
+                save_plotly_figure,
+                setup_plotly_environment,
+                show_plotly_figure,
+            )
+
+            setup_plotly_environment()
+            colors = get_experiment_colors()
+            fig = go.Figure()
+
+            df = analysis_result.dataframe
+            result = analysis_result.fitting_result
+
+            # Get device name from dataframe or use fallback
+            device_name = "unknown"
+            if not df.empty and "device" in df.columns:
+                device_name = df["device"].iloc[0]
+            elif hasattr(self, "_last_backend_device"):
+                device_name = self._last_backend_device
+
+            # Data points
+            fig.add_trace(
+                go.Scatter(
+                    x=df["amplitude"],
+                    y=df["probability"],
+                    mode="markers",
+                    name="Data",
+                    marker={
+                        "size": 7,
+                        "color": colors[1],
+                        "line": {"width": 1, "color": "white"},
+                    },
+                )
+            )
+
+            # Fit curve
+            if not result.error_info:
+                x_fine = np.linspace(df["amplitude"].min(), df["amplitude"].max(), 200)
+                y_fine = (
+                    result.fit_amplitude
+                    * np.sin(np.pi * x_fine * result.frequency) ** 2
+                    + result.offset
+                )
+
+                fig.add_trace(
+                    go.Scatter(
+                        x=x_fine,
+                        y=y_fine,
+                        mode="lines",
+                        name="Fit",
+                        line={"width": 3, "color": colors[0]},
+                    )
+                )
+
+            # Apply layout
+            apply_experiment_layout(
+                fig,
+                title=f"Rabi oscillation : Q{self.physical_qubit} ({device_name})",
+                xaxis_title="Drive amplitude (arb. unit)",
+                yaxis_title="P(|1⟩)",
+                height=400,
+                width=700,
+            )
+            fig.update_yaxes(range=[0, 1.05])  # Add 5% padding at top
+
+            # Add vertical line at π-pulse amplitude
+            if not result.error_info and result.pi_amplitude <= df["amplitude"].max():
+                fig.add_vline(
+                    x=result.pi_amplitude,
+                    line_dash="dash",
+                    line_color=colors[2],
+                    line_width=1.5,
+                    opacity=0.6,
+                )
+
+            # Add annotations for key parameters
+            if not result.error_info:
+                # Add π-pulse amplitude annotation
+                fig.add_annotation(
+                    x=result.pi_amplitude,
+                    y=0.95,
+                    text=f"π-pulse: {result.pi_amplitude:.3f}",
+                    showarrow=True,
+                    arrowhead=2,
+                    arrowsize=1,
+                    arrowwidth=2,
+                    arrowcolor=colors[2],
+                    font=dict(size=11, color=colors[2]),
+                    bgcolor="rgba(255,255,255,0.8)",
+                    bordercolor=colors[2],
+                    borderwidth=1,
+                )
+
+                # Add fit quality annotation
+                fig.add_annotation(
+                    x=0.98,
+                    y=0.02,
+                    text=f"Device: {device_name}<br>R² = {result.r_squared:.3f}<br>f = {result.frequency:.3f}",
+                    xref="paper",
+                    yref="paper",
+                    showarrow=False,
+                    font=dict(size=10, color="#666666"),
+                    bgcolor="rgba(255,255,255,0.9)",
+                    bordercolor="#CCCCCC",
+                    borderwidth=1,
+                    align="right",
+                )
+
+            # Save and show
+            if save_image:
+                images_dir = (
+                    getattr(self.data_manager, "session_dir", "./images") + "/plots"
+                )
+                save_plotly_figure(
+                    fig,
+                    name=f"rabi_{self.physical_qubit}",
+                    images_dir=images_dir,
+                    width=700,
+                    height=400,
+                )
+
+            config = get_plotly_config(
+                f"rabi_Q{self.physical_qubit}", width=700, height=400
+            )
+            show_plotly_figure(fig, config)
+
         except ImportError:
-            print("matplotlib not available - skipping plot generation")
+            print("plotly not available, skipping plot")
+        except Exception as e:
+            print(f"Plot creation failed: {e}")
+
+    def _save_results(self, analysis_result: RabiAnalysisResult):
+        """Save analysis results"""
+        try:
+            result = analysis_result.fitting_result
+            saved_path = self.save_experiment_data(
+                analysis_result.dataframe.to_dict(orient="records"),
+                metadata={
+                    "fitting_summary": {
+                        "pi_amplitude": result.pi_amplitude,
+                        "frequency": result.frequency,
+                        "r_squared": result.r_squared,
+                    },
+                    **analysis_result.metadata,
+                },
+                experiment_type="rabi",
+            )
+            print(f"Analysis data saved to: {saved_path}")
+        except Exception as e:
+            print(f"Warning: Could not save analysis data: {e}")
+
+    def _get_circuit_params(self) -> list[dict[str, Any]] | None:
+        """Get circuit parameters for OQTOPUS"""
+        if not hasattr(self, "experiment_params"):
             return None
 
-        amplitude_range = results.get("amplitude_range", np.linspace(0, 2 * np.pi, 20))
-        device_results = results.get("device_results", {})
+        amplitudes = self.experiment_params["amplitudes"]
+        logical_qubit = self.experiment_params.get("logical_qubit", 0)
+        physical_qubit = self.experiment_params.get("physical_qubit", logical_qubit)
 
-        if not device_results:
-            print("No device results for plotting")
-            return None
-
-        theoretical_excitation = results.get("theoretical_values", {}).get(
-            "excitation_theoretical", (np.sin(amplitude_range / 2) ** 2).tolist()
-        )
-
-        # Create plot
-        fig, ax = plt.subplots(figsize=(12, 8))
-
-        # Plot experimental data for each device
-        colors = ["blue", "red", "green", "orange", "purple"]
-
-        for i, (device, device_data) in enumerate(device_results.items()):
-            if "excitation_probabilities" in device_data:
-                excitation_probs = device_data["excitation_probabilities"]
-                color = colors[i % len(colors)]
-                ax.plot(
-                    amplitude_range,
-                    excitation_probs,
-                    "o-",
-                    linewidth=2,
-                    markersize=6,
-                    label=f"{device} (quantumlib)",
-                    alpha=0.8,
-                    color=color,
+        circuit_params = []
+        if hasattr(amplitudes, "__iter__"):
+            for amp in amplitudes:
+                param_model = RabiCircuitParams(
+                    amplitude=float(amp),
+                    logical_qubit=(
+                        int(logical_qubit)
+                        if isinstance(logical_qubit, (int | float))
+                        else 0
+                    ),
+                    physical_qubit=(
+                        int(physical_qubit)
+                        if isinstance(physical_qubit, (int | float))
+                        else 0
+                    ),
+                    rotation_angle=float(amp * np.pi),
                 )
+                circuit_params.append(param_model.model_dump())
 
-        # Plot theoretical curve
-        ax.plot(
-            amplitude_range,
-            theoretical_excitation,
-            "k-",
-            linewidth=3,
-            alpha=0.7,
-            label="Theory: sin²(Ωt/2)",
-        )
-
-        # Formatting
-        ax.set_xlabel("Drive Amplitude [rad]", fontsize=14)
-        ax.set_ylabel("Excitation Probability", fontsize=14)
-        ax.set_title(
-            "OQTOPUS Experiments Rabi Oscillation Experiment",
-            fontsize=16,
-            fontweight="bold",
-        )
-        ax.grid(True, alpha=0.3)
-        ax.legend(fontsize=12)
-        ax.set_ylim(0, 1.1)
-
-        # X-axis labels in π units
-        max_amp = max(amplitude_range)
-        if max_amp >= 2 * np.pi:
-            ax.set_xticks([0, np.pi / 2, np.pi, 3 * np.pi / 2, 2 * np.pi])
-            ax.set_xticklabels(["0", "π/2", "π", "3π/2", "2π"])
-
-        plot_filename = None
-        if save_plot:
-            # Save plot in experiment results directory
-            plt.tight_layout()
-            plot_filename = f"rabi_plot_{self.experiment_name}_{int(time.time())}.png"
-
-            # Always save to experiment results directory
-            if hasattr(self, "data_manager") and hasattr(
-                self.data_manager, "session_dir"
-            ):
-                plot_path = f"{self.data_manager.session_dir}/plots/{plot_filename}"
-                plt.savefig(plot_path, dpi=300, bbox_inches="tight")
-                print(f"Plot saved: {plot_path}")
-                plot_filename = plot_path  # Return full path
-            else:
-                # Fallback: save in current directory but warn
-                plt.savefig(plot_filename, dpi=300, bbox_inches="tight")
-                print(f"⚠️ Plot saved to current directory: {plot_filename}")
-                print("   (data_manager not available)")
-
-        # Try to display plot
-        if show_plot:
-            try:
-                plt.show()
-            except Exception:
-                pass
-
-        plt.close()
-        return plot_filename
-
-    def save_complete_experiment_data(self, results: dict[str, Any]) -> str:
-        """Save experiment data and generate comprehensive report"""
-        # Save main experiment data using existing system
-        main_file = self.save_experiment_data(results["analysis"])
-
-        # Generate and save plot
-        plot_file = self.generate_rabi_plot(results, save_plot=True, show_plot=False)
-
-        # Create experiment summary
-        summary = self._create_experiment_summary(results)
-        summary_file = self.data_manager.save_data(summary, "experiment_summary")
-
-        print("📊 Complete experiment data saved:")
-        print(f"  • Main results: {main_file}")
-        print(f"  • Plot: {plot_file if plot_file else 'Not generated'}")
-        print(f"  • Summary: {summary_file}")
-
-        return main_file
-
-    def _create_experiment_summary(self, results: dict[str, Any]) -> dict[str, Any]:
-        """Create human-readable experiment summary"""
-        device_results = results.get("device_results", {})
-        amplitude_range = results.get("amplitude_range", [])
-
-        summary = {
-            "experiment_overview": {
-                "experiment_name": self.experiment_name,
-                "timestamp": time.time(),
-                "method": results.get("method", "rabi_oscillation"),
-                "amplitude_points": len(amplitude_range),
-                "devices_tested": list(device_results.keys()),
-            },
-            "key_results": {},
-            "rabi_analysis": {
-                "expected_pi_pulse": self.expected_pi_pulse,
-                "oscillations_detected": False,
-            },
-        }
-
-        # Analyze each device
-        max_excitation_overall = 0
-        min_excitation_overall = 1
-
-        for device, device_data in device_results.items():
-            if "excitation_probabilities" in device_data:
-                excitation_probs = device_data["excitation_probabilities"]
-                valid_probs = [p for p in excitation_probs if not np.isnan(p)]
-
-                if valid_probs:
-                    max_exc = max(valid_probs)
-                    min_exc = min(valid_probs)
-                    rabi_freq = device_data.get("rabi_frequency", 0.0)
-
-                    summary["key_results"][device] = {
-                        "max_excitation": max_exc,
-                        "min_excitation": min_exc,
-                        "excitation_range": max_exc - min_exc,
-                        "rabi_frequency": rabi_freq,
-                        "clear_oscillation": (max_exc - min_exc) > 0.5,
-                    }
-
-                    max_excitation_overall = max(max_excitation_overall, max_exc)
-                    min_excitation_overall = min(min_excitation_overall, min_exc)
-
-        summary["rabi_analysis"]["oscillations_detected"] = (
-            max_excitation_overall - min_excitation_overall
-        ) > 0.5
-        summary["rabi_analysis"]["max_excitation_observed"] = max_excitation_overall
-        summary["rabi_analysis"]["min_excitation_observed"] = min_excitation_overall
-
-        return summary
-
-    def display_results(self, results: dict[str, Any], use_rich: bool = True) -> None:
-        """Display Rabi experiment results in formatted table"""
-        device_results = results.get("device_results", {})
-
-        if not device_results:
-            print("No device results found")
-            return
-
-        if use_rich:
-            try:
-                from rich.console import Console
-                from rich.table import Table
-
-                console = Console()
-                table = Table(
-                    title="Rabi Oscillation Results",
-                    show_header=True,
-                    header_style="bold blue",
-                )
-                table.add_column("Device", style="cyan")
-                table.add_column("Max Excitation", justify="right")
-                table.add_column("Rabi Frequency", justify="right")
-                table.add_column("Method", justify="center")
-                table.add_column("Clear Oscillation", justify="center")
-
-                method = results.get("method", "quantumlib_rabi")
-
-                for device, device_data in device_results.items():
-                    if "excitation_probabilities" in device_data:
-                        excitation_probs = device_data["excitation_probabilities"]
-                        valid_probs = [p for p in excitation_probs if not np.isnan(p)]
-
-                        if valid_probs:
-                            max_exc = max(valid_probs)
-                            min_exc = min(valid_probs)
-                            rabi_freq = device_data.get("rabi_frequency", 0.0)
-
-                            oscillation = "YES" if (max_exc - min_exc) > 0.5 else "NO"
-                            oscillation_style = (
-                                "green" if (max_exc - min_exc) > 0.5 else "yellow"
-                            )
-
-                            table.add_row(
-                                device.upper(),
-                                f"{max_exc:.3f}",
-                                f"{rabi_freq:.3f}",
-                                method,
-                                oscillation,
-                                style=(
-                                    oscillation_style
-                                    if (max_exc - min_exc) > 0.5
-                                    else None
-                                ),
-                            )
-
-                console.print(table)
-                console.print(f"\nExpected π pulse: {self.expected_pi_pulse:.3f} rad")
-                console.print("Clear oscillation threshold: 0.5 excitation range")
-
-            except ImportError:
-                use_rich = False
-
-        if not use_rich:
-            # Fallback to simple text display
-            print("\n" + "=" * 60)
-            print("Rabi Oscillation Results")
-            print("=" * 60)
-
-            method = results.get("method", "quantumlib_rabi")
-
-            for device, device_data in device_results.items():
-                if "excitation_probabilities" in device_data:
-                    excitation_probs = device_data["excitation_probabilities"]
-                    valid_probs = [p for p in excitation_probs if not np.isnan(p)]
-
-                    if valid_probs:
-                        max_exc = max(valid_probs)
-                        min_exc = min(valid_probs)
-                        rabi_freq = device_data.get("rabi_frequency", 0.0)
-
-                        oscillation = "YES" if (max_exc - min_exc) > 0.5 else "NO"
-
-                        print(f"Device: {device.upper()}")
-                        print(f"  Max Excitation: {max_exc:.3f}")
-                        print(f"  Rabi Frequency: {rabi_freq:.3f}")
-                        print(f"  Method: {method}")
-                        print(f"  Clear Oscillation: {oscillation}")
-                        print()
-
-            print(f"Expected π pulse: {self.expected_pi_pulse:.3f} rad")
-            print("Clear oscillation threshold: 0.5 excitation range")
-            print("=" * 60)
-
-    def run_complete_rabi_experiment(
-        self,
-        devices: list[str] = ["qulacs"],
-        amplitude_points: int = 20,
-        max_amplitude: float = 2 * np.pi,
-        shots: int = 1024,
-        parallel_workers: int = 4,
-        save_data: bool = True,
-        save_plot: bool = True,
-        show_plot: bool = False,
-        display_results: bool = True,
-    ) -> dict[str, Any]:
-        """
-        Run complete Rabi experiment with all post-processing
-        This is the main entry point for CLI usage
-        """
-        print(f"🔬 Running complete Rabi experiment: {self.experiment_name}")
-        print(f"   Devices: {devices}")
-        print(
-            f"   Amplitude points: {amplitude_points}, Max amplitude: {max_amplitude:.3f}"
-        )
-        print(f"   Shots: {shots}, Parallel workers: {parallel_workers}")
-
-        # Run the Rabi experiment
-        results = self.run_experiment(
-            devices=devices,
-            shots=shots,
-            amplitude_points=amplitude_points,
-            max_amplitude=max_amplitude,
-        )
-
-        # Save data if requested
-        if save_data:
-            self.save_complete_experiment_data(results)
-        elif save_plot:
-            # Just save plot without full data
-            self.generate_rabi_plot(results, save_plot=True, show_plot=show_plot)
-
-        # Display results if requested
-        if display_results:
-            self.display_results(results, use_rich=True)
-
-        return results
+        return circuit_params

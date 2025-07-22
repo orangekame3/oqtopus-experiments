@@ -4,6 +4,6 @@ Core module - Base classes and core functionality
 """
 
 from .base_experiment import BaseExperiment
-from .data_manager import SimpleDataManager
+from .data_manager import ExperimentDataManager
 
-__all__ = ["BaseExperiment", "SimpleDataManager"]
+__all__ = ["BaseExperiment", "ExperimentDataManager"]
