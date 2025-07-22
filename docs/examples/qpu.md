@@ -267,4 +267,4 @@ hw_result = exp.run(backend=hardware_backend, shots=1000)
 For more examples and tutorials, see:
 - [Simulation Examples](simulation.md)
 - [Backend Documentation](../backends/index.md)
-- [API Reference](../reference/)
+- [API Reference](../reference/SUMMARY.md)

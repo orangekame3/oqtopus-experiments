@@ -144,4 +144,4 @@ for backend_name in ["qulacs", "noisy", "oqtopus"]:
   - [T1 Measurements](t1.md) - Characterize energy relaxation
   - [CHSH Tests](chsh.md) - Demonstrate quantum entanglement
 - Explore [Examples](../examples/index.md) for complete workflows
-- Check [API Reference](../reference/) for detailed documentation
+- Check [API Reference](../reference/SUMMARY.md) for detailed documentation

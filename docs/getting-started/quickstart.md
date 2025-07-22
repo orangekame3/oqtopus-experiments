@@ -119,7 +119,7 @@ df = result.analyze(plot=True)
 - Explore [Experiment Documentation](../experiments/index.md) for detailed guides
 - Check out [Examples](../examples/index.md) for more complex scenarios
 - Learn about [Backend Options](../backends/index.md) for different execution environments
-- Browse the [API Reference](../reference/) for complete documentation
+- Browse the [API Reference](../reference/SUMMARY.md) for complete documentation
 
 ## Troubleshooting
 

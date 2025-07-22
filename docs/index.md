@@ -53,4 +53,4 @@ df = result.analyze(plot=True, save_data=True)
 - [Installation Guide](getting-started/installation.md) - Set up your environment
 - [Quick Start Tutorial](getting-started/quickstart.md) - Run your first experiment
 - [Experiment Documentation](experiments/index.md) - Detailed experiment guides
-- [API Reference](reference/) - Complete API documentation
+- [API Reference](reference/SUMMARY.md) - Complete API documentation

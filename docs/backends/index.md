@@ -127,4 +127,4 @@ result = exp.run(backend=backend, shots=1000)  # Fast enough to be sequential
   - [OQTOPUS Backend](oqtopus.md) - Real hardware setup
   - [Local Backend](local.md) - Simulation configuration
 - See [Examples](../examples/index.md) for backend-specific usage patterns
-- Check [API Reference](../reference/) for detailed configuration options
+- Check [API Reference](../reference/SUMMARY.md) for detailed configuration options

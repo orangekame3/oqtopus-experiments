@@ -209,4 +209,4 @@ experiments_data_YYYYMMDD_HHMMSS/
   - [Real Hardware Examples](qpu.md)
   - [Simulation Examples](simulation.md)
 - Learn about [experiment types](../experiments/index.md)
-- Check [API documentation](../reference/) for advanced usage
+- Check [API documentation](../reference/SUMMARY.md) for advanced usage
