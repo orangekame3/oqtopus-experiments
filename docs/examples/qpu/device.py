@@ -8,7 +8,7 @@ from oqtopus_experiments.backends import OqtopusBackend
 
 
 def main():
-    backend = OqtopusBackend(device="anemone")
+    backend = OqtopusBackend(device="urchin")
 
     print(f"Device: {backend.device_name}")
 

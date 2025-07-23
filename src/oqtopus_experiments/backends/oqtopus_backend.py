@@ -945,16 +945,23 @@ class OqtopusBackend:
         Returns:
             Dictionary with normalized string keys
         """
-        # If all keys are already strings, return as-is
-        if all(isinstance(k, str) for k in counts.keys()):
+        # Check if we need to convert from decimal to binary format
+        # If all keys are strings that represent binary states (e.g., "00", "01"), return as-is
+        if all(isinstance(k, str) and not k.isdigit() for k in counts.keys()):
             return {str(k): v for k, v in counts.items()}
 
-        # Determine number of qubits from maximum integer key
-        int_keys = [k for k in counts.keys() if isinstance(k, int)]
-        if not int_keys:
+        # Determine number of qubits from maximum key value (integer or decimal string)
+        all_keys = []
+        for k in counts.keys():
+            if isinstance(k, int):
+                all_keys.append(k)
+            elif isinstance(k, str) and k.isdigit():
+                all_keys.append(int(k))
+
+        if not all_keys:
             return {str(k): v for k, v in counts.items()}
 
-        max_key = max(int_keys)
+        max_key = max(all_keys)
         # For quantum measurements: n_qubits = ceil(log2(max_key + 1))
         # This ensures 2^n states can be represented
         import math
@@ -967,8 +974,13 @@ class OqtopusBackend:
                 # Convert to binary string with appropriate padding
                 binary_key = format(key, f"0{n_bits}b")
                 normalized[binary_key] = value
+            elif isinstance(key, str) and key.isdigit():
+                # String that represents a decimal number - convert to binary
+                decimal_value = int(key)
+                binary_key = format(decimal_value, f"0{n_bits}b")
+                normalized[binary_key] = value
             else:
-                # Already a string, keep as-is
+                # Already a binary string, keep as-is
                 normalized[str(key)] = value
 
         return normalized
