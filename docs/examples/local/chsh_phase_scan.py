@@ -14,6 +14,7 @@ def main():
 
     # Local backend for Qiskit Aer simulator with noise
     backend = LocalBackend(device="noisy")
+    # backend = OqtopusBackend("anemone"))
 
     # Create CHSH phase scan experiment
     exp = CHSHPhaseScan(
