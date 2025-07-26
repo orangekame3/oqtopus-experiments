@@ -34,7 +34,7 @@ class TestRabi:
             experiment_name="custom_rabi",
             physical_qubit=3,
             amplitude_points=20,
-            max_amplitude=3.0
+            max_amplitude=3.0,
         )
 
         assert experiment.experiment_name == "custom_rabi"
@@ -67,14 +67,16 @@ class TestRabi:
         """Test that circuits cover the correct amplitude range"""
         amplitude_points = 6
         max_amplitude = 2.0
-        experiment = Rabi(amplitude_points=amplitude_points, max_amplitude=max_amplitude)
+        experiment = Rabi(
+            amplitude_points=amplitude_points, max_amplitude=max_amplitude
+        )
 
         # First call circuits() to initialize experiment_params
         circuits = experiment.circuits()
         assert len(circuits) == amplitude_points
 
         # Get circuit parameters to verify amplitudes
-        if hasattr(experiment, '_get_circuit_params'):
+        if hasattr(experiment, "_get_circuit_params"):
             params = experiment._get_circuit_params()
             if params:
                 amplitudes = [p["amplitude"] for p in params]
@@ -89,15 +91,12 @@ class TestRabi:
         mock_results = {
             "circuit_0": [{"counts": {"0": 900, "1": 100}, "success": True}],
             "circuit_1": [{"counts": {"0": 600, "1": 400}, "success": True}],
-            "circuit_2": [{"counts": {"0": 200, "1": 800}, "success": True}]
+            "circuit_2": [{"counts": {"0": 200, "1": 800}, "success": True}],
         }
 
-        with patch('matplotlib.pyplot.show'):
+        with patch("matplotlib.pyplot.show"):
             analysis_result = experiment.analyze(
-                mock_results,
-                plot=False,
-                save_data=False,
-                save_image=False
+                mock_results, plot=False, save_data=False, save_image=False
             )
 
         assert analysis_result is not None
@@ -107,17 +106,11 @@ class TestRabi:
         """Test analyze method with empty results"""
         experiment = Rabi(amplitude_points=2)
 
-        empty_results = {
-            "circuit_0": [],
-            "circuit_1": []
-        }
+        empty_results = {"circuit_0": [], "circuit_1": []}
 
-        with patch('matplotlib.pyplot.show'):
+        with patch("matplotlib.pyplot.show"):
             analysis_result = experiment.analyze(
-                empty_results,
-                plot=False,
-                save_data=False,
-                save_image=False
+                empty_results, plot=False, save_data=False, save_image=False
             )
 
         assert analysis_result is not None
@@ -132,7 +125,7 @@ class TestRabi:
         mock_backend.run.side_effect = [
             {"counts": {"0": 900, "1": 100}, "success": True},
             {"counts": {"0": 600, "1": 400}, "success": True},
-            {"counts": {"0": 200, "1": 800}, "success": True}
+            {"counts": {"0": 200, "1": 800}, "success": True},
         ]
 
         result = experiment.run(mock_backend, shots=1000)
@@ -151,7 +144,7 @@ class TestRabi:
         mock_backend.collect_parallel.return_value = [
             {"counts": {"0": 900, "1": 100}, "success": True},
             {"counts": {"0": 600, "1": 400}, "success": True},
-            {"counts": {"0": 200, "1": 800}, "success": True}
+            {"counts": {"0": 200, "1": 800}, "success": True},
         ]
 
         result = experiment.run_parallel(mock_backend, shots=1000)
@@ -184,7 +177,7 @@ class TestRabi:
             experiment_name="test_rabi",
             physical_qubit=2,
             amplitude_points=15,
-            max_amplitude=1.5
+            max_amplitude=1.5,
         )
 
         params = experiment.params
@@ -202,8 +195,8 @@ class TestRabi:
         assert isinstance(experiment, BaseExperiment)
 
         # Test that abstract methods are implemented
-        assert hasattr(experiment, 'circuits')
-        assert hasattr(experiment, 'analyze')
+        assert hasattr(experiment, "circuits")
+        assert hasattr(experiment, "analyze")
         assert callable(experiment.circuits)
         assert callable(experiment.analyze)
 
@@ -236,7 +229,7 @@ class TestRabi:
             experiment = Rabi(max_amplitude=amplitude)
             assert experiment.max_amplitude == amplitude
 
-    @patch('oqtopus_experiments.experiments.rabi.curve_fit')
+    @patch("oqtopus_experiments.experiments.rabi.curve_fit")
     def test_analyze_with_fitting(self, mock_curve_fit):
         """Test analyze method with curve fitting"""
         experiment = Rabi(amplitude_points=5)
@@ -249,15 +242,12 @@ class TestRabi:
             "circuit_1": [{"counts": {"0": 600, "1": 400}, "success": True}],
             "circuit_2": [{"counts": {"0": 500, "1": 500}, "success": True}],
             "circuit_3": [{"counts": {"0": 400, "1": 600}, "success": True}],
-            "circuit_4": [{"counts": {"0": 200, "1": 800}, "success": True}]
+            "circuit_4": [{"counts": {"0": 200, "1": 800}, "success": True}],
         }
 
-        with patch('matplotlib.pyplot.show'):
+        with patch("matplotlib.pyplot.show"):
             analysis_result = experiment.analyze(
-                mock_results,
-                plot=False,
-                save_data=False,
-                save_image=False
+                mock_results, plot=False, save_data=False, save_image=False
             )
 
         assert analysis_result is not None
@@ -267,4 +257,3 @@ class TestRabi:
 
 if __name__ == "__main__":
     pytest.main([__file__])
-

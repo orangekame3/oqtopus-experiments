@@ -3,7 +3,6 @@
 Tests for OqtopusBackend
 """
 
-
 import pytest
 from qiskit import QuantumCircuit
 
@@ -124,10 +123,10 @@ class TestOqtopusBackend:
         """Test that backend has required attributes"""
         backend = OqtopusBackend("test_device")
 
-        assert hasattr(backend, 'backend_type')
-        assert hasattr(backend, 'device_name')
-        assert hasattr(backend, 'timeout_seconds')
-        assert hasattr(backend, 'available')
+        assert hasattr(backend, "backend_type")
+        assert hasattr(backend, "device_name")
+        assert hasattr(backend, "timeout_seconds")
+        assert hasattr(backend, "available")
 
         assert backend.backend_type == "oqtopus"
         assert backend.device_name == "test_device"

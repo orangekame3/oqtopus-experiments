@@ -36,7 +36,7 @@ class TestHadamardTest:
             physical_qubit=2,
             test_unitary="X",
             angle_points=8,
-            max_angle=np.pi
+            max_angle=np.pi,
         )
 
         assert experiment.experiment_name == "custom_hadamard"
@@ -96,7 +96,7 @@ class TestHadamardTest:
         assert len(circuits) == angle_points
 
         # Get circuit parameters to verify angles
-        if hasattr(experiment, '_get_circuit_params'):
+        if hasattr(experiment, "_get_circuit_params"):
             params = experiment._get_circuit_params()
             if params:
                 angles = [p["angle"] for p in params]
@@ -118,18 +118,21 @@ class TestHadamardTest:
 
         # Create mock results that should follow cos(θ) pattern for Z unitary
         mock_results = {
-            "circuit_0": [{"counts": {"0": 1000, "1": 0}, "success": True}],    # θ=0, cos(0)=1
-            "circuit_1": [{"counts": {"0": 750, "1": 250}, "success": True}],   # θ=π/3
-            "circuit_2": [{"counts": {"0": 500, "1": 500}, "success": True}],   # θ=2π/3, cos(2π/3)=0
-            "circuit_3": [{"counts": {"0": 0, "1": 1000}, "success": True}]     # θ=π, cos(π)=-1
+            "circuit_0": [
+                {"counts": {"0": 1000, "1": 0}, "success": True}
+            ],  # θ=0, cos(0)=1
+            "circuit_1": [{"counts": {"0": 750, "1": 250}, "success": True}],  # θ=π/3
+            "circuit_2": [
+                {"counts": {"0": 500, "1": 500}, "success": True}
+            ],  # θ=2π/3, cos(2π/3)=0
+            "circuit_3": [
+                {"counts": {"0": 0, "1": 1000}, "success": True}
+            ],  # θ=π, cos(π)=-1
         }
 
-        with patch('matplotlib.pyplot.show'):
+        with patch("matplotlib.pyplot.show"):
             analysis_result = experiment.analyze(
-                mock_results,
-                plot=False,
-                save_data=False,
-                save_image=False
+                mock_results, plot=False, save_data=False, save_image=False
             )
 
         assert analysis_result is not None
@@ -143,15 +146,12 @@ class TestHadamardTest:
             "circuit_0": [],
             "circuit_1": [],
             "circuit_2": [],
-            "circuit_3": []
+            "circuit_3": [],
         }
 
-        with patch('matplotlib.pyplot.show'):
+        with patch("matplotlib.pyplot.show"):
             analysis_result = experiment.analyze(
-                empty_results,
-                plot=False,
-                save_data=False,
-                save_image=False
+                empty_results, plot=False, save_data=False, save_image=False
             )
 
         assert analysis_result is not None
@@ -167,7 +167,7 @@ class TestHadamardTest:
             {"counts": {"0": 1000, "1": 0}, "success": True},
             {"counts": {"0": 750, "1": 250}, "success": True},
             {"counts": {"0": 500, "1": 500}, "success": True},
-            {"counts": {"0": 0, "1": 1000}, "success": True}
+            {"counts": {"0": 0, "1": 1000}, "success": True},
         ]
 
         result = experiment.run(mock_backend, shots=1000)
@@ -187,7 +187,7 @@ class TestHadamardTest:
             {"counts": {"0": 1000, "1": 0}, "success": True},
             {"counts": {"0": 750, "1": 250}, "success": True},
             {"counts": {"0": 500, "1": 500}, "success": True},
-            {"counts": {"0": 0, "1": 1000}, "success": True}
+            {"counts": {"0": 0, "1": 1000}, "success": True},
         ]
 
         result = experiment.run_parallel(mock_backend, shots=1000)
@@ -221,7 +221,7 @@ class TestHadamardTest:
             physical_qubit=1,
             test_unitary="Y",
             angle_points=12,
-            max_angle=3 * np.pi / 2
+            max_angle=3 * np.pi / 2,
         )
 
         params = experiment.params
@@ -240,8 +240,8 @@ class TestHadamardTest:
         assert isinstance(experiment, BaseExperiment)
 
         # Test that abstract methods are implemented
-        assert hasattr(experiment, 'circuits')
-        assert hasattr(experiment, 'analyze')
+        assert hasattr(experiment, "circuits")
+        assert hasattr(experiment, "analyze")
         assert callable(experiment.circuits)
         assert callable(experiment.analyze)
 
@@ -270,25 +270,31 @@ class TestHadamardTest:
     def test_max_angle_validation(self):
         """Test that max_angle parameter works correctly"""
         # Test different values
-        for angle in [np.pi/2, np.pi, 2*np.pi, 3*np.pi]:
+        for angle in [np.pi / 2, np.pi, 2 * np.pi, 3 * np.pi]:
             experiment = HadamardTest(max_angle=angle)
             assert experiment.max_angle == angle
 
     def test_expected_theoretical_behavior(self):
         """Test that the experiment setup matches theoretical expectations"""
         # For Z unitary, expectation value should be cos(θ)
-        experiment_z = HadamardTest(test_unitary="Z", angle_points=5, max_angle=2*np.pi)
+        experiment_z = HadamardTest(
+            test_unitary="Z", angle_points=5, max_angle=2 * np.pi
+        )
 
         # Create theoretical expectation values
-        angles = np.linspace(0, 2*np.pi, 5)
+        angles = np.linspace(0, 2 * np.pi, 5)
         _ = np.cos(angles)  # expected_z not used, kept for potential future use
 
         # For X unitary, expectation value should be sin(θ)
-        experiment_x = HadamardTest(test_unitary="X", angle_points=5, max_angle=2*np.pi)
+        experiment_x = HadamardTest(
+            test_unitary="X", angle_points=5, max_angle=2 * np.pi
+        )
         _ = np.sin(angles)  # expected_x not used, kept for potential future use
 
         # For Y unitary, expectation value should be 0 (since RX(θ) commutes with Y axis rotation)
-        experiment_y = HadamardTest(test_unitary="Y", angle_points=5, max_angle=2*np.pi)
+        experiment_y = HadamardTest(
+            test_unitary="Y", angle_points=5, max_angle=2 * np.pi
+        )
         _ = np.zeros_like(angles)  # expected_y not used, kept for potential future use
 
         # Just verify that experiments are set up correctly
@@ -296,7 +302,7 @@ class TestHadamardTest:
         assert experiment_x.test_unitary == "X"
         assert experiment_y.test_unitary == "Y"
 
-    @patch('scipy.optimize.curve_fit')
+    @patch("scipy.optimize.curve_fit")
     def test_analyze_with_fitting(self, mock_curve_fit):
         """Test analyze method with curve fitting"""
         experiment = HadamardTest(angle_points=4, test_unitary="Z")
@@ -308,15 +314,12 @@ class TestHadamardTest:
             "circuit_0": [{"counts": {"0": 1000, "1": 0}, "success": True}],
             "circuit_1": [{"counts": {"0": 750, "1": 250}, "success": True}],
             "circuit_2": [{"counts": {"0": 500, "1": 500}, "success": True}],
-            "circuit_3": [{"counts": {"0": 250, "1": 750}, "success": True}]
+            "circuit_3": [{"counts": {"0": 250, "1": 750}, "success": True}],
         }
 
-        with patch('matplotlib.pyplot.show'):
+        with patch("matplotlib.pyplot.show"):
             analysis_result = experiment.analyze(
-                mock_results,
-                plot=False,
-                save_data=False,
-                save_image=False
+                mock_results, plot=False, save_data=False, save_image=False
             )
 
         assert analysis_result is not None

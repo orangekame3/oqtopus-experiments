@@ -96,7 +96,7 @@ class TestValidateOqtopusResultLegacy:
 class TestValidateAndConvertOqtopusResult:
     """Test validate_and_convert_oqtopus_result function"""
 
-    @patch('oqtopus_experiments.utils.validation.ExperimentResult')
+    @patch("oqtopus_experiments.utils.validation.ExperimentResult")
     def test_successful_conversion(self, mock_experiment_result):
         """Test successful result conversion"""
         mock_result = MagicMock()
@@ -108,17 +108,21 @@ class TestValidateAndConvertOqtopusResult:
         converted = validate_and_convert_oqtopus_result(result, task_id)
 
         assert converted == mock_result
-        mock_experiment_result.from_oqtopus_result.assert_called_once_with(result, task_id)
+        mock_experiment_result.from_oqtopus_result.assert_called_once_with(
+            result, task_id
+        )
 
-    @patch('oqtopus_experiments.utils.validation.ExperimentResult')
+    @patch("oqtopus_experiments.utils.validation.ExperimentResult")
     def test_conversion_failure(self, mock_experiment_result):
         """Test handling of conversion failure"""
-        mock_experiment_result.from_oqtopus_result.side_effect = Exception("Conversion failed")
+        mock_experiment_result.from_oqtopus_result.side_effect = Exception(
+            "Conversion failed"
+        )
 
         result = {"invalid": "data"}
         task_id = "test_task_123"
 
-        with patch('builtins.print') as mock_print:
+        with patch("builtins.print") as mock_print:
             converted = validate_and_convert_oqtopus_result(result, task_id)
 
         assert converted is None
@@ -126,11 +130,13 @@ class TestValidateAndConvertOqtopusResult:
         assert "Failed to convert OQTOPUS result" in mock_print.call_args[0][0]
         assert "Conversion failed" in mock_print.call_args[0][0]
 
-    @patch('oqtopus_experiments.utils.validation.ExperimentResult')
+    @patch("oqtopus_experiments.utils.validation.ExperimentResult")
     def test_conversion_with_different_exceptions(self, mock_experiment_result):
         """Test handling of different types of exceptions"""
         # Test with ValueError
-        mock_experiment_result.from_oqtopus_result.side_effect = ValueError("Invalid value")
+        mock_experiment_result.from_oqtopus_result.side_effect = ValueError(
+            "Invalid value"
+        )
 
         result = {"data": "test"}
         task_id = "task_1"
@@ -159,15 +165,17 @@ class TestValidateConfigMigration:
         valid_config = {
             "experiment_type": "rabi",
             "shots": 1024,
-            "parameters": {"amplitude": 1.0}
+            "parameters": {"amplitude": 1.0},
         }
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             json.dump(valid_config, f)
             config_path = f.name
 
         try:
-            with patch('oqtopus_experiments.utils.validation.DefaultConfig') as mock_config:
+            with patch(
+                "oqtopus_experiments.utils.validation.DefaultConfig"
+            ) as mock_config:
                 mock_config.load_from_json.return_value = MagicMock()
 
                 result = validate_config_migration(config_path)
@@ -176,16 +184,17 @@ class TestValidateConfigMigration:
                 mock_config.load_from_json.assert_called_once_with(config_path)
         finally:
             import os
+
             os.unlink(config_path)
 
     def test_invalid_config_file(self):
         """Test validation of invalid config file"""
         config_path = "nonexistent_config.json"
 
-        with patch('oqtopus_experiments.utils.validation.DefaultConfig') as mock_config:
+        with patch("oqtopus_experiments.utils.validation.DefaultConfig") as mock_config:
             mock_config.load_from_json.side_effect = FileNotFoundError("File not found")
 
-            with patch('builtins.print') as mock_print:
+            with patch("builtins.print") as mock_print:
                 result = validate_config_migration(config_path)
 
             assert result is False
@@ -197,10 +206,12 @@ class TestValidateConfigMigration:
         """Test handling of config validation errors"""
         config_path = "test_config.json"
 
-        with patch('oqtopus_experiments.utils.validation.DefaultConfig') as mock_config:
-            mock_config.load_from_json.side_effect = ValueError("Invalid configuration format")
+        with patch("oqtopus_experiments.utils.validation.DefaultConfig") as mock_config:
+            mock_config.load_from_json.side_effect = ValueError(
+                "Invalid configuration format"
+            )
 
-            with patch('builtins.print') as mock_print:
+            with patch("builtins.print") as mock_print:
                 result = validate_config_migration(config_path)
 
             assert result is False
@@ -211,15 +222,19 @@ class TestValidateConfigMigration:
     def test_config_parsing_error(self):
         """Test handling of JSON parsing errors"""
         # Create a file with invalid JSON
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             f.write("{ invalid json }")
             config_path = f.name
 
         try:
-            with patch('oqtopus_experiments.utils.validation.DefaultConfig') as mock_config:
-                mock_config.load_from_json.side_effect = json.JSONDecodeError("Invalid JSON", "doc", 0)
+            with patch(
+                "oqtopus_experiments.utils.validation.DefaultConfig"
+            ) as mock_config:
+                mock_config.load_from_json.side_effect = json.JSONDecodeError(
+                    "Invalid JSON", "doc", 0
+                )
 
-                with patch('builtins.print') as mock_print:
+                with patch("builtins.print") as mock_print:
                     result = validate_config_migration(config_path)
 
                 assert result is False
@@ -227,16 +242,19 @@ class TestValidateConfigMigration:
                 assert "Configuration validation failed" in mock_print.call_args[0][0]
         finally:
             import os
+
             os.unlink(config_path)
 
     def test_permission_error(self):
         """Test handling of permission errors"""
         config_path = "/root/inaccessible_config.json"
 
-        with patch('oqtopus_experiments.utils.validation.DefaultConfig') as mock_config:
-            mock_config.load_from_json.side_effect = PermissionError("Permission denied")
+        with patch("oqtopus_experiments.utils.validation.DefaultConfig") as mock_config:
+            mock_config.load_from_json.side_effect = PermissionError(
+                "Permission denied"
+            )
 
-            with patch('builtins.print') as mock_print:
+            with patch("builtins.print") as mock_print:
                 result = validate_config_migration(config_path)
 
             assert result is False
@@ -260,7 +278,9 @@ class TestIntegration:
 
         # Only attempt conversion for valid results
         if validate_oqtopus_result_legacy(valid_result):
-            with patch('oqtopus_experiments.utils.validation.ExperimentResult') as mock_result:
+            with patch(
+                "oqtopus_experiments.utils.validation.ExperimentResult"
+            ) as mock_result:
                 mock_result.from_oqtopus_result.return_value = MagicMock()
                 converted = validate_and_convert_oqtopus_result(valid_result, "task_1")
                 assert converted is not None
@@ -271,7 +291,7 @@ class TestIntegration:
             {"status": "completed", "counts": {"0": 100}},
             {"status": "failed", "error": "timeout"},
             {"status": "succeeded", "data": "result"},
-            {"invalid": "data"}
+            {"invalid": "data"},
         ]
 
         valid_results = []
@@ -283,11 +303,15 @@ class TestIntegration:
                 valid_results.append(result)
 
                 # Step 2: Conversion
-                with patch('oqtopus_experiments.utils.validation.ExperimentResult') as mock_result:
+                with patch(
+                    "oqtopus_experiments.utils.validation.ExperimentResult"
+                ) as mock_result:
                     if result.get("status") in ["completed", "succeeded"]:
                         mock_result.from_oqtopus_result.return_value = MagicMock()
                     else:
-                        mock_result.from_oqtopus_result.side_effect = Exception("Conversion failed")
+                        mock_result.from_oqtopus_result.side_effect = Exception(
+                            "Conversion failed"
+                        )
 
                     converted = validate_and_convert_oqtopus_result(result, "task")
                     if converted is not None:
@@ -301,4 +325,3 @@ class TestIntegration:
 
 if __name__ == "__main__":
     pytest.main([__file__])
-
