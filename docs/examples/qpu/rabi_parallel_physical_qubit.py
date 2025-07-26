@@ -3,13 +3,11 @@
 Parallel Rabi experiment on QPU device
 """
 
-
 from oqtopus_experiments.backends import OqtopusBackend
 from oqtopus_experiments.experiments import Rabi
 
 
 def main():
-
     # OQTOPUS backend for QPU
     backend = OqtopusBackend(device="anemone")
 

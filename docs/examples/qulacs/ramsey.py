@@ -3,7 +3,6 @@
 Ramsey experiment with Qulacs Simulator
 """
 
-
 from oqtopus_experiments.backends import OqtopusBackend
 from oqtopus_experiments.experiments import Ramsey
 

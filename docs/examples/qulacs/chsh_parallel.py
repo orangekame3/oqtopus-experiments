@@ -3,7 +3,6 @@
 CHSH Bell inequality experiment with Qulacs Simulator
 """
 
-
 import math
 
 from oqtopus_experiments.backends import OqtopusBackend

@@ -11,7 +11,6 @@ from oqtopus_experiments.experiments import CHSHPhaseScan
 
 
 def main():
-
     # Local backend for Qiskit Aer simulator with noise
     backend = LocalBackend(device="noisy")
     # backend = OqtopusBackend("anemone"))

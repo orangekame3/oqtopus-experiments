@@ -19,7 +19,7 @@ class TestLocalBackend:
         backend = LocalBackend()
 
         assert backend.device_name == "noisy"
-        assert backend.noise_enabled == True
+        assert backend.noise_enabled
         assert backend.backend_type == "local"
         assert backend.t1_us == 50.0
         assert backend.t2_us == 100.0
@@ -29,7 +29,7 @@ class TestLocalBackend:
         backend = LocalBackend(device="ideal")
 
         assert backend.device_name == "ideal"
-        assert backend.noise_enabled == False
+        assert not backend.noise_enabled
         assert backend.backend_type == "local"
 
     def test_init_custom_params(self):
@@ -38,7 +38,7 @@ class TestLocalBackend:
         backend = LocalBackend(device="noisy", t1=50.0, t2=80.0)
 
         assert backend.device_name == "noisy"
-        assert backend.noise_enabled == True
+        assert backend.noise_enabled
         assert backend.t1_us == 50.0
         assert backend.t2_us == 80.0
 
@@ -51,7 +51,7 @@ class TestLocalBackend:
 
         backend = LocalBackend(device="noisy")
 
-        assert backend.available == True
+        assert backend.available
         assert backend.simulator == mock_simulator
         mock_aer.assert_called_once()
 
@@ -60,7 +60,7 @@ class TestLocalBackend:
         """Test initialization when Qiskit is not available"""
         backend = LocalBackend()
 
-        assert backend.available == False
+        assert not backend.available
         assert backend.simulator is None
         assert backend.noise_model is None
 
@@ -89,10 +89,10 @@ class TestLocalBackend:
 
         # Assertions
         assert result["backend"] == "noisy"
-        assert result["noise_enabled"] == True
+        assert result["noise_enabled"]
         assert result["counts"] == mock_counts
         assert result["shots"] == 1000
-        assert result["success"] == True
+        assert result["success"]
         assert "job_id" in result
 
         mock_transpile.assert_called_once_with(mock_circuit, mock_simulator)
@@ -123,7 +123,7 @@ class TestLocalBackend:
 
         # Assertions
         assert result["backend"] == "ideal"
-        assert result["noise_enabled"] == False
+        assert not result["noise_enabled"]
         assert result["counts"] == mock_counts
 
         # Should run without noise model
@@ -158,7 +158,7 @@ class TestLocalBackend:
         result = backend.run(circuit, shots=1000)
 
         # Should return error result
-        assert result["success"] == False
+        assert not result["success"]
         assert "error" in result
         assert "Simulation failed" in result["error"]
 
@@ -168,17 +168,17 @@ class TestLocalBackend:
 
         # Initially ideal
         assert backend.device_name == "ideal"
-        assert backend.noise_enabled == False
+        assert not backend.noise_enabled
 
         # Enable noise
         backend.enable_noise()
         assert backend.device_name == "noisy"
-        assert backend.noise_enabled == True
+        assert backend.noise_enabled
 
         # Disable noise
         backend.disable_noise()
         assert backend.device_name == "ideal"
-        assert backend.noise_enabled == False
+        assert not backend.noise_enabled
 
     @patch("oqtopus_experiments.backends.local_backend.QISKIT_AVAILABLE", True)
     def test_set_noise_parameters(self):

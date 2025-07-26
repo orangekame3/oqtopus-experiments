@@ -8,6 +8,7 @@ from .chsh import CHSH
 # Legacy imports for backward compatibility
 from .chsh import CHSH as CHSHExperiment
 from .chsh_phase_scan import CHSHPhaseScan
+from .hadamard_test import HadamardTest
 from .parity_oscillation import ParityOscillation
 from .parity_oscillation import ParityOscillation as ParityOscillationExperiment
 from .rabi import Rabi
@@ -22,6 +23,7 @@ from .t2_echo import T2Echo as T2EchoExperiment
 __all__ = [
     "CHSH",
     "CHSHPhaseScan",
+    "HadamardTest",
     "ParityOscillation",
     "Rabi",
     "Ramsey",

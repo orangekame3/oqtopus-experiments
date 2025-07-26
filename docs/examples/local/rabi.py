@@ -3,13 +3,11 @@
 Rabi experiment with Noisy Simulator
 """
 
-
 from oqtopus_experiments.backends import LocalBackend
 from oqtopus_experiments.experiments import Rabi
 
 
 def main():
-
     # Local backend for Qiskit Aer simulator
     backend = LocalBackend(device="noisy")
 

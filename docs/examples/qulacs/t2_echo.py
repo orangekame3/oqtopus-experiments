@@ -3,13 +3,11 @@
 T2 Echo experiment with Qulacs Simulator
 """
 
-
 from oqtopus_experiments.backends import OqtopusBackend
 from oqtopus_experiments.experiments import T2Echo
 
 
 def main():
-
     # OQTOPUS backend for Qulacs
     backend = OqtopusBackend(device="qulacs")
 

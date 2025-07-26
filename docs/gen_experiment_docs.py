@@ -1,48 +1,52 @@
 """Generate experiment documentation from class docstrings and code."""
 
 import ast
-import inspect
 import re
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import mkdocs_gen_files
 
 
-def extract_class_info(source_path: Path) -> Optional[Dict[str, Any]]:
+def extract_class_info(source_path: Path) -> dict[str, Any] | None:
     """Extract experiment class information from source file."""
     try:
-        with open(source_path, 'r', encoding='utf-8') as f:
+        with open(source_path, encoding="utf-8") as f:
             source = f.read()
-        
+
         tree = ast.parse(source)
-        
+
         for node in ast.walk(tree):
             if isinstance(node, ast.ClassDef):
                 # Find class that inherits from BaseExperiment
                 for base in node.bases:
                     if isinstance(base, ast.Name) and base.id == "BaseExperiment":
                         return extract_experiment_class_details(node, source)
-                    elif isinstance(base, ast.Attribute) and base.attr == "BaseExperiment":
+                    elif (
+                        isinstance(base, ast.Attribute)
+                        and base.attr == "BaseExperiment"
+                    ):
                         return extract_experiment_class_details(node, source)
-        
+
         return None
     except Exception as e:
         print(f"Error parsing {source_path}: {e}")
         return None
 
 
-def extract_experiment_class_details(class_node: ast.ClassDef, source: str) -> Dict[str, Any]:
+def extract_experiment_class_details(
+    class_node: ast.ClassDef, source: str
+) -> dict[str, Any]:
     """Extract detailed information from experiment class node."""
-    
+
     # Extract class docstring
     class_docstring = ast.get_docstring(class_node)
-    
+
     # Extract __init__ method details
     init_method = None
     analyze_method = None
     circuits_method = None
-    
+
     for node in class_node.body:
         if isinstance(node, ast.FunctionDef):
             if node.name == "__init__":
@@ -51,15 +55,15 @@ def extract_experiment_class_details(class_node: ast.ClassDef, source: str) -> D
                 analyze_method = node
             elif node.name == "circuits":
                 circuits_method = node
-    
+
     # Extract parameters from __init__
     parameters = []
     if init_method:
         parameters = extract_init_parameters(init_method)
-    
+
     # Extract example usage from docstrings or code
     examples = extract_examples_from_source(source)
-    
+
     return {
         "class_name": class_node.name,
         "class_docstring": class_docstring or "",
@@ -70,10 +74,10 @@ def extract_experiment_class_details(class_node: ast.ClassDef, source: str) -> D
     }
 
 
-def extract_init_parameters(init_node: ast.FunctionDef) -> List[Dict[str, Any]]:
+def extract_init_parameters(init_node: ast.FunctionDef) -> list[dict[str, Any]]:
     """Extract parameter information from __init__ method."""
     parameters = []
-    
+
     # Skip 'self' parameter
     for arg in init_node.args.args[1:]:
         param_info = {
@@ -82,11 +86,11 @@ def extract_init_parameters(init_node: ast.FunctionDef) -> List[Dict[str, Any]]:
             "default": None,
             "description": "",
         }
-        
+
         # Extract type annotation
         if arg.annotation:
             param_info["type"] = ast.unparse(arg.annotation)
-        
+
         # Extract default values
         num_defaults = len(init_node.args.defaults)
         num_args = len(init_node.args.args) - 1  # Exclude self
@@ -98,37 +102,37 @@ def extract_init_parameters(init_node: ast.FunctionDef) -> List[Dict[str, Any]]:
                     param_info["default"] = ast.unparse(default_val)
                 except:
                     param_info["default"] = str(default_val)
-        
+
         parameters.append(param_info)
-    
+
     return parameters
 
 
-def extract_examples_from_source(source: str) -> List[str]:
+def extract_examples_from_source(source: str) -> list[str]:
     """Extract example code blocks from source file."""
     examples = []
-    
+
     # Look for example patterns in comments or docstrings
     example_patterns = [
         r'"""[\s\S]*?```python([\s\S]*?)```[\s\S]*?"""',
         r"'''[\s\S]*?```python([\s\S]*?)```[\s\S]*?'''",
     ]
-    
+
     for pattern in example_patterns:
         matches = re.findall(pattern, source, re.MULTILINE)
         examples.extend(matches)
-    
+
     return [example.strip() for example in examples if example.strip()]
 
 
-def generate_experiment_page(class_info: Dict[str, Any], experiment_name: str) -> str:
+def generate_experiment_page(class_info: dict[str, Any], experiment_name: str) -> str:
     """Generate markdown documentation for an experiment class."""
-    
+
     class_name = class_info["class_name"]
     docstring = class_info["class_docstring"]
     parameters = class_info["parameters"]
     examples = class_info["examples"]
-    
+
     # Create a clean title from class name
     title = experiment_name.replace("_", " ").title()
     if title.lower() == "chsh":
@@ -137,30 +141,32 @@ def generate_experiment_page(class_info: Dict[str, Any], experiment_name: str) -
         title = "T1 Relaxation"
     elif title.lower() == "t2_echo":
         title = "T2 Echo"
-    
+
     # Start building markdown content
     content = f"# {title}\n\n"
-    
+
     # Add class description
     if docstring:
         # Clean up docstring
         clean_docstring = docstring.strip()
-        if not clean_docstring.endswith('.'):
-            clean_docstring += '.'
+        if not clean_docstring.endswith("."):
+            clean_docstring += "."
         content += f"{clean_docstring}\n\n"
-    
+
     # Add overview section
     content += "## Overview\n\n"
     content += f"The `{class_name}` class implements {title.lower()} experiments "
-    content += "with automatic circuit generation, data analysis, and visualization.\n\n"
-    
+    content += (
+        "with automatic circuit generation, data analysis, and visualization.\n\n"
+    )
+
     # Add quick start example
     content += "## Quick Start\n\n"
     content += "```python\n"
-    content += f"from oqtopus_experiments.backends import OqtopusBackend\n"
+    content += "from oqtopus_experiments.backends import OqtopusBackend\n"
     content += f"from oqtopus_experiments.experiments import {class_name}\n\n"
-    content += f"backend = OqtopusBackend(device=\"qulacs\")\n\n"
-    
+    content += 'backend = OqtopusBackend(device="qulacs")\n\n'
+
     # Generate example instantiation
     content += f"exp = {class_name}(\n"
     if parameters:
@@ -179,68 +185,74 @@ def generate_experiment_page(class_info: Dict[str, Any], experiment_name: str) -
                     elif "qubit" in param["name"]:
                         content += f"    {param['name']}=0,\n"
     content += ")\n\n"
-    
+
     content += "result = exp.run(backend=backend, shots=1000)\n"
     content += "df = result.analyze(plot=True, save_data=True)\n"
     content += "print(df.head())\n"
     content += "```\n\n"
-    
+
     # Add parameters section
     if parameters:
         content += "## Parameters\n\n"
         content += "| Parameter | Type | Default | Description |\n"
         content += "|-----------|------|---------|-------------|\n"
-        
+
         for param in parameters:
-            param_type = param.get("type", "").replace(" | None", "").replace("str | None", "str")
-            param_type = param_type.replace("int | None", "int").replace("float | None", "float")
+            param_type = (
+                param.get("type", "")
+                .replace(" | None", "")
+                .replace("str | None", "str")
+            )
+            param_type = param_type.replace("int | None", "int").replace(
+                "float | None", "float"
+            )
             default_val = param.get("default", "")
             if default_val == "None":
                 default_val = "Optional"
-            
+
             # Generate description based on parameter name
             description = generate_param_description(param["name"], experiment_name)
-            
+
             content += f"| `{param['name']}` | {param_type} | {default_val} | {description} |\n"
         content += "\n"
-    
+
     # Add circuit information
     content += "## Circuit Structure\n\n"
     content += generate_circuit_description(experiment_name)
     content += "\n"
-    
+
     # Add analysis section
     content += "## Analysis and Results\n\n"
     content += generate_analysis_description(experiment_name)
     content += "\n"
-    
+
     # Add examples section
     content += "## Examples\n\n"
     content += generate_usage_examples(class_name, experiment_name)
     content += "\n"
-    
+
     # Add backend considerations
     content += "## Backend Considerations\n\n"
     content += "### OQTOPUS Platform\n"
     content += "```python\n"
-    content += f"# Real quantum hardware\n"
-    content += f"backend = OqtopusBackend()\n\n"
-    content += f"# Fast noiseless simulation\n"
-    content += f"backend = OqtopusBackend(device=\"qulacs\")\n"
+    content += "# Real quantum hardware\n"
+    content += "backend = OqtopusBackend()\n\n"
+    content += "# Fast noiseless simulation\n"
+    content += 'backend = OqtopusBackend(device="qulacs")\n'
     content += "```\n\n"
-    
+
     content += "### Local Simulation\n"
     content += "```python\n"
-    content += f"from oqtopus_experiments.backends import LocalBackend\n\n"
-    content += f"# Realistic noisy simulation\n"
-    content += f"backend = LocalBackend(device=\"noisy\")\n"
-    content += f"result = exp.run(backend=backend, shots=1000)\n"
+    content += "from oqtopus_experiments.backends import LocalBackend\n\n"
+    content += "# Realistic noisy simulation\n"
+    content += 'backend = LocalBackend(device="noisy")\n'
+    content += "result = exp.run(backend=backend, shots=1000)\n"
     content += "```\n\n"
-    
+
     # Add API reference link
     content += "## API Reference\n\n"
     content += f"For complete API documentation, see [`{class_name}`](../reference/oqtopus_experiments/experiments/{experiment_name}.md).\n\n"
-    
+
     return content
 
 
@@ -262,7 +274,7 @@ def generate_param_description(param_name: str, experiment_name: str) -> str:
         "echo_type": "Type of echo sequence (hahn or cpmg)",
         "num_echoes": "Number of echo pulses in sequence",
     }
-    
+
     return descriptions.get(param_name, f"Parameter for {experiment_name} experiment")
 
 
@@ -278,7 +290,6 @@ qc.measure(0, 0)
 ```
 
 The amplitude sweep reveals the π-pulse calibration point.""",
-        
         "t1": """Each circuit prepares |1⟩ state and waits for decay:
 
 ```python
@@ -289,7 +300,6 @@ qc.measure(0, 0)           # Measure survival probability
 ```
 
 The delay sweep reveals the T1 relaxation time.""",
-        
         "ramsey": """Each circuit implements Ramsey interferometry:
 
 ```python
@@ -302,7 +312,6 @@ qc.measure(0, 0)
 ```
 
 The interference fringes reveal T2* dephasing time.""",
-        
         "chsh": """Four circuits measure Bell state correlations:
 
 ```python
@@ -318,7 +327,6 @@ qc.measure_all()
 ```
 
 The correlations test Bell inequality violation.""",
-        
         "t2_echo": """Echo sequences refocus dephasing errors:
 
 ```python
@@ -331,7 +339,6 @@ qc.measure(0, 0)
 ```
 
 Multiple echoes can extend coherence measurement.""",
-        
         "parity_oscillation": """Multi-qubit GHZ state preparation and measurement:
 
 ```python
@@ -345,10 +352,12 @@ qc.rz(φ, range(n_qubits))              # Parity rotation
 qc.measure_all()
 ```
 
-Parity measurements reveal multi-qubit decoherence."""
+Parity measurements reveal multi-qubit decoherence.""",
     }
-    
-    return descriptions.get(experiment_name, f"Circuit structure for {experiment_name} experiment.")
+
+    return descriptions.get(
+        experiment_name, f"Circuit structure for {experiment_name} experiment."
+    )
 
 
 def generate_analysis_description(experiment_name: str) -> str:
@@ -365,7 +374,6 @@ P(|1⟩) = A × sin²(π × amplitude × frequency) + offset
 - `pi_amplitude`: Drive amplitude for π-pulse
 - `frequency`: Rabi frequency 
 - `r_squared`: Fit quality (0-1)""",
-        
         "t1": """### Exponential Decay Fitting
 
 The experiment fits data to exponential decay:
@@ -377,7 +385,6 @@ P(|1⟩) = A × exp(-t/T1) + offset
 - `t1_time`: Relaxation time in nanoseconds
 - `amplitude`: Initial state fidelity
 - `r_squared`: Fit quality (0-1)""",
-        
         "ramsey": """### Oscillatory Decay Fitting
 
 The experiment fits data to damped oscillation:
@@ -389,7 +396,6 @@ P(|1⟩) = A × exp(-t/T2*) × cos(2πft + φ) + offset
 - `t2_star_time`: Dephasing time in nanoseconds
 - `frequency`: Oscillation frequency in Hz
 - `phase`: Phase offset in radians""",
-        
         "chsh": """### Bell Inequality Analysis
 
 The experiment calculates CHSH correlation:
@@ -401,7 +407,6 @@ S = |⟨ZZ⟩ - ⟨ZX⟩ + ⟨XZ⟩ + ⟨XX⟩|
 - `chsh_value`: CHSH parameter S
 - `bell_violation`: True if S > 2 (quantum behavior)
 - `significance`: Statistical significance of violation""",
-        
         "t2_echo": """### Echo Decay Fitting
 
 The experiment fits data to echo decay:
@@ -414,8 +419,10 @@ P(|1⟩) = A × exp(-t/T2) + offset
 - `amplitude`: Echo efficiency
 - `r_squared`: Fit quality (0-1)""",
     }
-    
-    return descriptions.get(experiment_name, f"Analysis details for {experiment_name} experiment.")
+
+    return descriptions.get(
+        experiment_name, f"Analysis details for {experiment_name} experiment."
+    )
 
 
 def generate_usage_examples(class_name: str, experiment_name: str) -> str:
@@ -448,7 +455,7 @@ exp = {class_name}(
 result = exp.run(backend=backend, shots=2000)
 df = result.analyze(plot=True, save_data=True)
 ```"""
-    
+
     return examples
 
 
@@ -461,45 +468,45 @@ def generate_example_params(experiment_name: str) -> str:
         "chsh": "shots_per_circuit=2000",
         "t2_echo": "delay_points=25,\n    max_delay=100000.0",
     }
-    
+
     return param_examples.get(experiment_name, "# High precision parameters")
 
 
 def main():
     """Generate experiment documentation from source files."""
-    
+
     experiments_dir = Path("src/oqtopus_experiments/experiments")
-    
+
     # Generate files directly in experiments directory
     generated_pages = []
-    
+
     # Process each experiment file
     experiment_files = list(experiments_dir.glob("*.py"))
     experiment_files = [f for f in experiment_files if f.name != "__init__.py"]
-    
+
     generated_pages = []
-    
+
     for exp_file in experiment_files:
         experiment_name = exp_file.stem
         print(f"Processing {experiment_name}...")
-        
+
         # Extract class information
         class_info = extract_class_info(exp_file)
         if not class_info:
             print(f"  No experiment class found in {exp_file}")
             continue
-        
+
         # Generate documentation
         doc_content = generate_experiment_page(class_info, experiment_name)
-        
+
         # Write to file
         output_file = f"experiments/{experiment_name}.md"
         with mkdocs_gen_files.open(output_file, "w") as f:
             f.write(doc_content)
-        
+
         generated_pages.append(experiment_name)
         print(f"  Generated {output_file}")
-    
+
     print(f"\\nGenerated documentation for {len(generated_pages)} experiments:")
     for page in sorted(generated_pages):
         print(f"  - {page}")
