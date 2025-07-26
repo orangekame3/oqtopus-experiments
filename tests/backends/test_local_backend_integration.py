@@ -61,7 +61,7 @@ class TestLocalBackendExperimentIntegration:
         assert len(result.raw_results) == 5  # 5 amplitude points
 
         # Analyze results
-        df = result.analyze()
+        df = result.analyze(plot=False, save_data=False, save_image=False)
 
         # Verify DataFrame structure
         assert isinstance(df, pd.DataFrame)
@@ -113,7 +113,7 @@ class TestLocalBackendExperimentIntegration:
         result = rabi.run(backend, shots=150)
 
         # Analyze results
-        df = result.analyze()
+        df = result.analyze(plot=False, save_data=False, save_image=False)
 
         # Verify DataFrame structure and device name
         if not df.empty:

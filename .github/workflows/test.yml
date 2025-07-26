@@ -1,10 +1,11 @@
-name: Test
+name: Test Suite
 
 on:
   push:
     branches: [ main, develop ]
   pull_request:
     branches: [ main, develop ]
+  workflow_dispatch:  # Allow manual trigger
 
 jobs:
   test:
@@ -28,6 +29,11 @@ jobs:
       run: |
         uv sync --all-extras --dev
 
+    - name: Verify test setup
+      run: |
+        uv run python -c "import pytest; print(f'pytest version: {pytest.__version__}')"
+        uv run python -c "import pytest_cov; print('pytest-cov available')"
+
     - name: Lint with ruff
       run: |
         uv run ruff check src/
@@ -38,17 +44,22 @@ jobs:
 
     - name: Type check with mypy
       run: |
-        uv run mypy src/
+        uv run mypy src/ --ignore-missing-imports --no-strict-optional
       continue-on-error: true
 
-    # - name: Test with pytest
-    #   run: |
-    #     uv run pytest tests/ -v --cov=src/oqtopus_experiments --cov-report=xml
+    - name: Test with pytest
+      run: |
+        uv run python -m pytest tests/ -v --cov=src/oqtopus_experiments --cov-report=xml --cov-report=term-missing --cov-fail-under=30
+      env:
+        PYTHONPATH: src
 
-    # - name: Upload coverage to Codecov
-    #   uses: codecov/codecov-action@v4
-    #   with:
-    #     file: ./coverage.xml
-    #     flags: unittests
-    #     name: codecov-umbrella
-    #     fail_ci_if_error: false
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+        # Token is optional for public repos
+        token: ${{ secrets.CODECOV_TOKEN }}
+      if: ${{ secrets.CODECOV_TOKEN != '' }}

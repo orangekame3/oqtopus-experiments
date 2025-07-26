@@ -60,6 +60,7 @@ Issues = "https://github.com/orangekame3/oqtopus-experiments/issues"
 [dependency-groups]
 dev = [
     "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
     "black>=23.0.0",
     "ruff>=0.0.280",
     "mypy>=1.4.0",
@@ -117,6 +118,12 @@ disallow_untyped_defs = false
 disallow_incomplete_defs = false
 check_untyped_defs = true
 disallow_untyped_decorators = false
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+disable_error_code = ["import-untyped"]
 
 # External libraries that don't have stubs
 [[tool.mypy.overrides]]
@@ -153,14 +160,6 @@ markers = [
 python_files = ["test_*.py", "*_test.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
-warn_redundant_casts = true
-warn_unused_ignores = true
-warn_no_return = true
-warn_unreachable = true
-strict_equality = true
-
-# Disable stub warnings for untyped imports
-disable_error_code = ["import-untyped"]
 
 [[tool.mypy.overrides]]
 module = [
