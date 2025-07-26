@@ -9,12 +9,14 @@ from .chsh import CHSH
 from .chsh import CHSH as CHSHExperiment
 from .chsh_phase_scan import CHSHPhaseScan
 from .hadamard_test import HadamardTest
+from .interleaved_randomized_benchmarking import InterleavedRandomizedBenchmarking
 from .parity_oscillation import ParityOscillation
 from .parity_oscillation import ParityOscillation as ParityOscillationExperiment
 from .rabi import Rabi
 from .rabi import Rabi as RabiExperiment
 from .ramsey import Ramsey
 from .ramsey import Ramsey as RamseyExperiment
+from .randomized_benchmarking import RandomizedBenchmarking
 from .t1 import T1
 from .t1 import T1 as T1Experiment
 from .t2_echo import T2Echo
@@ -24,8 +26,10 @@ __all__ = [
     "CHSH",
     "CHSHPhaseScan",
     "HadamardTest",
+    "InterleavedRandomizedBenchmarking",
     "ParityOscillation",
     "Rabi",
+    "RandomizedBenchmarking",
     "Ramsey",
     "T1",
     "T2Echo",

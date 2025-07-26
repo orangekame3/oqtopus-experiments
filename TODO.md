@@ -10,23 +10,28 @@
 - [x] **Ramsey** - 高精度周波数測定のためのRamsey干渉
 - [x] **Parity Oscillation** - GHZ状態デコヒーレンス研究
 - [x] **Hadamard Test** - Hadamardテスト実験
+- [x] **Randomized Benchmarking** - Cliffordゲートの平均エラー率測定
+- [x] **Interleaved Randomized Benchmarking** - 特定ゲートのエラー率分離評価
 
 ## 追加実装予定の実験
 
 ### 高優先度：キャリブレーション・ベンチマーク基盤
 
-#### 1. Randomized Benchmarking (RB) 🔥
-**実装優先度**: 最高
+#### 1. ~~Randomized Benchmarking (RB)~~ ✅ **完了**
+**実装優先度**: 最高 → **実装済み**
 - **目的**: Cliffordゲートの平均エラー率測定
 - **特徴**: SPAM誤差に対して堅牢
 - **用途**: 量子ビットキャラクタリゼーション、ゲート性能評価
-- **実装メモ**: 
-  - Standard RB（基本版）
-  - Interleaved RB（特定ゲートの分離評価）
-  - 既存のT1/T2測定と組み合わせて包括的キャラクタリゼーション
+- **実装完了**: 
+  - ✅ Standard RB（基本版）
+  - ✅ Interleaved RB（特定ゲートの分離評価）
+  - ✅ 完全24要素Clifford群実装
+  - ✅ ゲートフィデリティ計算
+  - ✅ 統合プロット機能
+  - ✅ データマネージャー統合
 
 #### 2. Quantum State Tomography (QST)
-**実装優先度**: 高
+**実装優先度**: 高 → **次の優先実装候補**
 - **目的**: 任意の量子状態の密度行列を完全再構成
 - **用途**: GHZ、W状態やVQE状態の検証
 - **実装メモ**: 
@@ -98,9 +103,9 @@
 ## 実装戦略
 
 ### Phase 1: 基盤整備（高優先度）
-1. **Randomized Benchmarking** - 最重要、即座に実装開始
-2. **SPAM Calibration** - 測定精度向上の基盤
-3. **Quantum State Tomography** - 状態検証機能
+1. ✅ **Randomized Benchmarking** - 完了（2025-07-26）
+2. **SPAM Calibration** - 測定精度向上の基盤（次の候補）
+3. **Quantum State Tomography** - 状態検証機能（次の候補）
 
 ### Phase 2: 特殊化（中優先度）
 1. アルゴリズムベンチマーク群
@@ -119,10 +124,12 @@
 
 ## 次のアクション
 
-1. **Randomized Benchmarking**の実装から開始
-2. 既存のRabi/T1/T2実験との統合テスト
-3. 段階的に他の実験を追加
+1. ✅ ~~**Randomized Benchmarking**の実装から開始~~ **完了**
+2. ✅ ~~既存のRabi/T1/T2実験との統合テスト~~ **完了**
+3. **Quantum State Tomography (QST)** または **SPAM Calibration** の実装開始
+4. 段階的に他の実験を追加
 
 ---
-*最終更新: 2025-07-26*
+*最終更新: 2025-07-26*  
+*RB実装完了により更新*  
 *o3との相談結果に基づく提案*
