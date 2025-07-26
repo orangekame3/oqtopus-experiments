@@ -16,7 +16,7 @@ class TestDeviceInfo:
 
     def test_init_default_device(self):
         """Test initialization with default device"""
-        with patch('oqtopus_experiments.devices.device_info.OQTOPUS_AVAILABLE', False):
+        with patch("oqtopus_experiments.devices.device_info.OQTOPUS_AVAILABLE", False):
             device = DeviceInfo()
 
             assert device.device_name == "anemone"
@@ -28,7 +28,7 @@ class TestDeviceInfo:
 
     def test_init_custom_device(self):
         """Test initialization with custom device name"""
-        with patch('oqtopus_experiments.devices.device_info.OQTOPUS_AVAILABLE', False):
+        with patch("oqtopus_experiments.devices.device_info.OQTOPUS_AVAILABLE", False):
             device = DeviceInfo("custom_device")
 
             assert device.device_name == "custom_device"
@@ -39,20 +39,20 @@ class TestDeviceInfo:
 
     def test_available_property_no_device_data(self):
         """Test available property when no device data is loaded"""
-        with patch('oqtopus_experiments.devices.device_info.OQTOPUS_AVAILABLE', False):
+        with patch("oqtopus_experiments.devices.device_info.OQTOPUS_AVAILABLE", False):
             device = DeviceInfo("anemone")
             assert device.available is False
 
     def test_available_property_with_device_data(self):
         """Test available property when device data is loaded"""
-        with patch('oqtopus_experiments.devices.device_info.OQTOPUS_AVAILABLE', False):
+        with patch("oqtopus_experiments.devices.device_info.OQTOPUS_AVAILABLE", False):
             device = DeviceInfo("anemone")
             device._device_data = MagicMock()  # Mock device data
             assert device.available is True
 
     def test_device_info_property(self):
         """Test device_info property"""
-        with patch('oqtopus_experiments.devices.device_info.OQTOPUS_AVAILABLE', False):
+        with patch("oqtopus_experiments.devices.device_info.OQTOPUS_AVAILABLE", False):
             device = DeviceInfo("anemone")
             device._device_info = {"name": "test", "qubits": 16}
 
@@ -61,7 +61,7 @@ class TestDeviceInfo:
 
     def test_device_info_property_none(self):
         """Test device_info property when None"""
-        with patch('oqtopus_experiments.devices.device_info.OQTOPUS_AVAILABLE', False):
+        with patch("oqtopus_experiments.devices.device_info.OQTOPUS_AVAILABLE", False):
             device = DeviceInfo("anemone")
             device._device_info = None
 
@@ -70,31 +70,37 @@ class TestDeviceInfo:
 
     def test_create_dataframes_success(self):
         """Test successful DataFrame creation"""
-        with patch('oqtopus_experiments.devices.device_info.OQTOPUS_AVAILABLE', False):
+        with patch("oqtopus_experiments.devices.device_info.OQTOPUS_AVAILABLE", False):
             device = DeviceInfo("anemone")
 
             # Mock device info with qubit and coupling data
             mock_device_info = {
                 "qubits": [
                     {
-                        "id": 0, "physical_id": 0, "fidelity": 0.99,
+                        "id": 0,
+                        "physical_id": 0,
+                        "fidelity": 0.99,
                         "position": {"x": 0, "y": 0},
                         "qubit_lifetime": {"t1": 50.0, "t2": 100.0},
-                        "meas_error": {"readout_assignment_error": 0.01}
+                        "meas_error": {"readout_assignment_error": 0.01},
                     },
                     {
-                        "id": 1, "physical_id": 1, "fidelity": 0.98,
+                        "id": 1,
+                        "physical_id": 1,
+                        "fidelity": 0.98,
                         "position": {"x": 1, "y": 0},
                         "qubit_lifetime": {"t1": 45.0, "t2": 90.0},
-                        "meas_error": {"readout_assignment_error": 0.02}
-                    }
+                        "meas_error": {"readout_assignment_error": 0.02},
+                    },
                 ],
                 "couplings": [
                     {
-                        "control": 0, "target": 1, "fidelity": 0.95,
-                        "gate_duration": {"rzx90": 50}
+                        "control": 0,
+                        "target": 1,
+                        "fidelity": 0.95,
+                        "gate_duration": {"rzx90": 50},
                     }
-                ]
+                ],
             }
             device._device_info = mock_device_info
 
@@ -115,7 +121,7 @@ class TestDeviceInfo:
 
     def test_create_dataframes_no_device_info(self):
         """Test DataFrame creation without device info"""
-        with patch('oqtopus_experiments.devices.device_info.OQTOPUS_AVAILABLE', False):
+        with patch("oqtopus_experiments.devices.device_info.OQTOPUS_AVAILABLE", False):
             device = DeviceInfo("anemone")
             device._device_info = None
 
@@ -125,7 +131,7 @@ class TestDeviceInfo:
 
     def test_qubits_property(self):
         """Test qubits property returns DataFrame"""
-        with patch('oqtopus_experiments.devices.device_info.OQTOPUS_AVAILABLE', False):
+        with patch("oqtopus_experiments.devices.device_info.OQTOPUS_AVAILABLE", False):
             device = DeviceInfo("anemone")
             device._qubits_df = pd.DataFrame([{"id": 0, "fidelity": 0.99}])
 
@@ -135,9 +141,11 @@ class TestDeviceInfo:
 
     def test_couplings_property(self):
         """Test couplings property returns DataFrame"""
-        with patch('oqtopus_experiments.devices.device_info.OQTOPUS_AVAILABLE', False):
+        with patch("oqtopus_experiments.devices.device_info.OQTOPUS_AVAILABLE", False):
             device = DeviceInfo("anemone")
-            device._couplings_df = pd.DataFrame([{"control": 0, "target": 1, "fidelity": 0.95}])
+            device._couplings_df = pd.DataFrame(
+                [{"control": 0, "target": 1, "fidelity": 0.95}]
+            )
 
             couplings = device.couplings
             assert couplings is not None
@@ -145,14 +153,16 @@ class TestDeviceInfo:
 
     def test_get_best_qubits_success(self):
         """Test getting best qubits by fidelity"""
-        with patch('oqtopus_experiments.devices.device_info.OQTOPUS_AVAILABLE', False):
+        with patch("oqtopus_experiments.devices.device_info.OQTOPUS_AVAILABLE", False):
             device = DeviceInfo("anemone")
-            device._qubits_df = pd.DataFrame([
-                {"id": 0, "physical_id": 0, "fidelity": 0.99},
-                {"id": 1, "physical_id": 1, "fidelity": 0.95},
-                {"id": 2, "physical_id": 2, "fidelity": 0.97},
-                {"id": 3, "physical_id": 3, "fidelity": 0.98}
-            ])
+            device._qubits_df = pd.DataFrame(
+                [
+                    {"id": 0, "physical_id": 0, "fidelity": 0.99},
+                    {"id": 1, "physical_id": 1, "fidelity": 0.95},
+                    {"id": 2, "physical_id": 2, "fidelity": 0.97},
+                    {"id": 3, "physical_id": 3, "fidelity": 0.98},
+                ]
+            )
 
             best_qubits = device.get_best_qubits(2)
 
@@ -162,7 +172,7 @@ class TestDeviceInfo:
 
     def test_get_best_qubits_no_dataframe(self):
         """Test getting best qubits when no DataFrame available"""
-        with patch('oqtopus_experiments.devices.device_info.OQTOPUS_AVAILABLE', False):
+        with patch("oqtopus_experiments.devices.device_info.OQTOPUS_AVAILABLE", False):
             device = DeviceInfo("anemone")
             device._qubits_df = None
 
@@ -171,12 +181,14 @@ class TestDeviceInfo:
 
     def test_get_best_qubits_more_than_available(self):
         """Test getting more qubits than available"""
-        with patch('oqtopus_experiments.devices.device_info.OQTOPUS_AVAILABLE', False):
+        with patch("oqtopus_experiments.devices.device_info.OQTOPUS_AVAILABLE", False):
             device = DeviceInfo("anemone")
-            device._qubits_df = pd.DataFrame([
-                {"id": 0, "physical_id": 0, "fidelity": 0.99},
-                {"id": 1, "physical_id": 1, "fidelity": 0.95}
-            ])
+            device._qubits_df = pd.DataFrame(
+                [
+                    {"id": 0, "physical_id": 0, "fidelity": 0.99},
+                    {"id": 1, "physical_id": 1, "fidelity": 0.95},
+                ]
+            )
 
             best_qubits = device.get_best_qubits(5)  # Request more than available
 
@@ -184,14 +196,16 @@ class TestDeviceInfo:
 
     def test_get_worst_qubits_success(self):
         """Test getting worst qubits by fidelity"""
-        with patch('oqtopus_experiments.devices.device_info.OQTOPUS_AVAILABLE', False):
+        with patch("oqtopus_experiments.devices.device_info.OQTOPUS_AVAILABLE", False):
             device = DeviceInfo("anemone")
-            device._qubits_df = pd.DataFrame([
-                {"id": 0, "fidelity": 0.99},
-                {"id": 1, "fidelity": 0.95},
-                {"id": 2, "fidelity": 0.97},
-                {"id": 3, "fidelity": 0.98}
-            ])
+            device._qubits_df = pd.DataFrame(
+                [
+                    {"id": 0, "fidelity": 0.99},
+                    {"id": 1, "fidelity": 0.95},
+                    {"id": 2, "fidelity": 0.97},
+                    {"id": 3, "fidelity": 0.98},
+                ]
+            )
 
             worst_qubits = device.get_worst_qubits(2)
 
@@ -201,12 +215,14 @@ class TestDeviceInfo:
 
     def test_get_qubit_stats_success(self):
         """Test getting qubit statistics"""
-        with patch('oqtopus_experiments.devices.device_info.OQTOPUS_AVAILABLE', False):
+        with patch("oqtopus_experiments.devices.device_info.OQTOPUS_AVAILABLE", False):
             device = DeviceInfo("anemone")
-            device._qubits_df = pd.DataFrame([
-                {"fidelity": 0.99, "t1": 50.0, "t2": 100.0, "readout_error": 0.01},
-                {"fidelity": 0.95, "t1": 45.0, "t2": 90.0, "readout_error": 0.02}
-            ])
+            device._qubits_df = pd.DataFrame(
+                [
+                    {"fidelity": 0.99, "t1": 50.0, "t2": 100.0, "readout_error": 0.01},
+                    {"fidelity": 0.95, "t1": 45.0, "t2": 90.0, "readout_error": 0.02},
+                ]
+            )
 
             stats = device.get_qubit_stats()
 
@@ -220,7 +236,7 @@ class TestDeviceInfo:
 
     def test_get_qubit_stats_no_dataframe(self):
         """Test getting qubit statistics when no DataFrame available"""
-        with patch('oqtopus_experiments.devices.device_info.OQTOPUS_AVAILABLE', False):
+        with patch("oqtopus_experiments.devices.device_info.OQTOPUS_AVAILABLE", False):
             device = DeviceInfo("anemone")
             device._qubits_df = None
 
@@ -229,7 +245,7 @@ class TestDeviceInfo:
 
     def test_summary_no_device_data(self):
         """Test summary when no device data available"""
-        with patch('oqtopus_experiments.devices.device_info.OQTOPUS_AVAILABLE', False):
+        with patch("oqtopus_experiments.devices.device_info.OQTOPUS_AVAILABLE", False):
             device = DeviceInfo("anemone")
             device._device_data = None
 
@@ -238,7 +254,7 @@ class TestDeviceInfo:
 
     def test_summary_with_device_data(self):
         """Test summary with device data"""
-        with patch('oqtopus_experiments.devices.device_info.OQTOPUS_AVAILABLE', False):
+        with patch("oqtopus_experiments.devices.device_info.OQTOPUS_AVAILABLE", False):
             device = DeviceInfo("anemone")
 
             mock_device_data = MagicMock()
@@ -261,17 +277,19 @@ class TestDeviceInfo:
 
     def test_show_device_unavailable(self):
         """Test show method when device is unavailable"""
-        with patch('oqtopus_experiments.devices.device_info.OQTOPUS_AVAILABLE', False):
+        with patch("oqtopus_experiments.devices.device_info.OQTOPUS_AVAILABLE", False):
             device = DeviceInfo("anemone")
             device._device_data = None  # Make device unavailable
 
-            with patch.object(device.console, 'print') as mock_print:
+            with patch.object(device.console, "print") as mock_print:
                 device.show()
-                mock_print.assert_called_with("[red]❌ Device information not available[/red]")
+                mock_print.assert_called_with(
+                    "[red]❌ Device information not available[/red]"
+                )
 
     def test_show_device_available(self):
         """Test show method when device is available"""
-        with patch('oqtopus_experiments.devices.device_info.OQTOPUS_AVAILABLE', False):
+        with patch("oqtopus_experiments.devices.device_info.OQTOPUS_AVAILABLE", False):
             device = DeviceInfo("anemone")
 
             # Mock device data
@@ -287,43 +305,73 @@ class TestDeviceInfo:
 
             device._device_data = mock_device_data
             # Create complete DataFrame with all required columns
-            device._qubits_df = pd.DataFrame([{
-                "id": 0, "physical_id": 0, "x": 0, "y": 0, "fidelity": 0.99,
-                "t1": 50.0, "t2": 100.0, "readout_error": 0.01
-            }])
+            device._qubits_df = pd.DataFrame(
+                [
+                    {
+                        "id": 0,
+                        "physical_id": 0,
+                        "x": 0,
+                        "y": 0,
+                        "fidelity": 0.99,
+                        "t1": 50.0,
+                        "t2": 100.0,
+                        "readout_error": 0.01,
+                    }
+                ]
+            )
             device._device_info = {"couplings": []}
 
-            with patch.object(device.console, 'print') as mock_print:
+            with patch.object(device.console, "print") as mock_print:
                 device.show()
                 # Should print device information multiple times
                 assert mock_print.call_count > 0
 
     def test_plot_layout_device_unavailable(self):
         """Test plot_layout when device is unavailable"""
-        with patch('oqtopus_experiments.devices.device_info.OQTOPUS_AVAILABLE', False):
+        with patch("oqtopus_experiments.devices.device_info.OQTOPUS_AVAILABLE", False):
             device = DeviceInfo("anemone")
             device._device_data = None  # Make device unavailable
 
-            with patch('builtins.print') as mock_print:
+            with patch("builtins.print") as mock_print:
                 device.plot_layout()
-                mock_print.assert_called_with("❌ Device information not available for plotting")
+                mock_print.assert_called_with(
+                    "❌ Device information not available for plotting"
+                )
 
-    @patch('oqtopus_experiments.devices.device_info.go.Figure')
-    @patch('oqtopus_experiments.devices.device_info.pio')
+    @patch("oqtopus_experiments.devices.device_info.go.Figure")
+    @patch("oqtopus_experiments.devices.device_info.pio")
     def test_plot_layout_device_available(self, mock_pio, mock_figure):
         """Test plot_layout when device is available"""
-        with patch('oqtopus_experiments.devices.device_info.OQTOPUS_AVAILABLE', False):
+        with patch("oqtopus_experiments.devices.device_info.OQTOPUS_AVAILABLE", False):
             device = DeviceInfo("anemone")
             device._device_data = MagicMock()  # Make device available
             # Create complete DataFrame with all required columns
-            device._qubits_df = pd.DataFrame([
-                {"id": 0, "physical_id": 0, "x": 0, "y": 0, "fidelity": 0.99, "t1": 50.0, "t2": 100.0, "readout_error": 0.01},
-                {"id": 1, "physical_id": 1, "x": 1, "y": 0, "fidelity": 0.95, "t1": 45.0, "t2": 90.0, "readout_error": 0.02}
-            ])
-            device._device_info = {
-                "couplings": [
-                    {"control": 0, "target": 1, "fidelity": 0.95}
+            device._qubits_df = pd.DataFrame(
+                [
+                    {
+                        "id": 0,
+                        "physical_id": 0,
+                        "x": 0,
+                        "y": 0,
+                        "fidelity": 0.99,
+                        "t1": 50.0,
+                        "t2": 100.0,
+                        "readout_error": 0.01,
+                    },
+                    {
+                        "id": 1,
+                        "physical_id": 1,
+                        "x": 1,
+                        "y": 0,
+                        "fidelity": 0.95,
+                        "t1": 45.0,
+                        "t2": 90.0,
+                        "readout_error": 0.02,
+                    },
                 ]
+            )
+            device._device_info = {
+                "couplings": [{"control": 0, "target": 1, "fidelity": 0.95}]
             }
 
             mock_fig = MagicMock()
@@ -336,13 +384,15 @@ class TestDeviceInfo:
 
     def test_compare_qubits_success(self):
         """Test comparing specific qubits"""
-        with patch('oqtopus_experiments.devices.device_info.OQTOPUS_AVAILABLE', False):
+        with patch("oqtopus_experiments.devices.device_info.OQTOPUS_AVAILABLE", False):
             device = DeviceInfo("anemone")
-            device._qubits_df = pd.DataFrame([
-                {"id": 0, "fidelity": 0.99},
-                {"id": 1, "fidelity": 0.95},
-                {"id": 2, "fidelity": 0.97}
-            ])
+            device._qubits_df = pd.DataFrame(
+                [
+                    {"id": 0, "fidelity": 0.99},
+                    {"id": 1, "fidelity": 0.95},
+                    {"id": 2, "fidelity": 0.97},
+                ]
+            )
 
             comparison = device.compare_qubits([0, 2])
 
@@ -353,7 +403,7 @@ class TestDeviceInfo:
 
     def test_compare_qubits_no_dataframe(self):
         """Test comparing qubits when no DataFrame available"""
-        with patch('oqtopus_experiments.devices.device_info.OQTOPUS_AVAILABLE', False):
+        with patch("oqtopus_experiments.devices.device_info.OQTOPUS_AVAILABLE", False):
             device = DeviceInfo("anemone")
             device._qubits_df = None
 
@@ -362,26 +412,30 @@ class TestDeviceInfo:
 
     def test_save_data_unavailable(self):
         """Test saving data when device is unavailable"""
-        with patch('oqtopus_experiments.devices.device_info.OQTOPUS_AVAILABLE', False):
+        with patch("oqtopus_experiments.devices.device_info.OQTOPUS_AVAILABLE", False):
             device = DeviceInfo("anemone")
             device._device_data = None
 
             result = device.save_data()
             assert "❌ No device data available to save" in result
 
-    @patch('builtins.open', create=True)
-    @patch('json.dump')
+    @patch("builtins.open", create=True)
+    @patch("json.dump")
     def test_save_data_success(self, mock_json_dump, mock_open):
         """Test successful data saving"""
-        with patch('oqtopus_experiments.devices.device_info.OQTOPUS_AVAILABLE', False):
+        with patch("oqtopus_experiments.devices.device_info.OQTOPUS_AVAILABLE", False):
             device = DeviceInfo("anemone")
             device._device_data = MagicMock()
             device._qubits_df = pd.DataFrame([{"id": 0, "fidelity": 0.99}])
-            device._couplings_df = pd.DataFrame([{"control": 0, "target": 1, "fidelity": 0.95}])
+            device._couplings_df = pd.DataFrame(
+                [{"control": 0, "target": 1, "fidelity": 0.95}]
+            )
 
-            with patch.object(device, 'summary', return_value={"device_id": "anemone"}):
-                with patch.object(device, 'get_qubit_stats', return_value={"mean": 0.97}):
-                    with patch('builtins.print'):
+            with patch.object(device, "summary", return_value={"device_id": "anemone"}):
+                with patch.object(
+                    device, "get_qubit_stats", return_value={"mean": 0.97}
+                ):
+                    with patch("builtins.print"):
                         result = device.save_data("test.json")
 
                         mock_open.assert_called_once_with("test.json", "w")

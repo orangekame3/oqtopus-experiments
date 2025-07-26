@@ -115,7 +115,7 @@ class TestExperimentDataManager:
         data = {
             "numpy_array": np.array([1, 2, 3]),
             "numpy_scalar": np.float64(3.14),
-            "regular_data": {"shots": 1000}
+            "regular_data": {"shots": 1000},
         }
         path = manager.save_data(data, "numpy_test")
 
@@ -209,7 +209,7 @@ class TestExperimentDataManager:
         data = {
             "regular": "string",
             "numpy_array": np.array([1, 2, 3]),
-            "nested": {"numpy_scalar": np.float64(3.14)}
+            "nested": {"numpy_scalar": np.float64(3.14)},
         }
 
         converted = manager._convert_for_json(data)

@@ -15,6 +15,7 @@ from oqtopus_experiments.models.base import (
 
 class MockConfigModel(BaseConfigModel):
     """Test model for BaseConfigModel"""
+
     name: str
     value: int
     optional_field: str = "default"
@@ -22,12 +23,14 @@ class MockConfigModel(BaseConfigModel):
 
 class MockExperimentModel(BaseExperimentModel):
     """Test model for BaseExperimentModel"""
+
     experiment_name: str
     shots: int = 1024
 
 
 class MockResultModel(BaseResultModel):
     """Test model for BaseResultModel"""
+
     success: bool
     counts: dict
 
@@ -76,20 +79,12 @@ class TestBaseConfigModel:
         model = MockConfigModel(name="test", value=42, optional_field="custom")
         data = model.to_dict()
 
-        expected = {
-            "name": "test",
-            "value": 42,
-            "optional_field": "custom"
-        }
+        expected = {"name": "test", "value": 42, "optional_field": "custom"}
         assert data == expected
 
     def test_from_dict(self):
         """Test creation from dictionary"""
-        data = {
-            "name": "test",
-            "value": 42,
-            "optional_field": "custom"
-        }
+        data = {"name": "test", "value": 42, "optional_field": "custom"}
         model = MockConfigModel.from_dict(data)
 
         assert model.name == "test"
@@ -98,10 +93,7 @@ class TestBaseConfigModel:
 
     def test_from_dict_with_missing_optional(self):
         """Test creation from dictionary with missing optional field"""
-        data = {
-            "name": "test",
-            "value": 42
-        }
+        data = {"name": "test", "value": 42}
         model = MockConfigModel.from_dict(data)
 
         assert model.name == "test"
@@ -110,9 +102,7 @@ class TestBaseConfigModel:
 
     def test_from_dict_with_missing_required(self):
         """Test creation from dictionary with missing required field"""
-        data = {
-            "value": 42
-        }
+        data = {"value": 42}
         with pytest.raises(ValidationError) as exc_info:
             MockConfigModel.from_dict(data)
 
@@ -153,14 +143,14 @@ class TestBaseExperimentModel:
             experiment_name="test_exp",
             shots=1024,
             extra_field="allowed",
-            another_extra=42
+            another_extra=42,
         )
 
         assert model.experiment_name == "test_exp"
         assert model.shots == 1024
         # Extra fields should be accessible
-        assert hasattr(model, 'extra_field')
-        assert hasattr(model, 'another_extra')
+        assert hasattr(model, "extra_field")
+        assert hasattr(model, "another_extra")
         assert model.extra_field == "allowed"
         assert model.another_extra == 42
 
@@ -201,13 +191,13 @@ class TestBaseResultModel:
             success=True,
             counts={"0": 50, "1": 50},
             metadata={"shots": 100},
-            backend_name="test_backend"
+            backend_name="test_backend",
         )
 
         assert model.success is True
         assert model.counts == {"0": 50, "1": 50}
-        assert hasattr(model, 'metadata')
-        assert hasattr(model, 'backend_name')
+        assert hasattr(model, "metadata")
+        assert hasattr(model, "backend_name")
         assert model.metadata == {"shots": 100}
         assert model.backend_name == "test_backend"
 
@@ -219,13 +209,11 @@ class TestBaseResultModel:
         custom_array = np.array([1, 2, 3])
 
         model = MockResultModel(
-            success=True,
-            counts={"0": 50, "1": 50},
-            numpy_data=custom_array
+            success=True, counts={"0": 50, "1": 50}, numpy_data=custom_array
         )
 
         assert model.success is True
-        assert hasattr(model, 'numpy_data')
+        assert hasattr(model, "numpy_data")
         assert isinstance(model.numpy_data, np.ndarray)
         np.testing.assert_array_equal(model.numpy_data, custom_array)
 
@@ -290,4 +278,3 @@ class TestModelConfigSettings:
 
 if __name__ == "__main__":
     pytest.main([__file__])
-

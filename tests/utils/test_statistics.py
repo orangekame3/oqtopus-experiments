@@ -232,7 +232,9 @@ class TestEstimateParametersWithQuality:
     def test_invalid_data_handling(self):
         """Test handling of invalid data (NaN, inf)"""
         x_data = np.array([0, 1, 2, 3, 4])
-        y_data = np.array([1, np.nan, np.inf, 0.3, 0.1])  # 3 valid points: (0,1), (3,0.3), (4,0.1)
+        y_data = np.array(
+            [1, np.nan, np.inf, 0.3, 0.1]
+        )  # 3 valid points: (0,1), (3,0.3), (4,0.1)
         initial_params = [1.0, 2.0, 0.0]
 
         # Suppress OptimizeWarning for covariance estimation
@@ -290,7 +292,9 @@ class TestFittingFunctions:
     def test_damped_oscillation(self):
         """Test damped oscillation function"""
         t = np.array([0, 0.25, 0.5])
-        result = damped_oscillation(t, A=1.0, T2_star=1.0, frequency=1.0, phase=0.0, offset=0.0)
+        result = damped_oscillation(
+            t, A=1.0, T2_star=1.0, frequency=1.0, phase=0.0, offset=0.0
+        )
         # At t=0: 1*exp(0)*cos(0) = 1
         # At t=0.25: 1*exp(-0.25)*cos(π/2) ≈ 0
         # At t=0.5: 1*exp(-0.5)*cos(π) ≈ -exp(-0.5)

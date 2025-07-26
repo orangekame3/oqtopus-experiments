@@ -15,6 +15,7 @@ def import_oqtopus_backend():
     """
     Factory fixture to import oqtopus_backend with controlled OQTOPUS availability
     """
+
     def _import_with_availability(monkeypatch, available: bool):
         """
         Import oqtopus_backend with the environment tweaked so that
@@ -71,7 +72,7 @@ def import_oqtopus_backend():
                     raise ImportError(f"simulated absence of {dep}")
                 return orig_import(name, *args, **kwargs)
 
-            orig_import = __builtins__['__import__']
+            orig_import = __builtins__["__import__"]
             monkeypatch.setattr(__builtins__, "__import__", _raise_import_error)
 
         # Force reload of the module under test
@@ -87,6 +88,7 @@ def import_oqtopus_backend():
 @pytest.fixture
 def mock_device_info():
     """Mock DeviceInfo for testing"""
+
     class MockDeviceInfo:
         def __init__(self, device_name="test_device"):
             self.device_name = device_name

@@ -75,7 +75,7 @@ class TestBaseExperiment:
         """Test save_experiment_data method"""
         experiment = MockExperiment()
 
-        with patch.object(experiment.data_manager, 'save_results') as mock_save:
+        with patch.object(experiment.data_manager, "save_results") as mock_save:
             mock_save.return_value = "test_path"
 
             results = {"test": "data"}
@@ -84,9 +84,7 @@ class TestBaseExperiment:
             path = experiment.save_experiment_data(results, metadata, "custom_type")
 
             mock_save.assert_called_once_with(
-                results=results,
-                metadata=metadata,
-                experiment_type="custom_type"
+                results=results, metadata=metadata, experiment_type="custom_type"
             )
             assert path == "test_path"
 
@@ -94,7 +92,7 @@ class TestBaseExperiment:
         """Test save_job_ids method"""
         experiment = MockExperiment()
 
-        with patch.object(experiment.data_manager, 'save_data') as mock_save:
+        with patch.object(experiment.data_manager, "save_data") as mock_save:
             mock_save.return_value = "job_ids_path"
 
             job_ids = {"backend1": ["job1", "job2"]}
@@ -118,7 +116,7 @@ class TestBaseExperiment:
         """Test save_raw_results method"""
         experiment = MockExperiment()
 
-        with patch.object(experiment.data_manager, 'save_data') as mock_save:
+        with patch.object(experiment.data_manager, "save_data") as mock_save:
             mock_save.return_value = "raw_results_path"
 
             results = {"circuit_0": [{"counts": {"0": 50, "1": 50}}]}
@@ -143,7 +141,7 @@ class TestBaseExperiment:
         """Test save_experiment_summary method"""
         experiment = MockExperiment()
 
-        with patch.object(experiment.data_manager, 'summary') as mock_summary:
+        with patch.object(experiment.data_manager, "summary") as mock_summary:
             mock_summary.return_value = "summary_path"
 
             path = experiment.save_experiment_summary()
@@ -158,7 +156,7 @@ class TestBaseExperiment:
         mock_backend.device_name = "test_device"
         mock_backend.run.side_effect = [
             {"counts": {"0": 40, "1": 60}, "success": True},
-            {"counts": {"0": 80, "1": 20}, "success": True}
+            {"counts": {"0": 80, "1": 20}, "success": True},
         ]
 
         result = experiment.run(mock_backend, shots=100)
@@ -217,7 +215,9 @@ class TestBaseExperiment:
         circuits = [QuantumCircuit(1, 1)]
         mock_backend = MagicMock()
 
-        result_circuits, was_transpiled = experiment._auto_transpile_if_needed(circuits, mock_backend)
+        result_circuits, was_transpiled = experiment._auto_transpile_if_needed(
+            circuits, mock_backend
+        )
 
         assert result_circuits == circuits
         assert not was_transpiled
@@ -230,35 +230,34 @@ class TestBaseExperiment:
             "physical_qubit_0": 2,
             "physical_qubit_1": 3,
             "logical_qubit_0": 0,
-            "logical_qubit_1": 1
+            "logical_qubit_1": 1,
         }
 
         circuits = [QuantumCircuit(2, 2)]
         mock_backend = MagicMock()
         mock_backend.transpile.return_value = "transpiled_circuits"
 
-        result_circuits, was_transpiled = experiment._auto_transpile_if_needed(circuits, mock_backend)
+        result_circuits, was_transpiled = experiment._auto_transpile_if_needed(
+            circuits, mock_backend
+        )
 
         assert result_circuits == "transpiled_circuits"
         assert was_transpiled
-        mock_backend.transpile.assert_called_once_with(
-            circuits, physical_qubits=[2, 3]
-        )
+        mock_backend.transpile.assert_called_once_with(circuits, physical_qubits=[2, 3])
 
     def test_auto_transpile_if_needed_transpile_error(self):
         """Test auto-transpile handles transpilation errors"""
         experiment = MockExperiment()
         experiment._physical_qubits_specified = True
-        experiment.experiment_params = {
-            "physical_qubit_0": 2,
-            "physical_qubit_1": 3
-        }
+        experiment.experiment_params = {"physical_qubit_0": 2, "physical_qubit_1": 3}
 
         circuits = [QuantumCircuit(2, 2)]
         mock_backend = MagicMock()
         mock_backend.transpile.side_effect = Exception("Transpile error")
 
-        result_circuits, was_transpiled = experiment._auto_transpile_if_needed(circuits, mock_backend)
+        result_circuits, was_transpiled = experiment._auto_transpile_if_needed(
+            circuits, mock_backend
+        )
 
         assert result_circuits == circuits
         assert not was_transpiled
@@ -267,16 +266,15 @@ class TestBaseExperiment:
         """Test auto-transpile when backend doesn't support transpilation"""
         experiment = MockExperiment()
         experiment._physical_qubits_specified = True
-        experiment.experiment_params = {
-            "physical_qubit_0": 2,
-            "physical_qubit_1": 3
-        }
+        experiment.experiment_params = {"physical_qubit_0": 2, "physical_qubit_1": 3}
 
         circuits = [QuantumCircuit(2, 2)]
         mock_backend = MagicMock()
         del mock_backend.transpile  # Remove transpile method
 
-        result_circuits, was_transpiled = experiment._auto_transpile_if_needed(circuits, mock_backend)
+        result_circuits, was_transpiled = experiment._auto_transpile_if_needed(
+            circuits, mock_backend
+        )
 
         assert result_circuits == circuits
         assert not was_transpiled
@@ -298,10 +296,7 @@ class TestBaseExperiment:
     def test_should_disable_transpilation_legacy_params(self):
         """Test _should_disable_transpilation with legacy params"""
         experiment = MockExperiment()
-        experiment.experiment_params = {
-            "physical_qubit_0": 1,
-            "physical_qubit_1": 2
-        }
+        experiment.experiment_params = {"physical_qubit_0": 1, "physical_qubit_1": 2}
 
         assert experiment._should_disable_transpilation()
 
@@ -320,7 +315,7 @@ class TestBaseExperiment:
         mock_backend.submit_parallel.return_value = ["job1", "job2"]
         mock_backend.collect_parallel.return_value = [
             {"counts": {"0": 40, "1": 60}, "success": True},
-            {"counts": {"0": 80, "1": 20}, "success": True}
+            {"counts": {"0": 80, "1": 20}, "success": True},
         ]
 
         result = experiment.run_parallel(mock_backend, shots=100, workers=2)
@@ -341,7 +336,7 @@ class TestBaseExperiment:
         del mock_backend.collect_parallel
         mock_backend.run.side_effect = [
             {"counts": {"0": 40, "1": 60}, "success": True},
-            {"counts": {"0": 80, "1": 20}, "success": True}
+            {"counts": {"0": 80, "1": 20}, "success": True},
         ]
 
         result = experiment.run_parallel(mock_backend, shots=100, workers=2)
@@ -354,10 +349,11 @@ class TestBaseExperiment:
         """Test run_parallel raises error when backend is None"""
         experiment = MockExperiment()
 
-        with pytest.raises(ValueError, match="Backend is required for parallel execution"):
+        with pytest.raises(
+            ValueError, match="Backend is required for parallel execution"
+        ):
             experiment.run_parallel(None)
 
 
 if __name__ == "__main__":
     pytest.main([__file__])
-
