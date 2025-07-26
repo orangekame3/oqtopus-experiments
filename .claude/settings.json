@@ -2,9 +2,7 @@
   "hooks": {
     "PostToolUse": [
       {
-        "matcher": {
-          "tools": ["Edit", "MultiEdit", "Write"]
-        },
+        "matcher": "Edit|MultiEdit|Write",
         "hooks": [
           {
             "type": "command",
@@ -13,9 +11,7 @@
         ]
       },
       {
-        "matcher": {
-          "tools": ["Bash"]
-        },
+        "matcher": "Bash",
         "hooks": [
           {
             "type": "command",
@@ -26,9 +22,7 @@
     ],
     "PreToolUse": [
       {
-        "matcher": {
-          "tools": ["Bash"]
-        },
+        "matcher": "Bash",
         "hooks": [
           {
             "type": "command",
@@ -80,28 +74,37 @@
   },
   "permissions": {
     "allow": [
-      {
-        "action": "read",
-        "paths": ["**"]
-      },
-      {
-        "action": "write",
-        "paths": ["src/**", "tests/**", "workspace/**", "notebooks/**", ".claude/**"]
-      },
-      {
-        "action": "execute",
-        "commands": ["uv", "python", "pytest", "ruff", "black", "mypy", "git", "echo", "date", "test", "command", "task", "jq", "basename"]
-      }
+      "read:**",
+      "write:src/**",
+      "write:tests/**",
+      "write:workspace/**",
+      "write:notebooks/**",
+      "write:.claude/**",
+      "execute:uv",
+      "execute:python",
+      "execute:pytest",
+      "execute:ruff",
+      "execute:black",
+      "execute:mypy",
+      "execute:git",
+      "execute:echo",
+      "execute:date",
+      "execute:test",
+      "execute:command",
+      "execute:task",
+      "execute:jq",
+      "execute:basename"
     ],
     "deny": [
-      {
-        "action": "write",
-        "paths": [".git/**", "*.pyc", "__pycache__/**", ".env", "*.key", "*.pem"]
-      },
-      {
-        "action": "execute",
-        "commands": ["sudo", "rm -rf /", "chmod 777"]
-      }
+      "write:.git/**",
+      "write:*.pyc",
+      "write:__pycache__/**",
+      "write:.env",
+      "write:*.key",
+      "write:*.pem",
+      "execute:sudo",
+      "execute:rm -rf /",
+      "execute:chmod 777"
     ]
   },
   "env": {
