@@ -94,13 +94,85 @@ class ExperimentResult:
 - **ParityOscillation**: GHZ state decoherence
 
 # Common Tasks
-## Add New Experiment
-1. Create class in `src/oqtopus_experiments/experiments/{name}.py`
-2. Implement `circuits()` method
-3. Create models in `src/oqtopus_experiments/models/{name}_models.py`
-4. Add to `__init__.py` exports
-5. Create example in `docs/examples/`
-6. Add tests in `tests/experiments/`
+## Add New Experiment - Detailed Workflow
+When adding a new experiment (e.g., "bell_state"), follow this exact sequence:
+
+### 1. Create Experiment Class
+```python
+# src/oqtopus_experiments/experiments/bell_state.py
+from ..core.base_experiment import BaseExperiment
+from ..models.bell_state_models import BellStateData
+
+class BellState(BaseExperiment):
+    def __init__(self, experiment_name: str | None = None):
+        super().__init__(experiment_name)
+        
+    def circuits(self) -> list[QuantumCircuit]:
+        # Implementation here
+        pass
+```
+
+### 2. Create Pydantic Models
+```python
+# src/oqtopus_experiments/models/bell_state_models.py
+from pydantic import BaseModel
+from ..models.experiment_result import ExperimentResult
+
+class BellStateData(BaseModel):
+    # Define data structure
+    pass
+
+class BellStateResult(ExperimentResult):
+    data: BellStateData
+    
+    def analyze(self, plot=True, save_data=False, save_image=False):
+        # Analysis implementation
+        pass
+```
+
+### 3. Update Exports
+```python
+# src/oqtopus_experiments/experiments/__init__.py
+from .bell_state import BellState
+
+# src/oqtopus_experiments/models/__init__.py  
+from .bell_state_models import BellStateData, BellStateResult
+```
+
+### 4. Create Examples
+```python
+# docs/examples/local/bell_state.py - Local simulator example
+# docs/examples/qulacs/bell_state.py - Qulacs example
+# docs/examples/qpu/bell_state.py - Real hardware example
+```
+
+### 5. Create Tests
+```python
+# tests/experiments/test_bell_state.py
+# tests/models/test_bell_state_models.py
+```
+
+### 6. Update Documentation
+```markdown
+# docs/experiments/bell_state.md
+```
+
+### 7. Run Validation
+```bash
+task check  # Format, lint, and type check
+uv run pytest tests/experiments/test_bell_state.py
+```
+
+## Automated Scaffolding
+Instead of using scripts, use the prompt template:
+1. Copy `.claude/prompts/new_experiment.md`
+2. Fill in the template with your experiment details
+3. Ask Claude: "Please create a new experiment using this specification: [paste filled template]"
+
+This approach ensures:
+- Always uses latest project patterns
+- Adapts to current codebase structure
+- No maintenance of scaffold scripts needed
 
 ## Run Quality Checks
 ```bash
