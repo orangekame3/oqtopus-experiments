@@ -1,0 +1,111 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": {
+          "tools": ["Edit", "MultiEdit", "Write"]
+        },
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [[ \"$FILE_PATH\" =~ \\.(py)$ ]] && command -v task &> /dev/null; then echo \"🔍 Python file edited: $(basename \"$FILE_PATH\")\"; echo \"💡 Run 'task check' to validate changes\"; fi"
+          }
+        ]
+      },
+      {
+        "matcher": {
+          "tools": ["Bash"]
+        },
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [[ \"$COMMAND\" =~ ^task\\s+(fmt|lint|mypy|check) ]] && [[ \"$EXIT_CODE\" == \"0\" ]]; then echo \"✅ Task completed successfully\"; fi"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": {
+          "tools": ["Bash"]
+        },
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [[ \"$COMMAND\" =~ ^(rm|mv|cp)\\s+(-rf?|--force) ]]; then echo \"⚠️  Destructive command detected: $COMMAND\"; exit 2; fi"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo \"📝 Processing request: $(date +%H:%M:%S)\""
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if command -v task &> /dev/null && [[ -f Taskfile.yml ]]; then echo \"💡 Available tasks: task lint, task mypy, task check (runs all)\"; fi"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo \"🤖 Sub-agent task completed\""
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo \"📦 Context compaction triggered - consider running 'task check' if many files were edited\""
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      {
+        "action": "read",
+        "paths": ["**"]
+      },
+      {
+        "action": "write",
+        "paths": ["src/**", "tests/**", "workspace/**", "notebooks/**", ".claude/**"]
+      },
+      {
+        "action": "execute",
+        "commands": ["uv", "python", "pytest", "ruff", "black", "mypy", "git", "echo", "date", "test", "command", "task", "jq", "basename"]
+      }
+    ],
+    "deny": [
+      {
+        "action": "write",
+        "paths": [".git/**", "*.pyc", "__pycache__/**", ".env", "*.key", "*.pem"]
+      },
+      {
+        "action": "execute",
+        "commands": ["sudo", "rm -rf /", "chmod 777"]
+      }
+    ]
+  },
+  "env": {
+    "PYTHONDONTWRITEBYTECODE": "1",
+    "UV_SYSTEM_PYTHON": "1"
+  }
+}

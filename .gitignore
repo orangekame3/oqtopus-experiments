@@ -1,3 +1,7 @@
+# Claude Code local settings
+.claude/settings.local.json
+.claude/CLAUDE.local.md
+
 # Python
 __pycache__/
 *.py[cod]
@@ -64,5 +68,4 @@ data/raw/*.txt
 
 # Experiment results
 .results/
-.claude/
 site/
