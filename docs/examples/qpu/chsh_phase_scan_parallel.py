@@ -11,7 +11,6 @@ from oqtopus_experiments.experiments import CHSHPhaseScan
 
 
 def main():
-
     # OQTOPUS backend for QPU
     backend = OqtopusBackend(device="urchin")
 

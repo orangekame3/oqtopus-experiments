@@ -3,13 +3,11 @@
 CHSH Bell inequality experiment with Local Simulator
 """
 
-
 from oqtopus_experiments.backends import LocalBackend
 from oqtopus_experiments.experiments import CHSH
 
 
 def main():
-
     # Local backend for Qiskit Aer simulator
     backend = LocalBackend(device="ideal")
 

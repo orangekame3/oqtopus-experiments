@@ -138,11 +138,11 @@ class TestLocalBackendExperimentIntegration:
             if device_type == "noisy":
                 backend.disable_noise()
                 assert backend.device_name == "ideal"
-                assert backend.noise_enabled == False
+                assert not backend.noise_enabled
 
                 backend.enable_noise()
                 assert backend.device_name == "noisy"
-                assert backend.noise_enabled == True
+                assert backend.noise_enabled
 
     @patch("oqtopus_experiments.backends.local_backend.QISKIT_AVAILABLE", True)
     @patch("oqtopus_experiments.backends.local_backend.AerSimulator")
@@ -153,7 +153,7 @@ class TestLocalBackendExperimentIntegration:
 
         assert backend.t1_us == 40.0
         assert backend.t2_us == 75.0
-        assert backend.noise_enabled == True
+        assert backend.noise_enabled
 
         # Update parameters
         backend.set_noise_parameters(t1=40.0, t2=80.0)  # T2 <= 2*T1
@@ -165,8 +165,8 @@ class TestLocalBackendExperimentIntegration:
         backend = LocalBackend(device="noisy")
 
         # Create multiple experiments
-        rabi1 = Rabi(experiment_name="rabi_1", physical_qubit=0, amplitude_points=3)
-        rabi2 = Rabi(experiment_name="rabi_2", physical_qubit=1, amplitude_points=4)
+        Rabi(experiment_name="rabi_1", physical_qubit=0, amplitude_points=3)
+        Rabi(experiment_name="rabi_2", physical_qubit=1, amplitude_points=4)
 
         # Both should use the same backend device name
         assert backend.device_name == "noisy"
@@ -212,7 +212,7 @@ class TestLocalBackendPerformance:
         # Verify all executed successfully
         assert len(results) == 10
         for result in results:
-            assert result["success"] == True
+            assert result["success"]
             assert result["backend"] == "ideal"
 
         # Performance should be reasonable (less than 10 seconds)

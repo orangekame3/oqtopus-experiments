@@ -110,5 +110,6 @@
   "env": {
     "PYTHONDONTWRITEBYTECODE": "1",
     "UV_SYSTEM_PYTHON": "1"
+
   }
 }

@@ -9,7 +9,6 @@ from oqtopus_experiments.experiments import ParityOscillation
 
 
 def main():
-
     # Local backend for ideal simulation
     backend = LocalBackend(device="noisy")
 

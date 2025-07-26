@@ -10,7 +10,6 @@ from oqtopus_experiments.experiments import CHSH
 
 
 def main():
-
     # OQTOPUS backend for QPU
     backend = OqtopusBackend(device="anemone")
 

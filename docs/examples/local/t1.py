@@ -3,13 +3,11 @@
 T1 experiment with Noisy Simulator
 """
 
-
 from oqtopus_experiments.backends import LocalBackend
 from oqtopus_experiments.experiments import T1
 
 
 def main():
-
     # Local backend for Qiskit Aer simulator with shorter T1 time
     backend = LocalBackend(device="noisy")
 

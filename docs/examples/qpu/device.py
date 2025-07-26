@@ -3,7 +3,6 @@
 Anemone device information example
 """
 
-
 from oqtopus_experiments.backends import OqtopusBackend
 
 

@@ -3,7 +3,6 @@
 Parallel Rabi experiment with Qulacs
 """
 
-
 from oqtopus_experiments.backends import OqtopusBackend
 from oqtopus_experiments.experiments import Rabi
 

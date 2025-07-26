@@ -11,7 +11,6 @@ from oqtopus_experiments.experiments import CHSHPhaseScan
 
 
 def main():
-
     # OQTOPUS backend for Qulacs
     backend = OqtopusBackend(device="qulacs")
 
