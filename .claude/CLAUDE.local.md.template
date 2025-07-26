@@ -1,0 +1,65 @@
+# Personal Development Notes
+<!-- Copy this to CLAUDE.local.md for personal customizations -->
+<!-- This file is gitignored and won't be committed -->
+
+# <personal_preferences>
+- Prefer concise responses
+- Show command outputs when running experiments
+- Alert on potential performance issues
+
+# <current_focus>
+<!-- Add your current work focus here -->
+- Working on: [experiment name]
+- Testing with: [specific parameters]
+- Debugging: [issue description]
+
+# <local_setup>
+<!-- Document any local environment specifics -->
+- Python path: /usr/local/bin/python3.12
+- OQTOPUS credentials location: ~/.oqtopus/config
+- Custom backends: [list any local quantum simulators]
+
+# <shortcuts>
+<!-- Personal command shortcuts or aliases -->
+```bash
+# Quick experiment run
+alias qrun='uv run workspace/scripts/chsh.py run --devices qulacs --shots 1000'
+
+# Full check with verbose output
+alias qcheck='task check && echo "✅ All checks passed!"'
+```
+
+# <experiment_notes>
+<!-- Keep notes about specific experiments -->
+## CHSH Experiment
+- Optimal angle found at: π/4
+- Best fidelity with 10000 shots
+- Backend comparison: Qulacs faster, OQTOPUS more accurate
+
+## Rabi Experiment
+- Calibration needed for device X
+- Frequency range: 0-10 MHz optimal
+
+# <todo_personal>
+<!-- Personal todo items not in main project -->
+- [ ] Profile memory usage for large circuits
+- [ ] Compare execution times across backends
+- [ ] Document edge cases found in testing
+
+# <debug_snippets>
+<!-- Useful code snippets for debugging -->
+```python
+# Quick circuit visualization
+from quantumlib.circuit.utils import visualize_circuit
+visualize_circuit(circuit, save_path="debug_circuit.png")
+
+# Backend connectivity test
+from quantumlib.backend import test_backend_connection
+test_backend_connection("oqtopus")
+```
+
+# <performance_notes>
+<!-- Performance optimization discoveries -->
+- Batch size of 100 circuits optimal for parallel execution
+- Memory spike occurs at >1000 qubits
+- Use sparse matrices for large systems

@@ -1,0 +1,47 @@
+{
+  "// This is a template for personal settings": "",
+  "// Copy this file to settings.local.json and customize as needed": "",
+  "// settings.local.json is gitignored and won't be committed": "",
+  
+  "model": "claude-3-5-sonnet-20241022",
+  
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": {
+          "tools": ["Edit", "MultiEdit", "Write"]
+        },
+        "hooks": [
+          {
+            "type": "command",
+            "command": "// Example: Automatically run task check after editing Python files",
+            "command_example": "if [[ \"$FILE_PATH\" =~ \\.(py)$ ]]; then task check; fi"
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "type": "command", 
+            "command": "// Example: Desktop notification when task completes",
+            "command_example": "osascript -e 'display notification \"Task completed\" with title \"Claude Code\"'"
+          }
+        ]
+      }
+    ]
+  },
+  
+  "env": {
+    "// Custom environment variables": "",
+    "CUSTOM_VAR": "your_value_here"
+  },
+  
+  "permissions": {
+    "additionalDirectories": [
+      "// Add additional directories you want to allow access to",
+      "/path/to/your/personal/directory"
+    ]
+  }
+}
