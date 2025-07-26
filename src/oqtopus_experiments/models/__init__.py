@@ -5,6 +5,12 @@ from .hadamard_test_models import (
     HadamardTestFittingResult,
     HadamardTestParameters,
 )
+from .randomized_benchmarking_models import (
+    RandomizedBenchmarkingData,
+    RandomizedBenchmarkingFittingResult,
+    RandomizedBenchmarkingParameters,
+    RandomizedBenchmarkingResult,
+)
 from .results import CircuitResult, ExperimentResult, TaskMetadata
 
 __all__ = [
@@ -18,4 +24,8 @@ __all__ = [
     "HadamardTestCircuitParams",
     "HadamardTestFittingResult",
     "HadamardTestParameters",
+    "RandomizedBenchmarkingData",
+    "RandomizedBenchmarkingFittingResult",
+    "RandomizedBenchmarkingParameters",
+    "RandomizedBenchmarkingResult",
 ]

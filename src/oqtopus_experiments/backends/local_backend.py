@@ -84,9 +84,9 @@ class LocalBackend:
             "cx": 500,  # CNOT gate
         }
 
-        # Single qubit depolarizing error (typical: 0.1% per gate)
-        single_qubit_error = 0.001
-        two_qubit_error = 0.06  # CNOT error ~2%
+        # Single qubit depolarizing error (increased for visible RB decay)
+        single_qubit_error = 0.01  # 1% per gate (10x higher for testing)
+        two_qubit_error = 0.06  # CNOT error ~6%
 
         # Add errors to gates
         for gate_name, gate_time in gate_times.items():
@@ -243,13 +243,26 @@ class LocalBackend:
                 )
             else:
                 # Standard handling for other experiments
-                compiled_circuit = transpile(circuit, self.simulator)
-
+                # CRITICAL: Transpile with basis gates to ensure noise is applied
                 if self.noise_model:
+                    # Use the same basis gates as defined in noise model
+                    basis_gates = [
+                        "sx",
+                        "x",
+                        "rz",
+                        "cx",
+                    ]  # Gates with noise in _create_noise_model
+                    compiled_circuit = transpile(
+                        circuit,
+                        self.simulator,
+                        basis_gates=basis_gates,
+                        optimization_level=0,  # Prevent gate cancellation for noise application
+                    )
                     job = self.simulator.run(
                         compiled_circuit, shots=shots, noise_model=self.noise_model
                     )
                 else:
+                    compiled_circuit = transpile(circuit, self.simulator)
                     job = self.simulator.run(compiled_circuit, shots=shots)
 
             result = job.result()
