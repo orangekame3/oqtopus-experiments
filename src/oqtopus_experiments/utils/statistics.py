@@ -5,6 +5,7 @@ Common statistical functions used across different quantum experiments
 for probability calculations and parameter estimation.
 """
 
+import warnings
 from typing import Any
 
 import numpy as np
@@ -122,19 +123,25 @@ def estimate_parameters_with_quality(
             }
 
         # Perform curve fitting
-        if param_bounds:
-            popt, pcov = curve_fit(
-                fit_function,
-                x_valid,
-                y_valid,
-                p0=initial_params,
-                bounds=param_bounds,
-                maxfev=max_iterations,
-            )
-        else:
-            popt, pcov = curve_fit(
-                fit_function, x_valid, y_valid, p0=initial_params, maxfev=max_iterations
-            )
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")  # Ignore all warnings during curve fitting
+            if param_bounds:
+                popt, pcov = curve_fit(
+                    fit_function,
+                    x_valid,
+                    y_valid,
+                    p0=initial_params,
+                    bounds=param_bounds,
+                    maxfev=max_iterations,
+                )
+            else:
+                popt, pcov = curve_fit(
+                    fit_function,
+                    x_valid,
+                    y_valid,
+                    p0=initial_params,
+                    maxfev=max_iterations,
+                )
 
         # Calculate parameter uncertainties
         param_errors_array = (

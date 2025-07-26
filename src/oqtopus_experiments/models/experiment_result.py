@@ -50,10 +50,21 @@ class ExperimentResult:
             DataFrame with analysis results
         """
         if self._analyzed_results is None:
-            # Perform analysis using the experiment's analyze method
-            self._analyzed_results = self.experiment.analyze(
-                self.raw_results, plot=plot, save_data=save_data, save_image=save_image
-            )
+            try:
+                # Perform analysis using the experiment's analyze method
+                raw_analysis = self.experiment.analyze(
+                    self.raw_results,
+                    plot=plot,
+                    save_data=save_data,
+                    save_image=save_image,
+                )
+
+                # Convert to DataFrame format
+                self._analyzed_results = self._extract_dataframe(raw_analysis)
+
+            except Exception as e:
+                print(f"⚠️  Analysis failed: {e}")
+                self._analyzed_results = pd.DataFrame()
 
         # Save results if requested (DataFrame is easily serializable)
         if save_data:
@@ -78,6 +89,21 @@ class ExperimentResult:
                 print(f"⚠️  Warning: Could not save results: {e}")
 
         return self._analyzed_results
+
+    def _extract_dataframe(self, analysis_result: Any) -> pd.DataFrame:
+        """Extract DataFrame from analysis result of various types"""
+        # If already a DataFrame, return as-is
+        if isinstance(analysis_result, pd.DataFrame):
+            return analysis_result
+
+        # If it's a dict, look for DataFrames within it
+        if isinstance(analysis_result, dict):
+            for _, value in analysis_result.items():
+                if isinstance(value, pd.DataFrame):
+                    return value  # Return the first DataFrame found
+
+        # If no DataFrame found, return empty DataFrame
+        return pd.DataFrame()
 
     @property
     def results(self) -> pd.DataFrame:

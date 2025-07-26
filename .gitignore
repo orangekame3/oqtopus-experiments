@@ -66,6 +66,26 @@ data/raw/*.txt
 # Cache
 .cache/
 
+# Coverage and testing
+.coverage
+coverage.xml
+coverage.lcov
+.coverage.*
+htmlcov/
+.pytest_cache/
+.tox/
+.nox/
+junit.xml
+nosetests.xml
+*.cover
+*.py,cover
+
+# Codecov
+codecov.yml
+.codecov.yml
+codecov.yaml
+.codecov.yaml
+
 # Experiment results
 .results/
 site/

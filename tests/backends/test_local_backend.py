@@ -21,8 +21,8 @@ class TestLocalBackend:
         assert backend.device_name == "noisy"
         assert backend.noise_enabled
         assert backend.backend_type == "local"
-        assert backend.t1_us == 50.0
-        assert backend.t2_us == 100.0
+        assert backend.t1_us == 25.0
+        assert backend.t2_us == 50.0
 
     def test_init_ideal_device(self):
         """Test LocalBackend initialization with ideal device"""

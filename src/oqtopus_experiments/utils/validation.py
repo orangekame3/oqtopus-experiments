@@ -12,8 +12,10 @@ def validate_oqtopus_result_legacy(result: dict[str, Any]) -> bool:
         return False
 
     success_statuses = ["completed", "succeeded", "success"]
-    status = result.get("status", "").lower()
-    return status in success_statuses
+    status = result.get("status", "")
+    if status is None:
+        return False
+    return str(status).lower() in success_statuses
 
 
 def validate_and_convert_oqtopus_result(

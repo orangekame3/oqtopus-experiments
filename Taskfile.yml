@@ -67,6 +67,26 @@ tasks:
       - task: docs-serve
     desc: "Build and serve documentation locally"
 
+  test:
+    cmds:
+      - uv run python -m pytest tests/ -v
+    desc: "Run all tests with verbose output"
+
+  test-fast:
+    cmds:
+      - uv run python -m pytest tests/ -q
+    desc: "Run all tests with minimal output"
+
+  test-coverage:
+    cmds:
+      - uv run python -m pytest tests/ --cov=src/oqtopus_experiments --cov-report=html --cov-report=term
+    desc: "Run tests with coverage report"
+
+  test-specific:
+    cmds:
+      - uv run python -m pytest {{.CLI_ARGS}} -v
+    desc: "Run specific tests (usage: task test-specific -- tests/core/)"
+
   run-local:
     cmds:
       - for f in docs/examples/local/*.py; do uv run python "$f"; done

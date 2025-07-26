@@ -70,5 +70,4 @@ class HadamardTestAnalysisResult(BaseModel):
         default_factory=dict, description="Additional experiment metadata"
     )
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = {"arbitrary_types_allowed": True}
