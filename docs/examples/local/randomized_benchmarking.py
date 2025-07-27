@@ -19,9 +19,9 @@ def main():
         experiment_name="rb_local_demo",
         physical_qubit=0,
         max_sequence_length=512,  # Even longer sequences to see convergence to 0.5
-        num_lengths=12,           # More sequence lengths
-        num_samples=30,           # Balance between statistics and runtime
-        rb_type="standard",       # Standard RB (not interleaved)
+        num_lengths=12,  # More sequence lengths
+        num_samples=30,  # Balance between statistics and runtime
+        rb_type="standard",  # Standard RB (not interleaved)
     )
 
     print(f"Experiment: {rb.experiment_name}")
@@ -30,7 +30,9 @@ def main():
 
     # Run the experiment
     print("\nRunning Randomized Benchmarking experiment...")
-    print("LocalBackend provides realistic T1/T2 noise for quantum error characterization")
+    print(
+        "LocalBackend provides realistic T1/T2 noise for quantum error characterization"
+    )
     result = rb.run(backend=backend, shots=1000)
 
     # Analyze results with plotting
@@ -41,36 +43,44 @@ def main():
     print(df)
 
     # Print key metrics if fitting was successful
-    if not df.empty and 'mean_survival_probability' in df.columns:
-        print(f"\n✅ Randomized Benchmarking Analysis Results:")
+    if not df.empty and "mean_survival_probability" in df.columns:
+        print("\n✅ Randomized Benchmarking Analysis Results:")
         print("=" * 45)
-        
+
         # Show survival probabilities by sequence length
         print("Survival Probability vs Sequence Length:")
         for _, row in df.iterrows():
-            length = int(row['sequence_length']) if 'sequence_length' in row else 'N/A'
-            prob = row['mean_survival_probability']
-            std = row.get('std_survival_probability', 0.0)
+            length = int(row["sequence_length"]) if "sequence_length" in row else "N/A"
+            prob = row["mean_survival_probability"]
+            std = row.get("std_survival_probability", 0.0)
             print(f"  Length {length:2d}: P(survival) = {prob:.4f} ± {std:.4f}")
-        
+
         # Check for decay
-        probs = df['mean_survival_probability'].tolist()
+        probs = df["mean_survival_probability"].tolist()
         if len(probs) >= 2:
             decay = probs[0] - probs[-1]
             if decay > 0.01:  # At least 1% decay
-                print(f"\n✅ Exponential decay detected: {probs[0]:.4f} → {probs[-1]:.4f}")
-                print(f"   Total decay: {decay:.4f} ({decay/probs[0]*100:.1f}%)")
+                print(
+                    f"\n✅ Exponential decay detected: {probs[0]:.4f} → {probs[-1]:.4f}"
+                )
+                print(f"   Total decay: {decay:.4f} ({decay / probs[0] * 100:.1f}%)")
             else:
                 print(f"\n⚠️  Little decay detected: {probs[0]:.4f} → {probs[-1]:.4f}")
-                print("   This indicates very low noise levels (realistic for good superconducting qubits)")
+                print(
+                    "   This indicates very low noise levels (realistic for good superconducting qubits)"
+                )
                 print("   With T1~25μs and gate times ~20ns, error per gate ≈ 10^-3")
-                
-        print("\nCheck the generated plot and saved data for detailed results.")
-        print("Note: For more visible decay, consider shorter T1/T2 or use custom noise models")
-    else:
-        print(f"\n⚠️  Analysis failed or returned empty results")
 
-    print(f"\nExperiment completed. Total circuits executed: {len(rb.sequence_lengths) * rb.num_samples}")
+        print("\nCheck the generated plot and saved data for detailed results.")
+        print(
+            "Note: For more visible decay, consider shorter T1/T2 or use custom noise models"
+        )
+    else:
+        print("\n⚠️  Analysis failed or returned empty results")
+
+    print(
+        f"\nExperiment completed. Total circuits executed: {len(rb.sequence_lengths) * rb.num_samples}"
+    )
     print("✅ Randomized Benchmarking implementation successfully validated!")
 
 

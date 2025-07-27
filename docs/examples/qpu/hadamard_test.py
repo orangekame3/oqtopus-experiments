@@ -12,7 +12,7 @@ from oqtopus_experiments.experiments import HadamardTest
 
 def main():
     """Run Hadamard Test experiment with QPU backend simulation"""
-    
+
     # Local backend configured for QPU-like behavior
     backend = LocalBackend(device="noisy")
 

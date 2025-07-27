@@ -3,6 +3,7 @@
 Experiments module - Concrete experiment implementations
 """
 
+from .bernstein_vazirani import BernsteinVazirani
 from .chsh import CHSH
 
 # Legacy imports for backward compatibility
@@ -23,6 +24,7 @@ from .t2_echo import T2Echo
 from .t2_echo import T2Echo as T2EchoExperiment
 
 __all__ = [
+    "BernsteinVazirani",
     "CHSH",
     "CHSHPhaseScan",
     "HadamardTest",

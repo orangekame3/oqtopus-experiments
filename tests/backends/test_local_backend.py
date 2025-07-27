@@ -95,7 +95,12 @@ class TestLocalBackend:
         assert result["success"]
         assert "job_id" in result
 
-        mock_transpile.assert_called_once_with(mock_circuit, mock_simulator)
+        mock_transpile.assert_called_once_with(
+            mock_circuit,
+            mock_simulator,
+            basis_gates=["sx", "x", "rz", "cx"],
+            optimization_level=0,
+        )
         mock_simulator.run.assert_called_once()
 
     @patch("oqtopus_experiments.backends.local_backend.QISKIT_AVAILABLE", True)
