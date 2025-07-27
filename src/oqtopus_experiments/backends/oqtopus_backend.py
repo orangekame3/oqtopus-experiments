@@ -60,6 +60,8 @@ class OqtopusBackend:
         circuit: Any,
         shots: int = 1024,
         circuit_params: dict[str, Any] | None = None,
+        mitigation_info: dict[str, Any] | None = None,
+        experiment_name: str | None = None,
     ) -> dict[str, Any]:
         """
         Run circuit on OQTOPUS backend
@@ -68,6 +70,8 @@ class OqtopusBackend:
             circuit: Quantum circuit to run
             shots: Number of shots
             circuit_params: Optional parameters to embed in job description
+            mitigation_info: Optional mitigation settings (e.g., {"ro_error_mitigation": "pseudo_inverse"})
+            experiment_name: Optional experiment name to set as job name
 
         Returns:
             Result dictionary with counts and embedded parameters
@@ -91,23 +95,33 @@ class OqtopusBackend:
             if circuit_params:
                 description = json.dumps(circuit_params)
 
+            # Use provided mitigation_info or default
+            if mitigation_info is None:
+                mitigation_info = {
+                    "ro_error_mitigation": "pseudo_inverse",
+                }
+
             # Submit to OQTOPUS with configured settings
-            job = self.backend.sample_qasm(
-                qasm_str,
-                device_id=self.device_name,
-                shots=shots,
-                transpiler_info={
+            job_kwargs = {
+                "device_id": self.device_name,
+                "shots": shots,
+                "transpiler_info": {
                     "transpiler_lib": "qiskit",
                     "transpiler_options": {
                         "basis_gates": ["sx", "x", "rz", "cx"],
                         "optimization_level": 1,
                     },
                 },
-                mitigation_info={
-                    "ro_error_mitigation": "pseudo_inverse",
-                },
-                description=description,
-            )
+                "mitigation_info": mitigation_info,
+                "description": description,
+            }
+
+            # Add name if experiment_name is provided
+            if experiment_name:
+                job_kwargs["name"] = experiment_name
+
+            job_kwargs["program"] = qasm_str
+            job = self.backend.sample_qasm(**job_kwargs)
 
             print(f"Job submitted with ID: {job.job_id[:8]}...")
 
@@ -469,6 +483,8 @@ class OqtopusBackend:
         shots: int = 1024,
         circuit_params: list[dict] | None = None,
         disable_transpilation: bool = False,
+        mitigation_info: dict[str, Any] | None = None,
+        experiment_name: str | None = None,
     ) -> list[str | None]:
         """
         Submit circuits in parallel to OQTOPUS cloud with parameter tracking
@@ -478,6 +494,8 @@ class OqtopusBackend:
             shots: Number of shots per circuit
             circuit_params: List of parameter dictionaries for each circuit
             disable_transpilation: Whether to disable OQTOPUS transpilation (use transpiler_lib: None)
+            mitigation_info: Optional mitigation settings (e.g., {"ro_error_mitigation": "pseudo_inverse"})
+            experiment_name: Optional experiment name to set as job name (will be appended with circuit index)
 
         Returns:
             List of job IDs
@@ -495,6 +513,12 @@ class OqtopusBackend:
             # Generate default params if not provided
             if circuit_params is None:
                 circuit_params = [{"circuit_index": i} for i in range(len(circuits))]
+
+            # Use provided mitigation_info or default
+            if mitigation_info is None:
+                mitigation_info = {
+                    "ro_error_mitigation": "pseudo_inverse",
+                }
 
             def submit_single_circuit(circuit_with_params):
                 circuit, params, index = circuit_with_params
@@ -520,16 +544,21 @@ class OqtopusBackend:
                             },
                         }
 
-                    job = self.backend.sample_qasm(
-                        qasm_str,
-                        device_id=self.device_name,
-                        shots=shots,
-                        transpiler_info=transpiler_info,
-                        mitigation_info={
-                            "ro_error_mitigation": "pseudo_inverse",
-                        },
-                        description=description,
-                    )
+                    # Prepare job submission kwargs
+                    job_kwargs = {
+                        "program": qasm_str,
+                        "device_id": self.device_name,
+                        "shots": shots,
+                        "transpiler_info": transpiler_info,
+                        "mitigation_info": mitigation_info,
+                        "description": description,
+                    }
+
+                    # Add name if experiment_name is provided
+                    if experiment_name:
+                        job_kwargs["name"] = f"{experiment_name}_circuit_{index + 1}"
+
+                    job = self.backend.sample_qasm(**job_kwargs)
                     return index, job.job_id
                 except Exception as e:
                     print(f"Circuit submission failed: {e}")
