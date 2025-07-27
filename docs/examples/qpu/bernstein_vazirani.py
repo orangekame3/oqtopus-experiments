@@ -24,11 +24,11 @@ def main():
     # (suitable for current hardware limitations)
     experiment = BernsteinVazirani(
         experiment_name="bernstein_vazirani_qpu",
-        secret_string="101",  # 3-bit secret string for hardware demo
+        secret_string="001",  # 3-bit secret string for hardware demo
     )
 
     # Run experiment with backend
-    result = experiment.run(backend=backend, shots=1000)
+    result = experiment.run(backend=backend, shots=1000, mitigation_info={})
 
     # Analyze results
     df = result.analyze()

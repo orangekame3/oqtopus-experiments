@@ -205,6 +205,8 @@ class LocalBackend:
         circuit: Any,
         shots: int = 1024,
         circuit_params: dict[str, Any] | None = None,
+        mitigation_info: dict[str, Any] | None = None,
+        experiment_name: str | None = None,
     ) -> dict[str, Any]:
         """
         Run circuit on local simulator
@@ -213,6 +215,8 @@ class LocalBackend:
             circuit: Quantum circuit to run
             shots: Number of shots
             circuit_params: Optional parameters (ignored for local backend, for compatibility)
+            mitigation_info: Optional mitigation settings (ignored for local backend, for compatibility)
+            experiment_name: Optional experiment name (ignored for local backend, for compatibility)
 
         Returns:
             Result dictionary with counts

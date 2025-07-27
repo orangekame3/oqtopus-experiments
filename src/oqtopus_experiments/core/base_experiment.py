@@ -121,6 +121,7 @@ class BaseExperiment(ABC):
         self,
         backend,
         shots: int = 1024,
+        mitigation_info: dict[str, Any] | None = None,
     ) -> ExperimentResult:
         """
         Run experiment sequentially using backend
@@ -128,6 +129,7 @@ class BaseExperiment(ABC):
         Args:
             backend: Backend instance (required)
             shots: Number of shots per circuit
+            mitigation_info: Optional mitigation settings passed to backend
         """
         if backend is None:
             raise ValueError("Backend is required for execution")
@@ -167,9 +169,29 @@ class BaseExperiment(ABC):
                 if circuit_params and i < len(circuit_params):
                     single_circuit_params = circuit_params[i]
 
-                result = backend.run(
-                    circuit, shots, circuit_params=single_circuit_params
-                )
+                # Get experiment name for OqtopusBackend
+                experiment_name = getattr(self, "experiment_name", None)
+
+                # Pass experiment_name to OqtopusBackend if available
+                if (
+                    hasattr(backend, "backend_type")
+                    and backend.backend_type == "oqtopus"
+                    and experiment_name
+                ):
+                    result = backend.run(
+                        circuit,
+                        shots,
+                        circuit_params=single_circuit_params,
+                        mitigation_info=mitigation_info,
+                        experiment_name=experiment_name,
+                    )
+                else:
+                    result = backend.run(
+                        circuit,
+                        shots,
+                        circuit_params=single_circuit_params,
+                        mitigation_info=mitigation_info,
+                    )
                 raw_results[f"circuit_{i}"] = [result]
             except Exception as e:
                 print(f"Backend execution failed: {e}")
@@ -325,6 +347,7 @@ class BaseExperiment(ABC):
         backend,
         shots: int = 1024,
         workers: int = 4,
+        mitigation_info: dict[str, Any] | None = None,
     ) -> ExperimentResult:
         """
         Run experiment in parallel using backend
@@ -333,6 +356,7 @@ class BaseExperiment(ABC):
             backend: Backend instance (required)
             shots: Number of shots per circuit
             workers: Number of parallel workers
+            mitigation_info: Optional mitigation settings passed to backend
         """
         if backend is None:
             raise ValueError("Backend is required for parallel execution")
@@ -370,9 +394,31 @@ class BaseExperiment(ABC):
             # Check if physical qubit mapping is needed (disable OQTOPUS transpilation)
             disable_transpilation = self._should_disable_transpilation()
 
-            job_ids = backend.submit_parallel(
-                circuits, shots, circuit_params, disable_transpilation
-            )
+            # Get experiment name for OqtopusBackend
+            experiment_name = getattr(self, "experiment_name", None)
+
+            # Pass experiment_name to OqtopusBackend if available
+            if (
+                hasattr(backend, "backend_type")
+                and backend.backend_type == "oqtopus"
+                and experiment_name
+            ):
+                job_ids = backend.submit_parallel(
+                    circuits,
+                    shots,
+                    circuit_params,
+                    disable_transpilation,
+                    mitigation_info,
+                    experiment_name,
+                )
+            else:
+                job_ids = backend.submit_parallel(
+                    circuits,
+                    shots,
+                    circuit_params,
+                    disable_transpilation,
+                    mitigation_info,
+                )
             print(f"Collecting {len(job_ids)} results")
             results = backend.collect_parallel(job_ids)
 
@@ -397,9 +443,29 @@ class BaseExperiment(ABC):
                     if circuit_params and i < len(circuit_params):
                         single_circuit_params = circuit_params[i]
 
-                    result = backend.run(
-                        circuit, shots, circuit_params=single_circuit_params
-                    )
+                    # Get experiment name for OqtopusBackend (in run_parallel sequential fallback)
+                    experiment_name = getattr(self, "experiment_name", None)
+
+                    # Pass experiment_name to OqtopusBackend if available
+                    if (
+                        hasattr(backend, "backend_type")
+                        and backend.backend_type == "oqtopus"
+                        and experiment_name
+                    ):
+                        result = backend.run(
+                            circuit,
+                            shots,
+                            circuit_params=single_circuit_params,
+                            mitigation_info=mitigation_info,
+                            experiment_name=experiment_name,
+                        )
+                    else:
+                        result = backend.run(
+                            circuit,
+                            shots,
+                            circuit_params=single_circuit_params,
+                            mitigation_info=mitigation_info,
+                        )
                     raw_results[f"circuit_{i}"] = [result]
                 except Exception as e:
                     print(f"Backend execution failed: {e}")
