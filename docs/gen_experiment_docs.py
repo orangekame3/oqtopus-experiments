@@ -100,7 +100,7 @@ def extract_init_parameters(init_node: ast.FunctionDef) -> list[dict[str, Any]]:
                 default_val = init_node.args.defaults[default_index]
                 try:
                     param_info["default"] = ast.unparse(default_val)
-                except:
+                except Exception:
                     param_info["default"] = str(default_val)
 
         parameters.append(param_info)
@@ -131,7 +131,6 @@ def generate_experiment_page(class_info: dict[str, Any], experiment_name: str) -
     class_name = class_info["class_name"]
     docstring = class_info["class_docstring"]
     parameters = class_info["parameters"]
-    examples = class_info["examples"]
 
     # Create a clean title from class name
     title = experiment_name.replace("_", " ").title()
@@ -372,7 +371,7 @@ P(|1⟩) = A × sin²(π × amplitude × frequency) + offset
 
 **Key Outputs:**
 - `pi_amplitude`: Drive amplitude for π-pulse
-- `frequency`: Rabi frequency 
+- `frequency`: Rabi frequency
 - `r_squared`: Fit quality (0-1)""",
         "t1": """### Exponential Decay Fitting
 

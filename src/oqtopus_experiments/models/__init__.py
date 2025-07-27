@@ -1,3 +1,9 @@
+from .bernstein_vazirani_models import (
+    BernsteinVaziraniAnalysisResult,
+    BernsteinVaziraniCircuitParams,
+    BernsteinVaziraniParameters,
+    BernsteinVaziraniResult,
+)
 from .config import DefaultConfig, ExperimentSettings, OQTOPUSSettings
 from .hadamard_test_models import (
     HadamardTestAnalysisResult,
@@ -20,6 +26,10 @@ __all__ = [
     "ExperimentResult",
     "CircuitResult",
     "TaskMetadata",
+    "BernsteinVaziraniAnalysisResult",
+    "BernsteinVaziraniCircuitParams",
+    "BernsteinVaziraniParameters",
+    "BernsteinVaziraniResult",
     "HadamardTestAnalysisResult",
     "HadamardTestCircuitParams",
     "HadamardTestFittingResult",

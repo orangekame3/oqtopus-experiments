@@ -7,6 +7,11 @@ OQTOPUS Experiments: A modular quantum computing experiment library for OQTOPUS 
 - **IMPORTANT**: Never expose OQTOPUS credentials or device tokens
 - **IMPORTANT**: All code comments must be in English
 - **IMPORTANT**: Use existing file edits over creating new files
+- **IMPORTANT**: After implementing any code changes, ALWAYS run these commands in order:
+  1. `task fmt` - Format code with Black and Ruff
+  2. `task lint` - Check code quality with Ruff
+  3. `task test` - Run pytest test suite
+  4. `task check` - Run all checks (format, lint, type check)
 - Python 3.12+ required
 - Use `uv` package manager, NOT pip directly
 - Project uses Pydantic v2 for data models
