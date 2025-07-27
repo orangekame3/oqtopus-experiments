@@ -18,7 +18,7 @@ def main():
     """Run Bernstein-Vazirani algorithm on real quantum hardware"""
 
     # OQTOPUS backend with real quantum processor
-    backend = OqtopusBackend(device="anemone")
+    backend = OqtopusBackend(device="urchin")
 
     # Create BernsteinVazirani experiment with a short secret string
     # (suitable for current hardware limitations)

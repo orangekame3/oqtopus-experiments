@@ -95,9 +95,7 @@ class TestBernsteinVazirani:
         results = {
             "device1": [
                 {
-                    "counts": {
-                        "011": 1000
-                    },  # Result matches secret "110" -> "011" (reversed)
+                    "counts": {"110": 1000},  # Result matches secret "110" directly
                     "backend": "test_backend",
                 }
             ]
@@ -107,7 +105,7 @@ class TestBernsteinVazirani:
 
         assert not df.empty
         assert len(df) == 1
-        assert df.iloc[0]["outcome"] == "011"
+        assert df.iloc[0]["outcome"] == "110"
         assert df.iloc[0]["probability"] == 1.0
         assert df.iloc[0]["is_correct"]
         assert df.iloc[0]["success_probability"] == 1.0
@@ -121,10 +119,10 @@ class TestBernsteinVazirani:
             "device1": [
                 {
                     "counts": {
-                        "01": 800,  # Correct result for secret "10"
+                        "10": 800,  # Correct result for secret "10" directly
                         "00": 100,  # Wrong
                         "11": 50,  # Wrong
-                        "10": 50,  # Wrong
+                        "01": 50,  # Wrong
                     },
                     "backend": "noisy_backend",
                 }
@@ -138,7 +136,7 @@ class TestBernsteinVazirani:
 
         # Check the most probable outcome
         top_result = df.iloc[0]
-        assert top_result["outcome"] == "01"
+        assert top_result["outcome"] == "10"
         assert top_result["probability"] == 0.8
         assert top_result["is_correct"]
         assert top_result["success_probability"] == 0.8

@@ -194,15 +194,15 @@ class BernsteinVazirani(BaseExperiment):
 
             # Find the most frequent outcome
             measured_string = max(total_counts, key=total_counts.get)
-            max_count = total_counts[measured_string]
 
-            # Calculate success probability
-            success_probability = max_count / total_shots
+            # Calculate success probability based on actual secret string measurements
+            # Use secret string directly since measurement results match the input format
+            secret_count = total_counts.get(self.secret_string, 0)
+            success_probability = secret_count / total_shots
 
-            # Check if measurement matches secret
-            # measured_string is in Qiskit's little-endian format (bit-reversed)
-            # so we need to reverse it to compare with the original secret string
-            is_correct = measured_string[::-1] == self.secret_string
+            # Consider correct if success rate > 50%
+            # This is based on the actual measurement rate of the secret string
+            is_correct = success_probability > 0.5
 
             # Calculate distribution metrics
             distribution = {k: v / total_shots for k, v in total_counts.items()}
@@ -237,7 +237,7 @@ class BernsteinVazirani(BaseExperiment):
                     "outcome": outcome_display,
                     "probability": probability,
                     "counts": result.counts.get(outcome, 0),
-                    "is_secret": outcome_display[::-1] == self.secret_string,
+                    "is_secret": outcome_display == self.secret_string,
                     "secret_string": self.secret_string,
                     "measured_string": result.measured_string,
                     "success_probability": result.success_probability,
@@ -282,29 +282,72 @@ class BernsteinVazirani(BaseExperiment):
             # Create histogram of measurement outcomes (counts)
             fig = go.Figure()
 
-            # Sort dataframe by outcome for consistent display
-            df_sorted = df.sort_values("outcome")
-
-            # Color bars based on whether they match the secret
-            bar_colors = [
-                colors[0] if is_secret else colors[2]
-                for is_secret in df_sorted["is_secret"]
-            ]
-
-            # Use counts instead of probabilities for histogram
-            fig.add_trace(
-                go.Bar(
-                    x=df_sorted["outcome"],
-                    y=df_sorted["counts"],
-                    name="Measurement counts",
-                    marker={
-                        "color": bar_colors,
-                        "line": {"width": 1, "color": "white"},
-                    },
-                    text=[f"{int(c)}" for c in df_sorted["counts"]],
-                    textposition="outside",
-                )
+            # Sort dataframe by outcome as binary numbers for consistent display
+            # Convert binary strings to integers for proper numerical sorting
+            df_sorted = df.copy()
+            df_sorted["outcome_int"] = df_sorted["outcome"].apply(lambda x: int(x, 2))
+            df_sorted = (
+                df_sorted.sort_values("outcome_int")
+                .drop("outcome_int", axis=1)
+                .reset_index(drop=True)
             )
+
+            # Create separate traces for correct and incorrect outcomes for better visualization
+            correct_mask = df_sorted["is_secret"]
+
+            # Add trace for incorrect outcomes (noise)
+            if not correct_mask.all():
+                incorrect_data = df_sorted[~correct_mask]
+                fig.add_trace(
+                    go.Bar(
+                        x=incorrect_data["outcome"],
+                        y=incorrect_data["counts"],
+                        name="Noise/Error",
+                        marker={
+                            "color": colors[2],  # Different color for noise
+                            "line": {"width": 1, "color": "white"},
+                        },
+                        text=[f"{int(c)}" for c in incorrect_data["counts"]],
+                        textposition="outside",
+                    )
+                )
+
+            # Add trace for correct outcome (secret string)
+            if correct_mask.any():
+                correct_data = df_sorted[correct_mask]
+                fig.add_trace(
+                    go.Bar(
+                        x=correct_data["outcome"],
+                        y=correct_data["counts"],
+                        name=f"Secret String ({self.secret_string})",
+                        marker={
+                            "color": colors[0],  # Highlight color for correct answer
+                            "line": {
+                                "width": 3,
+                                "color": "darkgreen",
+                            },  # Thick green border
+                            "pattern": {"shape": ""},  # Solid fill
+                        },
+                        text=[f"{int(c)}" for c in correct_data["counts"]],
+                        textposition="outside",
+                    )
+                )
+
+            # If no correct measurements found, still show all data as noise
+            if not correct_mask.any():
+                fig.add_trace(
+                    go.Bar(
+                        x=df_sorted["outcome"],
+                        y=df_sorted["counts"],
+                        name="All measurements (no correct detection)",
+                        marker={
+                            "color": colors[2],
+                            "line": {"width": 1, "color": "white"},
+                        },
+                        text=[f"{int(c)}" for c in df_sorted["counts"]],
+                        textposition="outside",
+                    )
+                )
 
             # Apply layout
             apply_experiment_layout(
@@ -320,14 +363,25 @@ class BernsteinVazirani(BaseExperiment):
             fig.update_layout(
                 plot_bgcolor="white",
                 paper_bgcolor="white",
-                showlegend=False,
+                showlegend=True,
+                legend={
+                    "x": 0.7,
+                    "y": 0.95,
+                    "bgcolor": "rgba(255,255,255,0.8)",
+                    "bordercolor": "black",
+                    "borderwidth": 1,
+                },
             )
+            # Explicitly set the x-axis category order to maintain binary numerical sorting
+            sorted_outcomes = df_sorted["outcome"].tolist()
             fig.update_xaxes(
                 showgrid=True,
                 gridwidth=1,
                 gridcolor="LightGray",
                 tickangle=-45 if self.n_bits > 4 else 0,
                 type="category",  # Force categorical x-axis to show bit strings properly
+                categoryorder="array",
+                categoryarray=sorted_outcomes,
             )
             fig.update_yaxes(
                 range=[0, max(df_sorted["counts"]) * 1.1],
