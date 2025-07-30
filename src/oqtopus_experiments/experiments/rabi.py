@@ -15,6 +15,7 @@ from ..core.base_experiment import BaseExperiment
 from ..models.rabi_models import (
     RabiAnalysisResult,
     RabiCircuitParams,
+    RabiData,
     RabiFittingResult,
     RabiParameters,
 )
@@ -81,11 +82,21 @@ class Rabi(BaseExperiment):
         # Create DataFrame
         df = self._create_dataframe(fitting_result, device_name)
 
-        # Create analysis result
-        analysis_result = RabiAnalysisResult(
+        # Create RabiData for new analysis system
+        rabi_data = RabiData(
+            amplitudes=fitting_result.amplitudes,
+            probabilities=fitting_result.probabilities,
+            probability_errors=[0.02]
+            * len(fitting_result.probabilities),  # Default error
+            shots_per_point=1000,  # Default shots
             fitting_result=fitting_result,
-            dataframe=df,
-            metadata={"experiment_type": "rabi", "physical_qubit": self.physical_qubit},
+        )
+
+        # Create analysis result with new pattern
+        analysis_result = RabiAnalysisResult(
+            data=rabi_data,
+            raw_results=results,
+            experiment_instance=self,
         )
 
         # Optional actions
