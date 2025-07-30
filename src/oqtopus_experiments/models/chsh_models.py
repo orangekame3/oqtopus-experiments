@@ -4,7 +4,7 @@ Pydantic models for CHSH (Bell inequality) experiment
 Provides structured data validation and serialization
 """
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Union
 
 import pandas as pd
 from pydantic import BaseModel, ConfigDict, Field
@@ -28,7 +28,7 @@ class CHSHData(BaseModel):
         description="Standard errors of correlations"
     )
     total_shots: int = Field(description="Total number of shots")
-    analysis_result: "CHSHAnalysisResult" | None = Field(
+    analysis_result: Union["CHSHAnalysisResult", None] = Field(
         default=None, description="CHSH analysis results"
     )
 

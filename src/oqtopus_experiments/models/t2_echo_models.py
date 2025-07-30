@@ -86,7 +86,6 @@ class T2EchoAnalysisResult(ExperimentResult):
             This method performs data analysis with comprehensive error handling
             and validation to provide helpful feedback when issues occur.
         """
-        from ..exceptions import FittingError, InsufficientDataError
         from ..models.analysis_result import AnalysisResult
 
         try:
@@ -97,7 +96,9 @@ class T2EchoAnalysisResult(ExperimentResult):
             prob_errors = data.probability_errors
 
             # Comprehensive input validation
-            result = self._validate_t2_echo_inputs(delay_times, probabilities, prob_errors)
+            result = self._validate_t2_echo_inputs(
+                delay_times, probabilities, prob_errors
+            )
             if not result.success:
                 return result.to_legacy_dataframe()
 
