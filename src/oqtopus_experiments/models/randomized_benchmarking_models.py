@@ -91,11 +91,15 @@ class RandomizedBenchmarkingResult(ExperimentResult):
 
         Args:
             plot: Whether to generate plots using plot_settings.md guidelines
-            save_data: Whether to save analysis results
+            save_data: Whether to save analysis results (handled by experiment classes)
             save_image: Whether to save generated plots
 
         Returns:
             DataFrame with analysis results including fitted parameters
+
+        Note:
+            Data saving is handled by experiment classes via data manager.
+            This method only performs pure data analysis and visualization.
         """
         try:
             # Extract measurement data
@@ -153,9 +157,8 @@ class RandomizedBenchmarkingResult(ExperimentResult):
             if plot:
                 self._plot_rb_results(df, fitting_result, save_image, plot)
 
-            # Save data if requested
-            if save_data:
-                self._save_results(df, fitting_result)
+            # Note: Data saving removed from model class - handled by experiment classes
+            # via BaseExperiment.save_experiment_data() method
 
             return df
 

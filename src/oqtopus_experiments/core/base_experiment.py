@@ -8,6 +8,8 @@ import time
 from abc import ABC, abstractmethod
 from typing import Any
 
+import pandas as pd
+
 from ..models.experiment_result import ExperimentResult
 from .data_manager import ExperimentDataManager
 
@@ -57,8 +59,23 @@ class BaseExperiment(ABC):
         plot: bool = True,
         save_data: bool = True,
         save_image: bool = True,
-    ) -> dict[str, Any]:
-        """Experiment-specific result analysis (implemented in each experiment class)"""
+    ) -> pd.DataFrame:
+        """
+        Experiment-specific result analysis (implemented in each experiment class)
+
+        Args:
+            results: Raw experiment results from backend execution
+            plot: Whether to generate plots
+            save_data: Whether to save analysis results (handled by experiment classes)
+            save_image: Whether to save generated plots
+
+        Returns:
+            DataFrame with analysis results
+
+        Note:
+            All concrete implementations should return pd.DataFrame for consistency.
+            Data saving is handled by experiment classes via data manager.
+        """
         pass
 
     def save_experiment_data(
