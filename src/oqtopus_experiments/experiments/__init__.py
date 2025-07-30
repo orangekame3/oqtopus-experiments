@@ -5,28 +5,24 @@ Experiments module - Concrete experiment implementations
 
 from .bernstein_vazirani import BernsteinVazirani
 from .chsh import CHSH
-
-# Legacy imports for backward compatibility
-from .chsh import CHSH as CHSHExperiment
 from .chsh_phase_scan import CHSHPhaseScan
+from .deutsch_jozsa import DeutschJozsa
+from .grover import Grover
 from .hadamard_test import HadamardTest
 from .interleaved_randomized_benchmarking import InterleavedRandomizedBenchmarking
 from .parity_oscillation import ParityOscillation
-from .parity_oscillation import ParityOscillation as ParityOscillationExperiment
 from .rabi import Rabi
-from .rabi import Rabi as RabiExperiment
 from .ramsey import Ramsey
-from .ramsey import Ramsey as RamseyExperiment
 from .randomized_benchmarking import RandomizedBenchmarking
 from .t1 import T1
-from .t1 import T1 as T1Experiment
 from .t2_echo import T2Echo
-from .t2_echo import T2Echo as T2EchoExperiment
 
 __all__ = [
     "BernsteinVazirani",
     "CHSH",
     "CHSHPhaseScan",
+    "DeutschJozsa",
+    "Grover",
     "HadamardTest",
     "InterleavedRandomizedBenchmarking",
     "ParityOscillation",
@@ -35,11 +31,4 @@ __all__ = [
     "Ramsey",
     "T1",
     "T2Echo",
-    # Legacy names
-    "CHSHExperiment",
-    "ParityOscillationExperiment",
-    "RabiExperiment",
-    "RamseyExperiment",
-    "T1Experiment",
-    "T2EchoExperiment",
 ]
