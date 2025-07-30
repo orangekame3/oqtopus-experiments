@@ -1,0 +1,231 @@
+name: Claude Issue Reaction Handler
+
+on:
+  issue_comment:
+    types: [created, edited]
+
+jobs:
+  handle-checkbox-updates:
+    if: |
+      github.event.issue.pull_request &&
+      contains(github.event.comment.body, 'Claude検出の問題 → Issue作成') &&
+      github.event.action == 'edited'
+    
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+    
+    steps:
+      - name: Check for auto-creation trigger
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const comment = context.payload.comment.body;
+            
+            // チェックボックスの変更を検出
+            const checkedItems = [];
+            const lines = comment.split('\n');
+            const issuePattern = /- \[(x)\] (.+)/;
+            
+            lines.forEach(line => {
+              const match = line.match(issuePattern);
+              if (match) {
+                checkedItems.push({
+                  content: match[2].replace(/^[🔴🟡🏗️🚨]\s*\*\*\[.+?\]\*\*\s*/, '').trim()
+                });
+              }
+            });
+            
+            // 3つ以上チェックされた場合は自動実行の提案
+            if (checkedItems.length >= 3) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: `💡 **自動実行の提案**
+
+${checkedItems.length}項目が選択されています。以下の方法で一括実行できます：
+
+- 🚀 リアクションで個別issue作成
+- 📦 リアクションで1つのissueにまとめて作成
+- または \`/create-issues-batch\` コマンドで実行
+
+選択された項目:
+${checkedItems.map((item, i) => `${i + 1}. ${item.content}`).join('\n')}`
+              });
+            }
+
+  provide-help:
+    if: |
+      github.event.issue.pull_request &&
+      (contains(github.event.comment.body, '/help') || 
+       contains(github.event.comment.body, '/claude-help'))
+    
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    
+    steps:
+      - name: Show help information
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const helpText = `## 🤖 Claude Issue Creator - 使い方ガイド
+
+### 📋 基本的な使い方
+
+1. **Claudeが問題を検出** → 自動的にインタラクティブコメントが生成されます
+2. **チェックボックスで選択** → 作成したい項目にチェック ☑️
+3. **リアクションで実行** → 以下のリアクションを追加:
+   - 🚀 選択した項目を個別にissue作成
+   - 📦 選択した項目を1つのissueにまとめて作成
+
+### 🎯 コマンド一覧
+
+\`\`\`
+/create-issue タイトル        # 単一issue作成
+/create-issues all            # Claude検出の全問題をissue化
+/create-issues 1,3,5          # 指定番号のみissue化
+/help                         # このヘルプを表示
+\`\`\`
+
+### ⚙️ オプション
+
+\`\`\`
+--labels="bug,high-priority"  # ラベル追加
+--assign=@username            # アサイン
+--milestone="v1.0"            # マイルストーン
+\`\`\`
+
+### 📝 使用例
+
+\`\`\`
+/create-issue Fix data architecture --labels="architecture,urgent" --assign=@orangekame3
+\`\`\`
+
+### 🔄 自動化フロー
+
+1. Claude分析実行 → 問題検出
+2. インタラクティブコメント生成
+3. ユーザーがチェックボックス選択
+4. リアクション追加で実行
+5. Issue自動作成 + 結果通知
+
+---
+_このヘルプは \`/help\` または \`/claude-help\` で表示できます_`;
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: helpText
+            });
+
+  batch-create-from-command:
+    if: |
+      github.event.issue.pull_request &&
+      startsWith(github.event.comment.body, '/create-issues-batch')
+    
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    
+    steps:
+      - name: Find latest interactive comment and create issues
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // 最新のインタラクティブコメントを検索
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              per_page: 100
+            });
+            
+            const interactiveComment = comments.data
+              .filter(c => c.body.includes('Claude検出の問題 → Issue作成'))
+              .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
+            
+            if (!interactiveComment) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: '❌ インタラクティブコメントが見つかりません。まずClaude分析を実行してください。'
+              });
+              return;
+            }
+            
+            // チェックされた項目を抽出
+            const lines = interactiveComment.body.split('\n');
+            const selectedItems = [];
+            const issuePattern = /- \[(x)\] (.+)/;
+            
+            lines.forEach(line => {
+              const match = line.match(issuePattern);
+              if (match) {
+                selectedItems.push({
+                  content: match[2].replace(/^[🔴🟡🏗️🚨]\s*\*\*\[.+?\]\*\*\s*/, '').trim()
+                });
+              }
+            });
+            
+            if (selectedItems.length === 0) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: '❌ チェックされた項目がありません。インタラクティブコメントでチェックボックスを選択してください。'
+              });
+              return;
+            }
+            
+            // バッチでissue作成
+            const createdIssues = [];
+            for (const item of selectedItems) {
+              try {
+                const issueTitle = item.content.length > 60 
+                  ? `${item.content.substring(0, 60)}...`
+                  : item.content;
+                
+                const created = await github.rest.issues.create({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  title: `[Claude Batch] ${issueTitle}`,
+                  body: `## 概要
+${item.content}
+
+## コンテキスト
+- 検出元: PR #${context.issue.number}
+- 実行者: @${context.payload.comment.user.login}
+- 実行日時: ${new Date().toISOString()}
+- 実行方法: バッチコマンド
+
+---
+_このissueはバッチコマンドから作成されました_`,
+                  labels: ['claude-detected', 'batch-created']
+                });
+                
+                createdIssues.push(created.data);
+              } catch (error) {
+                console.error('Failed to create issue:', error);
+              }
+            }
+            
+            // 結果報告
+            if (createdIssues.length > 0) {
+              const resultComment = `✅ **バッチ作成完了！**
+
+${createdIssues.map(issue => `- [#${issue.number}](${issue.html_url}): ${issue.title}`).join('\n')}
+
+_${createdIssues.length}件のissueがバッチ作成されました_`;
+              
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: resultComment
+              });
+            }
