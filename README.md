@@ -1,6 +1,6 @@
 # OQTOPUS Experiments
 
-A modular quantum computing experiment library for the OQTOPUS platform.
+A modular quantum computing experiment library for the OQTOPUS platform with comprehensive analysis and visualization capabilities.
 
 ## Installation
 
@@ -43,6 +43,11 @@ print(df.head())
 - **CHSH**: Bell inequality tests for quantum entanglement
 - **Ramsey**: Ramsey interference for precise frequency measurements
 - **Parity Oscillation**: GHZ state decoherence studies
+- **Randomized Benchmarking**: Gate error characterization with comprehensive fitting
+- **Hadamard Test**: Quantum algorithm for eigenvalue estimation
+- **Bernstein-Vazirani**: Hidden bit string identification algorithm
+- **Deutsch-Jozsa**: Function classification (constant vs balanced)
+- **Grover**: Quantum search algorithm implementation
 
 ### Backends
 
