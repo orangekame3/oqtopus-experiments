@@ -4,10 +4,33 @@ Pydantic models for CHSH (Bell inequality) experiment
 Provides structured data validation and serialization
 """
 
-from typing import Any
+from typing import TYPE_CHECKING
 
 import pandas as pd
 from pydantic import BaseModel, ConfigDict, Field
+
+from .experiment_result import ExperimentResult
+
+if TYPE_CHECKING:
+    from ..models.analysis_result import AnalysisResult
+
+
+class CHSHData(BaseModel):
+    """Data structure for CHSH measurements"""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    measurement_counts: dict[str, dict[str, int]] = Field(
+        description="Raw measurement counts for each setting"
+    )
+    correlations: dict[str, float] = Field(description="Individual correlation values")
+    correlation_errors: dict[str, float] = Field(
+        description="Standard errors of correlations"
+    )
+    total_shots: int = Field(description="Total number of shots")
+    analysis_result: "CHSHAnalysisResult" | None = Field(
+        default=None, description="CHSH analysis results"
+    )
 
 
 class CHSHAnalysisResult(BaseModel):
@@ -59,16 +82,420 @@ class CHSHParameters(BaseModel):
     )
 
 
-class CHSHExperimentResult(BaseModel):
-    """Complete CHSH experiment results"""
+class CHSHExperimentResult(ExperimentResult):
+    """Complete CHSH experiment result with comprehensive error handling"""
 
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+    def __init__(self, data: CHSHData, **kwargs):
+        """Initialize with CHSH data"""
+        super().__init__(**kwargs)
+        self.data = data
 
-    analysis_result: CHSHAnalysisResult = Field(description="Analysis results")
-    dataframe: pd.DataFrame = Field(description="Detailed results as DataFrame")
-    metadata: dict[str, Any] = Field(
-        default_factory=dict, description="Additional metadata"
-    )
+    def analyze(
+        self,
+        plot: bool = True,
+        save_data: bool = True,
+        save_image: bool = True,
+    ) -> pd.DataFrame:
+        """
+        Analyze CHSH Bell inequality test results with comprehensive error handling
+
+        Args:
+            plot: Whether to generate plots using plot_settings.md guidelines
+            save_data: Whether to save analysis results (handled by experiment classes)
+            save_image: Whether to save generated plots
+
+        Returns:
+            DataFrame with analysis results including CHSH value and Bell violation test
+
+        Note:
+            Data saving is handled by experiment classes via data manager.
+            This method performs data analysis with comprehensive error handling
+            and validation to provide helpful feedback when issues occur.
+        """
+        from ..models.analysis_result import AnalysisResult
+
+        try:
+            # Extract measurement data
+            data = self.data
+            measurement_counts = data.measurement_counts
+            total_shots = data.total_shots
+
+            # Comprehensive input validation
+            result = self._validate_chsh_inputs(measurement_counts, total_shots)
+            if not result.success:
+                return result.to_legacy_dataframe()
+
+            # Check if we have sufficient measurement data
+            required_settings = {"A0B0", "A0B1", "A1B0", "A1B1"}
+            available_settings = set(measurement_counts.keys())
+            if not required_settings.issubset(available_settings):
+                missing = required_settings - available_settings
+                result = AnalysisResult(
+                    success=False,
+                    error_message=f"Missing measurement settings: {missing}",
+                    error_type="InsufficientDataError",
+                    suggestions=[
+                        "Ensure all four CHSH measurement settings are performed",
+                        "Check that circuit generation includes A0B0, A0B1, A1B0, A1B1 settings",
+                    ],
+                )
+                return result.to_legacy_dataframe()
+
+            # Perform CHSH analysis
+            try:
+                analysis_result = self._calculate_chsh_value(
+                    measurement_counts, total_shots
+                )
+
+                # Validate analysis results quality
+                quality_result = self._validate_analysis_quality(analysis_result)
+                if not quality_result.success:
+                    return quality_result.to_legacy_dataframe()
+
+                # Update data with analysis results
+                self.data.analysis_result = analysis_result
+
+                # Generate plots if requested
+                if plot:
+                    try:
+                        self._create_chsh_plot(analysis_result, save_image)
+                    except Exception as e:
+                        print(f"Warning: Plot generation failed: {e}")
+
+                # Create successful result
+                analysis_data = {
+                    "chsh_value": analysis_result.chsh_value,
+                    "chsh_std_error": analysis_result.chsh_std_error,
+                    "bell_violation": analysis_result.bell_violation,
+                    "significance": analysis_result.significance,
+                    "correlations": analysis_result.correlations,
+                    "correlation_errors": analysis_result.correlation_errors,
+                    "total_shots": analysis_result.total_shots,
+                    "quantum_theoretical_max": analysis_result.quantum_theoretical_max,
+                }
+
+                result = AnalysisResult(
+                    success=True,
+                    data=analysis_data,
+                    metadata={
+                        "bell_violation": analysis_result.bell_violation,
+                        "statistical_significance": f"{analysis_result.significance:.2f}σ",
+                    },
+                )
+                return result.to_legacy_dataframe()
+
+            except Exception as e:
+                # Handle analysis failure gracefully
+                result = AnalysisResult(
+                    success=False,
+                    error_message=f"CHSH analysis failed: {str(e)}",
+                    error_type="AnalysisError",
+                    suggestions=[
+                        "Check measurement count data format and completeness",
+                        "Verify sufficient statistics for correlation calculations",
+                        "Ensure all measurement settings have adequate shot counts",
+                    ],
+                )
+                return result.to_legacy_dataframe()
+
+        except Exception as e:
+            # Handle unexpected errors
+            result = AnalysisResult(
+                success=False,
+                error_message=f"Unexpected error in CHSH analysis: {str(e)}",
+                error_type="UnexpectedError",
+                suggestions=[
+                    "Check input data format and types",
+                    "Verify all required dependencies are available",
+                ],
+            )
+            return result.to_legacy_dataframe()
+
+    def _validate_chsh_inputs(
+        self, measurement_counts: dict[str, dict[str, int]], total_shots: int
+    ) -> "AnalysisResult":
+        """Validate CHSH input data"""
+        from ..models.analysis_result import AnalysisResult
+
+        # Basic validation
+        if not measurement_counts:
+            return AnalysisResult(
+                success=False,
+                error_message="Empty measurement counts",
+                error_type="ValidationError",
+            )
+
+        if total_shots <= 0:
+            return AnalysisResult(
+                success=False,
+                error_message="Total shots must be positive",
+                error_type="ValidationError",
+            )
+
+        # Validate each measurement setting
+        for setting, counts in measurement_counts.items():
+            if not isinstance(counts, dict):
+                return AnalysisResult(
+                    success=False,
+                    error_message=f"Invalid counts format for setting {setting}",
+                    error_type="ValidationError",
+                )
+
+            # Check for required outcomes
+            required_outcomes = {"00", "01", "10", "11"}
+            if not required_outcomes.issubset(set(counts.keys())):
+                missing = required_outcomes - set(counts.keys())
+                return AnalysisResult(
+                    success=False,
+                    error_message=f"Missing outcomes {missing} for setting {setting}",
+                    error_type="ValidationError",
+                )
+
+            # Check for negative counts
+            for outcome, count in counts.items():
+                if count < 0:
+                    return AnalysisResult(
+                        success=False,
+                        error_message=f"Negative count for {setting}:{outcome}",
+                        error_type="ValidationError",
+                    )
+
+        return AnalysisResult(success=True, data={"validation": "passed"})
+
+    def _calculate_chsh_value(
+        self, measurement_counts: dict[str, dict[str, int]], total_shots: int
+    ) -> CHSHAnalysisResult:
+        """Calculate CHSH value from measurement counts"""
+        import numpy as np
+
+        correlations = {}
+        correlation_errors = {}
+
+        # Calculate correlations for each measurement setting
+        for setting, counts in measurement_counts.items():
+            # Calculate correlation E(A,B) = (N_00 + N_11 - N_01 - N_10) / N_total
+            n_00 = counts.get("00", 0)
+            n_01 = counts.get("01", 0)
+            n_10 = counts.get("10", 0)
+            n_11 = counts.get("11", 0)
+            n_total = n_00 + n_01 + n_10 + n_11
+
+            if n_total == 0:
+                correlation = 0.0
+                error = 1.0
+            else:
+                correlation = (n_00 + n_11 - n_01 - n_10) / n_total
+                # Standard error calculation for correlation
+                error = np.sqrt(1 / n_total) if n_total > 0 else 1.0
+
+            correlations[setting] = correlation
+            correlation_errors[setting] = error
+
+        # Calculate CHSH value: S = |E(A0,B0) + E(A0,B1) + E(A1,B0) - E(A1,B1)|
+        e_a0b0 = correlations.get("A0B0", 0.0)
+        e_a0b1 = correlations.get("A0B1", 0.0)
+        e_a1b0 = correlations.get("A1B0", 0.0)
+        e_a1b1 = correlations.get("A1B1", 0.0)
+
+        chsh_value = abs(e_a0b0 + e_a0b1 + e_a1b0 - e_a1b1)
+
+        # Error propagation for CHSH value
+        err_a0b0 = correlation_errors.get("A0B0", 0.0)
+        err_a0b1 = correlation_errors.get("A0B1", 0.0)
+        err_a1b0 = correlation_errors.get("A1B0", 0.0)
+        err_a1b1 = correlation_errors.get("A1B1", 0.0)
+
+        chsh_std_error = np.sqrt(err_a0b0**2 + err_a0b1**2 + err_a1b0**2 + err_a1b1**2)
+
+        # Bell inequality violation test
+        bell_violation = chsh_value > 2.0
+        significance = (
+            (chsh_value - 2.0) / chsh_std_error if chsh_std_error > 0 else 0.0
+        )
+
+        return CHSHAnalysisResult(
+            chsh_value=float(chsh_value),
+            chsh_std_error=float(chsh_std_error),
+            bell_violation=bell_violation,
+            quantum_theoretical_max=2.0 * np.sqrt(2),
+            significance=float(significance),
+            correlations=correlations,
+            correlation_errors=correlation_errors,
+            measurement_counts=measurement_counts,
+            total_shots=total_shots,
+        )
+
+    def _validate_analysis_quality(
+        self, analysis_result: CHSHAnalysisResult
+    ) -> "AnalysisResult":
+        """Validate quality of CHSH analysis results"""
+        from ..models.analysis_result import AnalysisResult
+
+        warnings = []
+        issues = []
+
+        # Check statistical significance
+        if analysis_result.significance < 2.0 and analysis_result.bell_violation:
+            warnings.append(
+                f"Low statistical significance ({analysis_result.significance:.2f}σ < 2σ) for Bell violation"
+            )
+
+        # Check for sufficient statistics
+        if analysis_result.total_shots < 1000:
+            warnings.append(
+                f"Low shot count ({analysis_result.total_shots}) may affect statistical reliability"
+            )
+
+        # Check CHSH value reasonableness
+        if analysis_result.chsh_value > analysis_result.quantum_theoretical_max + 0.1:
+            issues.append(
+                f"CHSH value ({analysis_result.chsh_value:.3f}) exceeds quantum limit ({analysis_result.quantum_theoretical_max:.3f})"
+            )
+
+        # Check error magnitudes
+        if analysis_result.chsh_std_error > 1.0:
+            warnings.append(
+                f"Large CHSH error ({analysis_result.chsh_std_error:.3f}) indicates poor statistics"
+            )
+
+        if issues:
+            return AnalysisResult(
+                success=False,
+                error_message="CHSH analysis quality issues: " + "; ".join(issues),
+                error_type="AnalysisQualityError",
+                warnings=warnings,
+                suggestions=[
+                    "Increase number of shots for better statistics",
+                    "Check for systematic errors in measurement setup",
+                    "Verify proper Bell state preparation and measurement",
+                ],
+            )
+
+        return AnalysisResult(
+            success=True, warnings=warnings, data={"quality_check": "passed"}
+        )
+
+    def _create_chsh_plot(
+        self, analysis_result: CHSHAnalysisResult, save_image: bool = True
+    ):
+        """Create CHSH analysis plot following plot_settings.md guidelines"""
+        try:
+            import plotly.graph_objects as go
+
+            from ..utils.visualization import (
+                get_experiment_colors,
+                get_plotly_config,
+                save_plotly_figure,
+                setup_plotly_environment,
+                show_plotly_figure,
+            )
+
+            # Setup plotly environment
+            setup_plotly_environment()
+            colors = get_experiment_colors()
+
+            # Create figure with two subplots
+            from plotly.subplots import make_subplots
+
+            fig = make_subplots(
+                rows=1,
+                cols=2,
+                subplot_titles=["Correlation Values", "CHSH Test Result"],
+                specs=[[{"secondary_y": False}, {"secondary_y": False}]],
+            )
+
+            # Plot correlations
+            settings = list(analysis_result.correlations.keys())
+            corr_values = list(analysis_result.correlations.values())
+            corr_errors = [analysis_result.correlation_errors[s] for s in settings]
+
+            fig.add_trace(
+                go.Bar(
+                    x=settings,
+                    y=corr_values,
+                    error_y={"type": "data", "array": corr_errors, "visible": True},
+                    name="Correlations",
+                    marker_color=colors[1],
+                ),
+                row=1,
+                col=1,
+            )
+
+            # Plot CHSH value comparison
+            chsh_categories = ["Classical Limit", "Measured CHSH", "Quantum Limit"]
+            chsh_values = [
+                2.0,
+                analysis_result.chsh_value,
+                analysis_result.quantum_theoretical_max,
+            ]
+            bar_colors = [
+                "gray",
+                colors[0] if analysis_result.bell_violation else "red",
+                "lightblue",
+            ]
+
+            fig.add_trace(
+                go.Bar(
+                    x=chsh_categories,
+                    y=chsh_values,
+                    name="CHSH Values",
+                    marker_color=bar_colors,
+                    error_y={
+                        "type": "data",
+                        "array": [0, analysis_result.chsh_std_error, 0],
+                        "visible": True,
+                    },
+                ),
+                row=1,
+                col=2,
+            )
+
+            # Update layout
+            fig.update_layout(
+                title_text=f"CHSH Bell Inequality Test (S = {analysis_result.chsh_value:.3f})",
+                plot_bgcolor="white",
+                paper_bgcolor="white",
+                showlegend=False,
+                width=1000,
+                height=500,
+            )
+
+            # Update axes
+            fig.update_xaxes(title_text="Measurement Setting", row=1, col=1)
+            fig.update_yaxes(
+                title_text="Correlation E(A,B)", row=1, col=1, range=[-1.1, 1.1]
+            )
+            fig.update_xaxes(title_text="", row=1, col=2)
+            fig.update_yaxes(title_text="CHSH Value", row=1, col=2)
+
+            # Add violation annotation
+            violation_text = (
+                "Bell Violation!" if analysis_result.bell_violation else "No Violation"
+            )
+            significance_text = f"({analysis_result.significance:.2f}σ)"
+
+            fig.add_annotation(
+                x=0.98,
+                y=0.98,
+                xref="paper",
+                yref="paper",
+                text=f"{violation_text}<br>{significance_text}",
+                showarrow=False,
+                align="right",
+                bgcolor="rgba(255,255,255,0.95)",
+                bordercolor="#CCCCCC",
+                borderwidth=1,
+            )
+
+            # Save and show plot
+            if save_image:
+                save_plotly_figure(fig, name="chsh_analysis", images_dir="./plots")
+
+            config = get_plotly_config("chsh_analysis", 1000, 500)
+            show_plotly_figure(fig, config)
+
+        except Exception as e:
+            print(f"Warning: CHSH plot generation failed: {e}")
 
 
 class CHSHCircuitParams(BaseModel):
@@ -82,3 +509,7 @@ class CHSHCircuitParams(BaseModel):
     logical_qubit_1: int = Field(description="Second logical qubit index")
     physical_qubit_0: int = Field(description="First physical qubit index")
     physical_qubit_1: int = Field(description="Second physical qubit index")
+
+
+# Fix forward reference
+CHSHData.model_rebuild()
