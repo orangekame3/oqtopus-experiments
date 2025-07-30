@@ -5,6 +5,18 @@ from .bernstein_vazirani_models import (
     BernsteinVaziraniResult,
 )
 from .config import DefaultConfig, ExperimentSettings, OQTOPUSSettings
+from .deutsch_jozsa_models import (
+    DeutschJozsaAnalysisResult,
+    DeutschJozsaCircuitParams,
+    DeutschJozsaParameters,
+    DeutschJozsaResult,
+)
+from .grover_models import (
+    GroverAnalysisResult,
+    GroverData,
+    GroverParameters,
+    GroverResult,
+)
 from .hadamard_test_models import (
     HadamardTestAnalysisResult,
     HadamardTestCircuitParams,
@@ -30,6 +42,14 @@ __all__ = [
     "BernsteinVaziraniCircuitParams",
     "BernsteinVaziraniParameters",
     "BernsteinVaziraniResult",
+    "DeutschJozsaAnalysisResult",
+    "DeutschJozsaCircuitParams",
+    "DeutschJozsaParameters",
+    "DeutschJozsaResult",
+    "GroverAnalysisResult",
+    "GroverData",
+    "GroverParameters",
+    "GroverResult",
     "HadamardTestAnalysisResult",
     "HadamardTestCircuitParams",
     "HadamardTestFittingResult",

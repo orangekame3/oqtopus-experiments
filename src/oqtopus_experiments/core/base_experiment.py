@@ -16,7 +16,7 @@ class BaseExperiment(ABC):
     """
     Base class for quantum experiments
 
-    All concrete experiment classes (CHSHExperiment, etc.) inherit from this
+    All concrete experiment classes (CHSH, Rabi, T1, etc.) inherit from this
     Common functionality: OQTOPUS connection, parallel execution, data management
     """
 
