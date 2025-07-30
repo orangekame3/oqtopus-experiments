@@ -1,0 +1,235 @@
+name: Issue Creation Handler
+
+on:
+  issue_comment:
+    types: [edited]
+
+jobs:  
+  handle-checkbox-reactions:
+    if: |
+      github.event.issue.pull_request &&
+      contains(github.event.comment.body, 'Claude問題検出 → Issue作成ツール') &&
+      github.event.action == 'edited'
+    
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: read
+    
+    steps:
+      - name: Parse checkbox selections
+        id: parse
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const comment = context.payload.comment.body;
+            const lines = comment.split('\n');
+            const selectedItems = [];
+            
+            // チェックボックスの解析
+            lines.forEach((line, index) => {
+              const checkedMatch = line.match(/^- \[x\] (.+)/);
+              if (checkedMatch) {
+                const content = checkedMatch[1]
+                  .replace(/^[🔴🟡📝🚨🏗️🟠]\s*/, '')  // 絵文字除去
+                  .replace(/^\*\*\[.+?\]\*\*\s*/, '')   // 優先度タグ除去
+                  .trim();
+                
+                selectedItems.push({
+                  index: index,
+                  content: content,
+                  originalLine: line
+                });
+              }
+            });
+            
+            console.log(`Found ${selectedItems.length} selected items`);
+            core.setOutput('selected_items', JSON.stringify(selectedItems));
+            core.setOutput('has_selections', selectedItems.length > 0);
+            core.setOutput('selection_count', selectedItems.length);
+
+      - name: Monitor for reactions
+        if: steps.parse.outputs.has_selections == 'true'
+        id: monitor
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const selectedItems = JSON.parse('${{ steps.parse.outputs.selected_items }}');
+            const commentId = context.payload.comment.id;
+            
+            // リアクションを確認
+            const reactions = await github.rest.reactions.listForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: commentId
+            });
+            
+            // ボット以外のリアクションを確認
+            const userReactions = reactions.data.filter(r => 
+              !r.user.login.includes('bot') && !r.user.login.includes('action')
+            );
+            
+            const rocketReaction = userReactions.find(r => r.content === 'rocket');
+            const packageReaction = userReactions.find(r => r.content === 'package');
+            
+            let action = null;
+            if (rocketReaction) action = 'individual';
+            else if (packageReaction) action = 'bundled';
+            
+            core.setOutput('action', action || 'none');
+            core.setOutput('reactor', rocketReaction?.user.login || packageReaction?.user.login || 'none');
+            
+            return { action, selectedItems };
+
+      - name: Create individual issues
+        if: steps.monitor.outputs.action == 'individual'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const selectedItems = JSON.parse('${{ steps.parse.outputs.selected_items }}');
+            const createdIssues = [];
+            
+            for (const item of selectedItems) {
+              try {
+                const title = item.content.length > 60 
+                  ? `${item.content.substring(0, 60)}...`
+                  : item.content;
+                
+                const body = `## 概要
+${item.content}
+
+## コンテキスト
+- **検出元**: PR #${context.issue.number}
+- **検出者**: Claude Code Analysis
+- **作成者**: @${{ steps.monitor.outputs.reactor }}
+- **作成日時**: ${new Date().toISOString()}
+- **元コメント**: ${context.payload.comment.html_url}
+
+## 対応方針
+TODO: 対応方針を記載してください
+
+## 関連
+- [ ] 問題の詳細調査
+- [ ] 修正方針の検討
+- [ ] 実装とテスト
+- [ ] レビューと統合
+
+---
+_このissueはClaude分析結果から自動生成されました_`;
+                
+                const created = await github.rest.issues.create({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  title: `[Claude] ${title}`,
+                  body: body,
+                  labels: ['claude-detected', 'auto-generated']
+                });
+                
+                createdIssues.push(created.data);
+                console.log(`Created issue #${created.data.number}: ${title}`);
+                
+              } catch (error) {
+                console.error(`Failed to create issue for: ${item.content}`, error);
+              }
+            }
+            
+            // 結果を報告
+            const resultComment = `✅ **個別Issue作成完了！**
+
+作成されたIssue (${createdIssues.length}件):
+${createdIssues.map(issue => 
+  `- [#${issue.number}](${issue.html_url}): ${issue.title}`
+).join('\n')}
+
+作成者: @${{ steps.monitor.outputs.reactor }}
+作成日時: ${new Date().toLocaleString('ja-JP')}`;
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: resultComment
+            });
+
+      - name: Create bundled issue
+        if: steps.monitor.outputs.action == 'bundled'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const selectedItems = JSON.parse('${{ steps.parse.outputs.selected_items }}');
+            
+            const title = `[Claude Bundle] ${selectedItems.length}件の問題検出 (PR #${context.issue.number})`;
+            
+            const body = `## 検出された問題一覧
+
+${selectedItems.map((item, i) => `### ${i + 1}. ${item.content}
+
+**対応状況**: 🔲 未対応
+
+---`).join('\n\n')}
+
+## 全体的な対応方針
+
+- [ ] 各問題の詳細調査
+- [ ] 優先順位の決定
+- [ ] 修正計画の策定
+- [ ] 段階的な実装
+
+## コンテキスト
+- **検出元**: PR #${context.issue.number}
+- **検出者**: Claude Code Analysis  
+- **作成者**: @${{ steps.monitor.outputs.reactor }}
+- **作成日時**: ${new Date().toISOString()}
+- **総問題数**: ${selectedItems.length}件
+
+## 進捗管理
+
+各問題の解決後は、上記のチェックボックスを更新してください。
+
+---
+_このissueはClaude分析結果をまとめて自動生成されました_`;
+            
+            try {
+              const created = await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: title,
+                body: body,
+                labels: ['claude-detected', 'bundled', 'auto-generated']
+              });
+              
+              // 結果を報告
+              const resultComment = `📦 **バンドルIssue作成完了！**
+
+[#${created.data.number}](${created.data.html_url}): ${created.data.title}
+
+- 統合された問題数: ${selectedItems.length}件
+- 作成者: @${{ steps.monitor.outputs.reactor }}
+- 作成日時: ${new Date().toLocaleString('ja-JP')}
+
+このissueで全ての選択された問題をまとめて管理できます。`;
+              
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: resultComment
+              });
+              
+            } catch (error) {
+              console.error('Failed to create bundled issue:', error);
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: '❌ バンドルIssue作成に失敗しました。ログを確認してください。'
+              });
+            }
+
+      - name: Log completion
+        if: steps.monitor.outputs.action != 'none'
+        run: |
+          echo "✅ Issue creation completed"
+          echo "🎯 Action: ${{ steps.monitor.outputs.action }}"
+          echo "👤 Executed by: ${{ steps.monitor.outputs.reactor }}"
+          echo "📊 Selected items: ${{ steps.parse.outputs.selection_count }}"

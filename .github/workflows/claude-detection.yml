@@ -1,0 +1,198 @@
+name: Claude Analysis Detection
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  detect-and-create-ui:
+    if: |
+      github.event.issue.pull_request && 
+      github.event.comment.user.login == 'claude[bot]' &&
+      (contains(github.event.comment.body, '❌') || 
+       contains(github.event.comment.body, '⚠️') ||
+       contains(github.event.comment.body, 'Issues') ||
+       contains(github.event.comment.body, 'TODO'))
+    
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: read
+    
+    steps:
+      - name: Extract problems from Claude analysis
+        id: extract
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const comment = context.payload.comment.body;
+            const issues = [];
+            
+            // ❌ エラーの抽出
+            const errorMatches = comment.match(/❌\s*([^\n]+)/g) || [];
+            errorMatches.forEach((match, i) => {
+              const content = match.replace(/❌\s*/, '').trim();
+              issues.push({
+                id: `error-${i}`,
+                type: 'error',
+                priority: 'high',
+                emoji: '🔴',
+                content: content,
+                originalMatch: match
+              });
+            });
+            
+            // ⚠️ 警告の抽出
+            const warningMatches = comment.match(/⚠️\s*([^\n]+)/g) || [];
+            warningMatches.forEach((match, i) => {
+              const content = match.replace(/⚠️\s*/, '').trim();
+              issues.push({
+                id: `warning-${i}`,
+                type: 'warning',
+                priority: 'medium',
+                emoji: '🟡',
+                content: content,
+                originalMatch: match
+              });
+            });
+            
+            // TODO項目の抽出
+            const todoMatches = comment.match(/TODO:\s*([^\n]+)/g) || [];
+            todoMatches.forEach((match, i) => {
+              const content = match.replace(/TODO:\s*/, '').trim();
+              issues.push({
+                id: `todo-${i}`,
+                type: 'todo',
+                priority: 'low',
+                emoji: '📝',
+                content: content,
+                originalMatch: match
+              });
+            });
+            
+            // セクション別の抽出
+            const sections = [
+              { pattern: /## ?(High Priority Issues|高優先度の問題)([\s\S]*?)(?=\n## |$)/, type: 'high-priority', emoji: '🚨' },
+              { pattern: /## ?(Architecture Issues|アーキテクチャの問題)([\s\S]*?)(?=\n## |$)/, type: 'architecture', emoji: '🏗️' },
+              { pattern: /## ?(Medium Priority Issues|中優先度の問題)([\s\S]*?)(?=\n## |$)/, type: 'medium-priority', emoji: '🟠' }
+            ];
+            
+            sections.forEach(section => {
+              const match = comment.match(section.pattern);
+              if (match && match[2] && match[2].trim()) {
+                issues.push({
+                  id: `section-${section.type}`,
+                  type: section.type,
+                  priority: section.type.includes('high') ? 'high' : 'medium',
+                  emoji: section.emoji,
+                  content: `${match[1]} detected with multiple items`,
+                  sectionContent: match[2].trim()
+                });
+              }
+            });
+            
+            console.log(`Extracted ${issues.length} issues from Claude analysis`);
+            core.setOutput('issues', JSON.stringify(issues));
+            core.setOutput('has_issues', issues.length > 0);
+            core.setOutput('issue_count', issues.length);
+
+      - name: Create interactive selection UI
+        if: steps.extract.outputs.has_issues == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issues = JSON.parse('${{ steps.extract.outputs.issues }}');
+            const issueCount = '${{ steps.extract.outputs.issue_count }}';
+            
+            // Load template functions
+            const CLAUDE_UI_TEMPLATE = `## 🤖 Claude問題検出 → Issue作成ツール
+
+**{{ISSUE_COUNT}}件の問題が検出されました** 
+
+作成したい項目を **チェック** してください：
+
+{{ISSUE_LIST}}
+
+---
+
+### 🎯 実行方法
+
+**方法1: リアクション実行** (推奨)
+1. 上記のチェックボックスを選択
+2. このコメントに以下のリアクションを追加：
+   - 🚀 = 選択した項目を **個別にissue作成**
+   - 📦 = 選択した項目を **1つのissueにまとめて作成**
+
+**方法2: コマンド実行**
+\`\`\`
+/create-issues selected    # チェックした項目を作成
+/create-issues all         # 全項目を作成  
+/create-issues 1,3,5       # 番号指定で作成
+\`\`\`
+
+### ⚙️ オプション
+\`\`\`
+/create-issues all --labels="bug,urgent" --assign=@username
+\`\`\`
+
+<details>
+<summary>📋 検出された問題の詳細</summary>
+
+{{ISSUE_DETAILS}}
+
+</details>
+
+---
+_検出ID: \`{{COMMENT_ID}}\` | 検出時刻: {{TIMESTAMP}}_`;
+            
+            // Generate template variables
+            const issueList = issues.map((issue, i) => 
+              `- [ ] ${issue.emoji} **[${issue.priority.toUpperCase()}]** ${issue.content}`
+            ).join('\n');
+            
+            const issueDetails = issues.map((issue, i) => `**${i + 1}. ${issue.content}**
+- タイプ: ${issue.type}
+- 優先度: ${issue.priority}
+${issue.sectionContent ? `- 詳細: ${issue.sectionContent.substring(0, 200)}...` : ''}
+`).join('\n');
+            
+            // Process template
+            const interactiveComment = CLAUDE_UI_TEMPLATE
+              .replace(/{{ISSUE_COUNT}}/g, issueCount)
+              .replace(/{{ISSUE_LIST}}/g, issueList)
+              .replace(/{{ISSUE_DETAILS}}/g, issueDetails)
+              .replace(/{{COMMENT_ID}}/g, context.payload.comment.id)
+              .replace(/{{TIMESTAMP}}/g, new Date().toISOString());
+            
+            const result = await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: interactiveComment
+            });
+            
+            // メタデータを隠しコメントとして保存
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `<!-- claude-issue-metadata
+${Buffer.from(JSON.stringify({
+  commentId: result.data.id,
+  sourceCommentId: context.payload.comment.id,
+  issues: issues,
+  detectedAt: new Date().toISOString(),
+  prNumber: context.issue.number
+})).toString('base64')}
+-->`
+            });
+            
+            console.log(`Created interactive UI comment: ${result.data.html_url}`);
+
+      - name: Log detection summary
+        if: steps.extract.outputs.has_issues == 'true'
+        run: |
+          echo "✅ Claude analysis detection completed"
+          echo "📊 Issues found: ${{ steps.extract.outputs.issue_count }}"
+          echo "🔗 PR: #${{ github.event.issue.number }}"
+          echo "👤 Detected from: ${{ github.event.comment.user.login }}"

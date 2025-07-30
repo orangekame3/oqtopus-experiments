@@ -1,0 +1,404 @@
+name: Direct Issue Commands
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  handle-create-issue:
+    if: |
+      github.event.issue.pull_request &&
+      startsWith(github.event.comment.body, '/create-issue')
+    
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: read
+    
+    steps:
+      - name: Parse single issue command
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const command = context.payload.comment.body;
+            const match = command.match(/\/create-issue\s+(.*)/s);
+            
+            if (!match) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: '❌ コマンド形式が正しくありません。\n\n使用例: `/create-issue タイトル\\n詳細説明...`'
+              });
+              return;
+            }
+            
+            const content = match[1].trim();
+            const lines = content.split('\n');
+            const title = lines[0] || `Issue from PR #${context.issue.number}`;
+            const description = lines.slice(1).join('\n').trim() || 'PR コメントから作成されたissue';
+            
+            // オプション解析
+            const labelMatch = command.match(/--labels?[=\s]+"?([^"\s]+)"?/);
+            const assignMatch = command.match(/--assign[=\s]+"?([^"\s]+)"?/);
+            const milestoneMatch = command.match(/--milestone[=\s]+"?([^"\s]+)"?/);
+            
+            const labels = ['manual-created'];
+            if (labelMatch) {
+              labels.push(...labelMatch[1].split(',').map(l => l.trim()));
+            }
+            
+            const assignee = assignMatch ? assignMatch[1].replace('@', '') : null;
+            const milestone = milestoneMatch ? milestoneMatch[1] : null;
+            
+            const issueBody = `## 概要
+${description}
+
+## コンテキスト
+- **作成元**: PR #${context.issue.number} - https://github.com/${context.repo.owner}/${context.repo.repo}/pull/${context.issue.number}
+- **作成者**: @${context.payload.comment.user.login}
+- **作成日時**: ${new Date().toISOString()}
+- **作成方法**: 手動コマンド
+
+## 詳細
+${description ? description : 'TODO: 詳細を記載してください'}
+
+---
+_このissueは手動コマンドから作成されました_`;
+
+            try {
+              const issueData = {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: title,
+                body: issueBody,
+                labels: labels.filter(Boolean)
+              };
+              
+              if (assignee) issueData.assignees = [assignee];
+              
+              const created = await github.rest.issues.create(issueData);
+              
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: `✅ **Issue作成完了！**
+
+[#${created.data.number}](${created.data.html_url}): ${created.data.title}
+
+- 作成者: @${context.payload.comment.user.login}
+- ラベル: ${labels.join(', ')}
+${assignee ? `- アサイン: @${assignee}` : ''}
+- 作成日時: ${new Date().toLocaleString('ja-JP')}`
+              });
+              
+            } catch (error) {
+              console.error('Failed to create issue:', error);
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: `❌ Issue作成に失敗しました。
+
+エラー: ${error.message}
+
+コマンド例:
+\`\`\`
+/create-issue バグ修正が必要
+データ保存の処理に問題があります --labels="bug,urgent" --assign=@username
+\`\`\``
+              });
+            }
+
+  handle-create-issues-command:
+    if: |
+      github.event.issue.pull_request &&
+      startsWith(github.event.comment.body, '/create-issues')
+    
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: read
+    
+    steps:
+      - name: Find latest Claude UI
+        id: find-ui
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // 最新のClaude UIコメントを検索
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              per_page: 100
+            });
+            
+            const uiComment = comments.data
+              .filter(c => c.body.includes('Claude問題検出 → Issue作成ツール'))
+              .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
+            
+            if (!uiComment) {
+              core.setOutput('found', 'false');
+              return;
+            }
+            
+            // メタデータコメントも検索
+            const metadataComment = comments.data.find(c => 
+              c.body.includes('<!-- claude-issue-metadata')
+            );
+            
+            core.setOutput('found', 'true');
+            core.setOutput('ui_comment', JSON.stringify(uiComment));
+            core.setOutput('metadata_comment', metadataComment ? JSON.stringify(metadataComment) : '{}');
+
+      - name: Parse create-issues command
+        if: steps.find-ui.outputs.found == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const command = context.payload.comment.body;
+            const uiComment = JSON.parse('${{ steps.find-ui.outputs.ui_comment }}');
+            
+            // コマンド解析
+            const match = command.match(/\/create-issues\s+(.*)/);
+            const args = match ? match[1].trim() : '';
+            
+            // UIコメントからチェック状態を取得
+            const lines = uiComment.body.split('\n');
+            const allItems = [];
+            const selectedItems = [];
+            
+            lines.forEach((line, index) => {
+              const itemMatch = line.match(/^- \[([ x])\] (.+)/);
+              if (itemMatch) {
+                const isChecked = itemMatch[1] === 'x';
+                const content = itemMatch[2]
+                  .replace(/^[🔴🟡📝🚨🏗️🟠]\s*/, '')
+                  .replace(/^\*\*\[.+?\]\*\*\s*/, '')
+                  .trim();
+                
+                allItems.push({ content, index });
+                if (isChecked) {
+                  selectedItems.push({ content, index });
+                }
+              }
+            });
+            
+            let itemsToCreate = [];
+            
+            if (args === 'all') {
+              itemsToCreate = allItems;
+            } else if (args === 'selected') {
+              itemsToCreate = selectedItems;
+            } else if (args.match(/^\d+(,\d+)*$/)) {
+              // 番号指定
+              const indices = args.split(',').map(n => parseInt(n.trim()) - 1);
+              itemsToCreate = indices.map(i => allItems[i]).filter(Boolean);
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: `❌ 不正なコマンド形式です。
+
+使用可能な形式:
+- \`/create-issues all\` - 全項目を作成
+- \`/create-issues selected\` - チェックされた項目を作成  
+- \`/create-issues 1,3,5\` - 指定番号の項目を作成`
+              });
+              return;
+            }
+            
+            if (itemsToCreate.length === 0) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: '❌ 作成対象のアイテムがありません。チェックボックスを選択するか、有効な番号を指定してください。'
+              });
+              return;
+            }
+            
+            // オプション解析
+            const labelMatch = command.match(/--labels?[=\s]+"?([^"\s]+)"?/);
+            const assignMatch = command.match(/--assign[=\s]+"?([^"\s]+)"?/);
+            
+            const labels = ['claude-detected', 'command-created'];
+            if (labelMatch) {
+              labels.push(...labelMatch[1].split(',').map(l => l.trim()));
+            }
+            
+            const assignee = assignMatch ? assignMatch[1].replace('@', '') : null;
+            
+            // Issue作成
+            const createdIssues = [];
+            for (const item of itemsToCreate) {
+              try {
+                const title = item.content.length > 60 
+                  ? `${item.content.substring(0, 60)}...`
+                  : item.content;
+                
+                const body = `## 概要
+${item.content}
+
+## コンテキスト
+- **検出元**: PR #${context.issue.number}
+- **作成者**: @${context.payload.comment.user.login}
+- **作成方法**: コマンド実行 (\`${args}\`)
+- **作成日時**: ${new Date().toISOString()}
+
+## 対応方針
+TODO: 対応方針を記載してください
+
+---
+_このissueはコマンドから作成されました_`;
+                
+                const issueData = {
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  title: `[Claude Cmd] ${title}`,
+                  body: body,
+                  labels: labels.filter(Boolean)
+                };
+                
+                if (assignee) issueData.assignees = [assignee];
+                
+                const created = await github.rest.issues.create(issueData);
+                createdIssues.push(created.data);
+                
+              } catch (error) {
+                console.error(`Failed to create issue for: ${item.content}`, error);
+              }
+            }
+            
+            // 結果報告
+            if (createdIssues.length > 0) {
+              const resultComment = `✅ **コマンド実行完了！**
+
+作成されたIssue (${createdIssues.length}件):
+${createdIssues.map(issue => 
+  `- [#${issue.number}](${issue.html_url}): ${issue.title}`
+).join('\n')}
+
+- 実行者: @${context.payload.comment.user.login}
+- 実行コマンド: \`/create-issues ${args}\`
+- 実行日時: ${new Date().toLocaleString('ja-JP')}`;
+              
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: resultComment
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: '❌ Issueの作成に失敗しました。ログを確認してください。'
+              });
+            }
+
+      - name: Show help if no UI found
+        if: steps.find-ui.outputs.found == 'false'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `❌ Claude分析UIが見つかりません。
+
+**使用方法:**
+1. まずClaude（@claude）にコード分析を依頼してください
+2. 分析結果が表示されると、自動的にUIが生成されます
+3. その後で \`/create-issues\` コマンドを使用できます
+
+**または直接作成:**
+\`\`\`
+/create-issue タイトル
+詳細説明...
+\`\`\``
+            });
+
+  show-help:
+    if: |
+      github.event.issue.pull_request &&
+      (contains(github.event.comment.body, '/help') || 
+       contains(github.event.comment.body, '/claude-help'))
+    
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    
+    steps:
+      - name: Display help information
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const helpText = `## 🤖 Claude Issue Creator ヘルプ
+
+### 📋 基本的な使い方
+
+**Step 1: Claude分析の実行**
+\`\`\`
+@claude このPRの変更を分析して問題があれば教えてください
+\`\`\`
+
+**Step 2: 自動UI生成**
+- Claudeが❌⚠️などの問題を検出すると自動的にUIが生成されます
+
+**Step 3: Issue作成**
+- チェックボックスで項目を選択
+- 🚀（個別作成）または📦（まとめて作成）リアクションを追加
+
+### 🎯 利用可能なコマンド
+
+**直接Issue作成:**
+\`\`\`
+/create-issue タイトル
+詳細説明...
+
+# オプション付き
+/create-issue バグ修正 --labels="bug,urgent" --assign=@username
+\`\`\`
+
+**Claude検出問題からの作成:**
+\`\`\`
+/create-issues all              # 全項目を作成
+/create-issues selected         # チェック済み項目を作成
+/create-issues 1,3,5           # 指定番号を作成
+/create-issues all --labels="priority" --assign=@reviewer
+\`\`\`
+
+### ⚙️ 利用可能なオプション
+
+- \`--labels="label1,label2"\` - ラベルを追加
+- \`--assign=@username\` - ユーザーをアサイン
+- \`--milestone="v1.0"\` - マイルストーンを設定
+
+### 🔄 自動化フロー
+
+1. **Claude分析** → 問題検出
+2. **UI自動生成** → チェックボックス付きコメント
+3. **ユーザー選択** → チェックボックス操作
+4. **リアクション実行** → 🚀📦で自動Issue作成
+5. **結果通知** → 作成されたIssueのリンク表示
+
+### 📞 サポート
+
+- \`/help\` または \`/claude-help\` - このヘルプを表示
+- 問題がある場合は、ワークフローログを確認してください
+
+---
+_Claude Issue Creator v2.0 - 分離アーキテクチャ版_`;
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: helpText
+            });
