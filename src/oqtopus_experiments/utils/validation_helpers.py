@@ -97,6 +97,33 @@ def validate_positive_values(values: list[float], parameter_name: str) -> None:
         )
 
 
+def validate_non_negative_values(values: list[float], parameter_name: str) -> None:
+    """
+    Validate values are non-negative (>= 0)
+    Args:
+        values: Values to validate
+        parameter_name: Name of parameter for error messages
+    Raises:
+        InvalidParameterError: If values are negative
+        DataQualityError: If values contain NaN or inf
+    """
+    # Check for NaN or infinite values
+    if any(not np.isfinite(v) for v in values):
+        raise DataQualityError(
+            f"Invalid {parameter_name} values",
+            "contains NaN or infinite values",
+        )
+
+    # Check non-negativity
+    negative = [v for v in values if v < 0]
+    if negative:
+        raise InvalidParameterError(
+            parameter_name,
+            f"negative values: {negative[:3]}",
+            "non-negative values >= 0",
+        )
+
+
 def validate_sequence_lengths(lengths: list[int]) -> None:
     """
     Validate sequence lengths for experiments like Randomized Benchmarking
@@ -155,8 +182,8 @@ def validate_fitting_data(
     # Check sufficient data for fitting
     validate_data_length(x_data, 3, f"{experiment_type} fitting")
 
-    # Validate x_data
-    validate_positive_values(x_data, "x_data")
+    # Validate x_data (allow non-negative for some experiments like Rabi that start from 0)
+    validate_non_negative_values(x_data, "x_data")
 
     # Validate y_data (probabilities)
     validate_probability_values(y_data)

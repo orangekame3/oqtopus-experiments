@@ -125,9 +125,9 @@ class RamseyAnalysisResult(ExperimentResult):
                 )
                 result = AnalysisResult(
                     success=False,
-                    error_message="Insufficient data for Ramsey fitting",
-                    error_type="InsufficientDataError",
-                    data={"fitting_result": fitting_result},
+                    errors=["Insufficient data for Ramsey fitting"],
+                    suggestions=["Collect more delay time points for reliable fitting"],
+                    data=pd.DataFrame(),
                 )
                 return result.to_legacy_dataframe()
 
@@ -190,14 +190,13 @@ class RamseyAnalysisResult(ExperimentResult):
                 )
                 result = AnalysisResult(
                     success=False,
-                    error_message=f"Ramsey fitting failed: {str(e)}",
-                    error_type="FittingError",
-                    data={"fitting_result": fitting_result},
+                    errors=[f"Ramsey fitting failed: {str(e)}"],
                     suggestions=[
                         "Check if delay times span sufficient range for fringe observation",
                         "Verify detuning frequency is appropriate",
                         "Consider using more delay points for better fitting",
                     ],
+                    data=pd.DataFrame(),
                 )
                 return result.to_legacy_dataframe()
 
@@ -205,12 +204,12 @@ class RamseyAnalysisResult(ExperimentResult):
             # Handle unexpected errors
             result = AnalysisResult(
                 success=False,
-                error_message=f"Unexpected error in Ramsey analysis: {str(e)}",
-                error_type="UnexpectedError",
+                errors=[f"Unexpected error in Ramsey analysis: {str(e)}"],
                 suggestions=[
                     "Check input data format and types",
                     "Verify all required dependencies are available",
                 ],
+                data=pd.DataFrame(),
             )
             return result.to_legacy_dataframe()
 
@@ -223,55 +222,38 @@ class RamseyAnalysisResult(ExperimentResult):
         """Validate Ramsey input data"""
         from ..models.analysis_result import AnalysisResult
         from ..utils.validation_helpers import (
-            check_for_nan_inf,
-            validate_data_ranges,
-            validate_measurement_data,
+            validate_fitting_data,
+            validate_probability_values,
         )
 
-        # Basic data validation
-        validation_result = validate_measurement_data(
-            x_data=delay_times,
-            y_data=probabilities,
-            y_errors=prob_errors,
-            x_name="delay_times",
-            y_name="probabilities",
-        )
-        if not validation_result.success:
-            return validation_result
+        result = AnalysisResult.success_result(data=pd.DataFrame())
 
-        # Check for NaN/inf values
-        nan_result = check_for_nan_inf(
-            {
-                "delay_times": delay_times,
-                "probabilities": probabilities,
-                "errors": prob_errors,
-            }
-        )
-        if not nan_result.success:
-            return nan_result
+        try:
+            # Basic data validation using existing functions
+            validate_fitting_data(delay_times, probabilities, "Ramsey")
+            validate_probability_values(prob_errors, allow_zero=True)
 
-        # Validate ranges
-        range_result = validate_data_ranges(
-            delay_times=delay_times,
-            probabilities=probabilities,
-            prob_errors=prob_errors,
-        )
-        if not range_result.success:
-            return range_result
+        except Exception as e:
+            result.add_error(str(e))
+            if hasattr(e, "suggestions"):
+                result.suggestions.extend(e.suggestions)
+            return result
 
         # Ramsey specific validations
         if min(delay_times) < 0:
             return AnalysisResult(
                 success=False,
-                error_message="Delay times must be non-negative",
-                error_type="ValidationError",
+                errors=["Delay times must be non-negative"],
+                suggestions=["Check delay time generation and units"],
+                data=pd.DataFrame(),
             )
 
         if max(delay_times) <= min(delay_times):
             return AnalysisResult(
                 success=False,
-                error_message="Delay times must span a range (max > min)",
-                error_type="ValidationError",
+                errors=["Delay times must span a range (max > min)"],
+                suggestions=["Increase max_delay or use more delay points"],
+                data=pd.DataFrame(),
             )
 
         return AnalysisResult(success=True, data={"validation": "passed"})
@@ -286,7 +268,6 @@ class RamseyAnalysisResult(ExperimentResult):
         """Fit damped oscillation to Ramsey data"""
         import numpy as np
         from scipy.optimize import curve_fit
-        from sklearn.metrics import r2_score
 
         def ramsey_func(t, amplitude, t2_star, offset, phase, frequency):
             """Ramsey fringe function: P = amplitude * exp(-t/T2*) * cos(2πft + φ) + offset"""
@@ -332,7 +313,10 @@ class RamseyAnalysisResult(ExperimentResult):
 
         # Calculate R-squared
         y_pred = ramsey_func(x_data, *popt)
-        r_squared = r2_score(y_data, y_pred)
+        # Calculate R-squared manually
+        ss_res = np.sum((y_data - y_pred) ** 2)
+        ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
+        r_squared = 1 - (ss_res / ss_tot) if ss_tot != 0 else 0
 
         return RamseyFittingResult(
             t2_star_time=float(t2_star_fit),
@@ -399,8 +383,7 @@ class RamseyAnalysisResult(ExperimentResult):
         if issues:
             return AnalysisResult(
                 success=False,
-                error_message="Ramsey fitting quality issues: " + "; ".join(issues),
-                error_type="FittingQualityError",
+                errors=["Ramsey fitting quality issues: " + "; ".join(issues)],
                 warnings=warnings,
                 suggestions=[
                     "Increase measurement range to better capture fringe oscillations",

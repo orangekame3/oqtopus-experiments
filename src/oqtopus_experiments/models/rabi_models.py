@@ -236,15 +236,15 @@ class RabiAnalysisResult(ExperimentResult):
         from ..models.analysis_result import AnalysisResult
         from ..utils.validation_helpers import (
             validate_fitting_data,
-            validate_positive_values,
+            validate_non_negative_values,
             validate_probability_values,
         )
 
         result = AnalysisResult.success_result(data=pd.DataFrame())
 
         try:
-            # Validate amplitudes (should be positive)
-            validate_positive_values(amplitudes, "amplitudes")
+            # Validate amplitudes (should be non-negative, allowing zero for Rabi experiments)
+            validate_non_negative_values(amplitudes, "amplitudes")
 
             # Validate probabilities
             validate_probability_values(probabilities)
@@ -301,10 +301,11 @@ class RabiAnalysisResult(ExperimentResult):
     def _rabi_oscillation_function(
         self, amplitudes: list[float], A: float, f: float, offset: float
     ) -> list[float]:
-        """Rabi oscillation function: P(amp) = A * sin²(f * amp) + offset"""
+        """Rabi oscillation function: P(amp) = A * sin²(π * amp / 2) + offset"""
         import numpy as np
 
-        result = A * np.sin(f * np.array(amplitudes)) ** 2 + offset
+        # Use correct Rabi function for RX(amp * π) gates
+        result = A * np.sin(np.pi * np.array(amplitudes) / 2) ** 2 + offset
         return result.tolist()  # type: ignore
 
     def _fit_rabi_oscillation(
@@ -318,13 +319,16 @@ class RabiAnalysisResult(ExperimentResult):
             import numpy as np
             from scipy.optimize import curve_fit
 
-            # Initial guess: A=0.5, f=π/max_amp, offset=0.5
-            max_amp = max(amplitudes)
-            initial_guess = [0.5, np.pi / max_amp, 0.5]
-            bounds = ([0, 0, 0], [1, 10 * np.pi / max_amp, 1])  # Physical bounds
+            # For RX(amp * π), use correct Rabi function: A * sin²(π * amp / 2) + offset
+            # Initial guess: A=1.0 (full oscillation), offset=0.0 (ground state baseline)
+            initial_guess = [1.0, 0.0]  # [amplitude, offset]
+            bounds = (
+                [0, 0],
+                [1, 0.2],
+            )  # Physical bounds: amplitude 0-1, small offset for noise
 
-            def rabi_func(amp, A, f, offset):
-                return A * np.sin(f * amp) ** 2 + offset
+            def rabi_func(amp, A, offset):
+                return A * np.sin(np.pi * amp / 2) ** 2 + offset
 
             popt, pcov = curve_fit(
                 rabi_func,
@@ -336,20 +340,24 @@ class RabiAnalysisResult(ExperimentResult):
                 absolute_sigma=True,
             )
 
-            A, f, offset = popt
+            A, offset = popt
 
-            # Calculate π-pulse amplitude
-            pi_amplitude = np.pi / (2 * f) if f > 0 else 0
+            # Calculate π-pulse amplitude (where sin²(π * amp / 2) = 1)
+            # This occurs when π * amp / 2 = π/2, so amp = 1
+            pi_amplitude = 1.0
+
+            # Rabi frequency (for compatibility with existing structure)
+            frequency = np.pi / 2  # Since we use fixed π/2 in the function
 
             # Calculate R-squared
-            y_pred = rabi_func(np.array(amplitudes), A, f, offset)
+            y_pred = rabi_func(np.array(amplitudes), A, offset)
             ss_res = np.sum((np.array(probabilities) - y_pred) ** 2)
             ss_tot = np.sum((np.array(probabilities) - np.mean(probabilities)) ** 2)
             r_squared = 1 - (ss_res / ss_tot) if ss_tot != 0 else 0
 
             return RabiFittingResult(
                 pi_amplitude=pi_amplitude,
-                frequency=f,
+                frequency=frequency,
                 fit_amplitude=A,
                 offset=offset,
                 r_squared=r_squared,

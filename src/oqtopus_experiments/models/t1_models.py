@@ -430,6 +430,9 @@ class T1AnalysisResult(ExperimentResult):
                 height=500,
             )
 
+            # Set x-axis to logarithmic scale for better visualization of exponential decay
+            fig.update_xaxes(type="log")
+
             # Add statistics box if fitting succeeded
             if not fitting_result.error_info:
                 stats_text = f"""T1 time: {fitting_result.t1_time:.1f} ns

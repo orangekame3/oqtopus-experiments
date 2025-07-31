@@ -126,17 +126,25 @@ class CHSHExperimentResult(ExperimentResult):
                 return result.to_legacy_dataframe()
 
             # Check if we have sufficient measurement data
-            required_settings = {"A0B0", "A0B1", "A1B0", "A1B1"}
+            # Support both naming conventions: A0B0/A0B1/A1B0/A1B1 and ZZ/ZX/XZ/XX
+            required_settings_1 = {"A0B0", "A0B1", "A1B0", "A1B1"}
+            required_settings_2 = {"ZZ", "ZX", "XZ", "XX"}
             available_settings = set(measurement_counts.keys())
-            if not required_settings.issubset(available_settings):
-                missing = required_settings - available_settings
+
+            has_A_settings = required_settings_1.issubset(available_settings)
+            has_Z_settings = required_settings_2.issubset(available_settings)
+
+            if not (has_A_settings or has_Z_settings):
+                missing_1 = required_settings_1 - available_settings
+                missing_2 = required_settings_2 - available_settings
                 result = AnalysisResult(
                     success=False,
-                    error_message=f"Missing measurement settings: {missing}",
-                    error_type="InsufficientDataError",
+                    errors=[
+                        f"Missing measurement settings. Need either {missing_1} or {missing_2}"
+                    ],
                     suggestions=[
                         "Ensure all four CHSH measurement settings are performed",
-                        "Check that circuit generation includes A0B0, A0B1, A1B0, A1B1 settings",
+                        "Check that circuit generation includes either A0B0/A0B1/A1B0/A1B1 or ZZ/ZX/XZ/XX settings",
                     ],
                 )
                 return result.to_legacy_dataframe()
@@ -162,21 +170,36 @@ class CHSHExperimentResult(ExperimentResult):
                     except Exception as e:
                         print(f"Warning: Plot generation failed: {e}")
 
-                # Create successful result
-                analysis_data = {
-                    "chsh_value": analysis_result.chsh_value,
-                    "chsh_std_error": analysis_result.chsh_std_error,
-                    "bell_violation": analysis_result.bell_violation,
-                    "significance": analysis_result.significance,
-                    "correlations": analysis_result.correlations,
-                    "correlation_errors": analysis_result.correlation_errors,
-                    "total_shots": analysis_result.total_shots,
-                    "quantum_theoretical_max": analysis_result.quantum_theoretical_max,
-                }
+                # Create DataFrame from analysis results
+                df_data = []
+                for setting, correlation in analysis_result.correlations.items():
+                    counts = analysis_result.measurement_counts[setting]
+                    total = sum(counts.values())
+
+                    df_data.append(
+                        {
+                            "measurement_basis": setting,
+                            "correlation": correlation,
+                            "correlation_error": analysis_result.correlation_errors[
+                                setting
+                            ],
+                            "counts_00": counts.get("00", 0),
+                            "counts_01": counts.get("01", 0),
+                            "counts_10": counts.get("10", 0),
+                            "counts_11": counts.get("11", 0),
+                            "total_shots": total,
+                            "chsh_value": analysis_result.chsh_value,
+                            "bell_violation": analysis_result.bell_violation,
+                            "significance": analysis_result.significance,
+                            "quantum_theoretical_max": analysis_result.quantum_theoretical_max,
+                        }
+                    )
+
+                analysis_df = pd.DataFrame(df_data)
 
                 result = AnalysisResult(
                     success=True,
-                    data=analysis_data,
+                    data=analysis_df,
                     metadata={
                         "bell_violation": analysis_result.bell_violation,
                         "statistical_significance": f"{analysis_result.significance:.2f}σ",
@@ -188,8 +211,7 @@ class CHSHExperimentResult(ExperimentResult):
                 # Handle analysis failure gracefully
                 result = AnalysisResult(
                     success=False,
-                    error_message=f"CHSH analysis failed: {str(e)}",
-                    error_type="AnalysisError",
+                    errors=[f"CHSH analysis failed: {str(e)}"],
                     suggestions=[
                         "Check measurement count data format and completeness",
                         "Verify sufficient statistics for correlation calculations",
@@ -202,8 +224,7 @@ class CHSHExperimentResult(ExperimentResult):
             # Handle unexpected errors
             result = AnalysisResult(
                 success=False,
-                error_message=f"Unexpected error in CHSH analysis: {str(e)}",
-                error_type="UnexpectedError",
+                errors=[f"Unexpected error in CHSH analysis: {str(e)}"],
                 suggestions=[
                     "Check input data format and types",
                     "Verify all required dependencies are available",
@@ -221,15 +242,13 @@ class CHSHExperimentResult(ExperimentResult):
         if not measurement_counts:
             return AnalysisResult(
                 success=False,
-                error_message="Empty measurement counts",
-                error_type="ValidationError",
+                errors=["Empty measurement counts"],
             )
 
         if total_shots <= 0:
             return AnalysisResult(
                 success=False,
-                error_message="Total shots must be positive",
-                error_type="ValidationError",
+                errors=["Total shots must be positive"],
             )
 
         # Validate each measurement setting
@@ -237,27 +256,21 @@ class CHSHExperimentResult(ExperimentResult):
             if not isinstance(counts, dict):
                 return AnalysisResult(
                     success=False,
-                    error_message=f"Invalid counts format for setting {setting}",
-                    error_type="ValidationError",
+                    errors=[f"Invalid counts format for setting {setting}"],
                 )
 
-            # Check for required outcomes
+            # Ensure all required outcomes are present (fill missing with 0)
             required_outcomes = {"00", "01", "10", "11"}
-            if not required_outcomes.issubset(set(counts.keys())):
-                missing = required_outcomes - set(counts.keys())
-                return AnalysisResult(
-                    success=False,
-                    error_message=f"Missing outcomes {missing} for setting {setting}",
-                    error_type="ValidationError",
-                )
+            for outcome in required_outcomes:
+                if outcome not in counts:
+                    counts[outcome] = 0
 
             # Check for negative counts
             for outcome, count in counts.items():
                 if count < 0:
                     return AnalysisResult(
                         success=False,
-                        error_message=f"Negative count for {setting}:{outcome}",
-                        error_type="ValidationError",
+                        errors=[f"Negative count for {setting}:{outcome}"],
                     )
 
         return AnalysisResult(success=True, data={"validation": "passed"})
@@ -292,19 +305,34 @@ class CHSHExperimentResult(ExperimentResult):
             correlation_errors[setting] = error
 
         # Calculate CHSH value: S = |E(A0,B0) + E(A0,B1) + E(A1,B0) - E(A1,B1)|
-        e_a0b0 = correlations.get("A0B0", 0.0)
-        e_a0b1 = correlations.get("A0B1", 0.0)
-        e_a1b0 = correlations.get("A1B0", 0.0)
-        e_a1b1 = correlations.get("A1B1", 0.0)
+        # Support both naming conventions
+        if "ZZ" in correlations:
+            # ZZ/ZX/XZ/XX naming (from experiment class)
+            # Map to CHSH calculation: ZZ=A0B0, ZX=A0B1, XZ=A1B0, XX=A1B1
+            e_a0b0 = correlations.get("ZZ", 0.0)
+            e_a0b1 = correlations.get("ZX", 0.0)
+            e_a1b0 = correlations.get("XZ", 0.0)
+            e_a1b1 = correlations.get("XX", 0.0)
+
+            err_a0b0 = correlation_errors.get("ZZ", 0.0)
+            err_a0b1 = correlation_errors.get("ZX", 0.0)
+            err_a1b0 = correlation_errors.get("XZ", 0.0)
+            err_a1b1 = correlation_errors.get("XX", 0.0)
+        else:
+            # A0B0/A0B1/A1B0/A1B1 naming (traditional CHSH notation)
+            e_a0b0 = correlations.get("A0B0", 0.0)
+            e_a0b1 = correlations.get("A0B1", 0.0)
+            e_a1b0 = correlations.get("A1B0", 0.0)
+            e_a1b1 = correlations.get("A1B1", 0.0)
+
+            err_a0b0 = correlation_errors.get("A0B0", 0.0)
+            err_a0b1 = correlation_errors.get("A0B1", 0.0)
+            err_a1b0 = correlation_errors.get("A1B0", 0.0)
+            err_a1b1 = correlation_errors.get("A1B1", 0.0)
 
         chsh_value = abs(e_a0b0 + e_a0b1 + e_a1b0 - e_a1b1)
 
         # Error propagation for CHSH value
-        err_a0b0 = correlation_errors.get("A0B0", 0.0)
-        err_a0b1 = correlation_errors.get("A0B1", 0.0)
-        err_a1b0 = correlation_errors.get("A1B0", 0.0)
-        err_a1b1 = correlation_errors.get("A1B1", 0.0)
-
         chsh_std_error = np.sqrt(err_a0b0**2 + err_a0b1**2 + err_a1b0**2 + err_a1b1**2)
 
         # Bell inequality violation test
@@ -361,8 +389,7 @@ class CHSHExperimentResult(ExperimentResult):
         if issues:
             return AnalysisResult(
                 success=False,
-                error_message="CHSH analysis quality issues: " + "; ".join(issues),
-                error_type="AnalysisQualityError",
+                errors=["CHSH analysis quality issues: " + "; ".join(issues)],
                 warnings=warnings,
                 suggestions=[
                     "Increase number of shots for better statistics",

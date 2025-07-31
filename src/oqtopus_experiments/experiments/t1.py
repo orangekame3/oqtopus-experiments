@@ -72,20 +72,12 @@ class T1(BaseExperiment):
         if not fitting_result:
             return pd.DataFrame()
 
-        # Get device name from results
-        device_name = "unknown"
-        if all_results:
-            # Get device name from first result's backend field
-            device_name = all_results[0].get("backend", "unknown")
-
-        # Create DataFrame
-        df = self._create_dataframe(fitting_result, device_name)
-
         # Create T1Data for new analysis system
         t1_data = T1Data(
             delay_times=fitting_result.delay_times,
             probabilities=fitting_result.probabilities,
-            probability_errors=[0.02] * len(fitting_result.probabilities),  # Default error
+            probability_errors=[0.02]
+            * len(fitting_result.probabilities),  # Default error
             shots_per_point=1000,  # Default shots
             fitting_result=fitting_result,
         )
@@ -98,8 +90,9 @@ class T1(BaseExperiment):
         )
 
         # Analysis handled by T1AnalysisResult class
-
-        return df
+        return analysis_result.analyze(
+            plot=plot, save_data=save_data, save_image=save_image
+        )
 
     def circuits(self, **kwargs: Any) -> list["QuantumCircuit"]:
         """Generate T1 circuits with automatic transpilation"""
@@ -278,7 +271,6 @@ class T1(BaseExperiment):
                 }
             )
         return pd.DataFrame(df_data) if df_data else pd.DataFrame()
-
 
     def _get_circuit_params(self) -> list[dict[str, Any]] | None:
         """Get circuit parameters for OQTOPUS"""

@@ -145,9 +145,9 @@ class HadamardTestAnalysisResult(ExperimentResult):
                 )
                 result = AnalysisResult(
                     success=False,
-                    error_message="Insufficient data for Hadamard Test fitting",
-                    error_type="InsufficientDataError",
-                    data={"fitting_result": fitting_result},
+                    errors=["Insufficient data for Hadamard Test fitting"],
+                    suggestions=["Collect more angle points for reliable fitting"],
+                    data=pd.DataFrame(),
                 )
                 return result.to_legacy_dataframe()
 
@@ -213,14 +213,13 @@ class HadamardTestAnalysisResult(ExperimentResult):
                 )
                 result = AnalysisResult(
                     success=False,
-                    error_message=f"Hadamard Test analysis failed: {str(e)}",
-                    error_type="AnalysisError",
-                    data={"fitting_result": fitting_result},
+                    errors=[f"Hadamard Test analysis failed: {str(e)}"],
                     suggestions=[
                         "Check if angle range spans sufficient values for expectation value calculation",
                         "Verify test unitary type is correctly specified (X, Y, or Z)",
                         "Consider using more angle points for better statistics",
                     ],
+                    data=pd.DataFrame(),
                 )
                 return result.to_legacy_dataframe()
 
@@ -228,12 +227,12 @@ class HadamardTestAnalysisResult(ExperimentResult):
             # Handle unexpected errors
             result = AnalysisResult(
                 success=False,
-                error_message=f"Unexpected error in Hadamard Test analysis: {str(e)}",
-                error_type="UnexpectedError",
+                errors=[f"Unexpected error in Hadamard Test analysis: {str(e)}"],
                 suggestions=[
                     "Check input data format and types",
                     "Verify all required dependencies are available",
                 ],
+                data=pd.DataFrame(),
             )
             return result.to_legacy_dataframe()
 
@@ -249,42 +248,32 @@ class HadamardTestAnalysisResult(ExperimentResult):
 
         from ..models.analysis_result import AnalysisResult
         from ..utils.validation_helpers import (
-            check_for_nan_inf,
-            validate_data_ranges,
-            validate_measurement_data,
+            validate_fitting_data,
+            validate_probability_values,
         )
 
-        # Basic data validation
-        validation_result = validate_measurement_data(
-            x_data=angles,
-            y_data=probabilities,
-            y_errors=prob_errors,
-            x_name="angles",
-            y_name="probabilities",
-        )
-        if not validation_result.success:
-            return validation_result
+        result = AnalysisResult.success_result(data=pd.DataFrame())
 
-        # Check for NaN/inf values
-        nan_result = check_for_nan_inf(
-            {"angles": angles, "probabilities": probabilities, "errors": prob_errors}
-        )
-        if not nan_result.success:
-            return nan_result
+        try:
+            # Basic data validation using existing functions
+            validate_fitting_data(angles, probabilities, "HadamardTest")
+            validate_probability_values(prob_errors, allow_zero=True)
 
-        # Validate ranges
-        range_result = validate_data_ranges(
-            angles=angles, probabilities=probabilities, prob_errors=prob_errors
-        )
-        if not range_result.success:
-            return range_result
+        except Exception as e:
+            result.add_error(str(e))
+            if hasattr(e, "suggestions"):
+                result.suggestions.extend(e.suggestions)
+            return result
 
         # Hadamard Test specific validations
         if test_unitary not in ["X", "Y", "Z"]:
             return AnalysisResult(
                 success=False,
-                error_message=f"Invalid test unitary '{test_unitary}'. Must be 'X', 'Y', or 'Z'",
-                error_type="ValidationError",
+                errors=[
+                    f"Invalid test unitary '{test_unitary}'. Must be 'X', 'Y', or 'Z'"
+                ],
+                suggestions=["Use one of the supported test unitaries: X, Y, or Z"],
+                data=pd.DataFrame(),
             )
 
         # Check angle range
@@ -292,12 +281,14 @@ class HadamardTestAnalysisResult(ExperimentResult):
         if angle_range < np.pi:
             return AnalysisResult(
                 success=False,
-                error_message=f"Insufficient angle range ({angle_range:.2f} rad < π rad) for expectation value calculation",
-                error_type="ValidationError",
+                errors=[
+                    f"Insufficient angle range ({angle_range:.2f} rad < π rad) for expectation value calculation"
+                ],
                 suggestions=[
                     "Use angle range of at least π radians for accurate expectation value measurement",
                     "Consider using 2π range for complete characterization",
                 ],
+                data=pd.DataFrame(),
             )
 
         return AnalysisResult(success=True, data={"validation": "passed"})
@@ -312,7 +303,6 @@ class HadamardTestAnalysisResult(ExperimentResult):
         """Analyze expectation values from Hadamard Test data"""
         import numpy as np
         from scipy.optimize import curve_fit
-        from sklearn.metrics import r2_score
 
         # Define theoretical expectation functions for each unitary
         def x_expectation(theta, amplitude):
@@ -364,9 +354,11 @@ class HadamardTestAnalysisResult(ExperimentResult):
             # Fallback: estimate amplitude from data range
             amplitude_fit = 2 * (max(y_data) - min(y_data))
 
-        # Calculate R-squared
+        # Calculate R-squared manually
         y_pred = fit_func(x_data, amplitude_fit)
-        r_squared = r2_score(y_data, y_pred)
+        ss_res = np.sum((y_data - y_pred) ** 2)
+        ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
+        r_squared = 1 - (ss_res / ss_tot) if ss_tot != 0 else 0
 
         # Calculate expectation value components
         # For complex expectation values, we need both real and imaginary parts
@@ -436,15 +428,14 @@ class HadamardTestAnalysisResult(ExperimentResult):
         if issues:
             return AnalysisResult(
                 success=False,
-                error_message="Hadamard Test analysis quality issues: "
-                + "; ".join(issues),
-                error_type="AnalysisQualityError",
+                errors=["Hadamard Test analysis quality issues: " + "; ".join(issues)],
                 warnings=warnings,
                 suggestions=[
                     "Increase number of angle points for better statistics",
                     "Check state preparation and measurement procedures",
                     "Verify unitary gate implementation",
                 ],
+                data=pd.DataFrame(),
             )
 
         return AnalysisResult(

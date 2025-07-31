@@ -174,14 +174,13 @@ class T2EchoAnalysisResult(ExperimentResult):
                 )
                 result = AnalysisResult(
                     success=False,
-                    error_message=f"T2 Echo fitting failed: {str(e)}",
-                    error_type="FittingError",
-                    data={"fitting_result": fitting_result},
+                    errors=[f"T2 Echo fitting failed: {str(e)}"],
                     suggestions=[
                         "Check if delay times span sufficient range for T2 measurement",
                         "Verify measurement data quality and noise levels",
                         "Consider using more delay points for better fitting",
                     ],
+                    data=pd.DataFrame(),
                 )
                 return result.to_legacy_dataframe()
 
@@ -189,12 +188,12 @@ class T2EchoAnalysisResult(ExperimentResult):
             # Handle unexpected errors
             result = AnalysisResult(
                 success=False,
-                error_message=f"Unexpected error in T2 Echo analysis: {str(e)}",
-                error_type="UnexpectedError",
+                errors=[f"Unexpected error in T2 Echo analysis: {str(e)}"],
                 suggestions=[
                     "Check input data format and types",
                     "Verify all required dependencies are available",
                 ],
+                data=pd.DataFrame(),
             )
             return result.to_legacy_dataframe()
 
@@ -207,55 +206,38 @@ class T2EchoAnalysisResult(ExperimentResult):
         """Validate T2 Echo input data"""
         from ..models.analysis_result import AnalysisResult
         from ..utils.validation_helpers import (
-            check_for_nan_inf,
-            validate_data_ranges,
-            validate_measurement_data,
+            validate_fitting_data,
+            validate_probability_values,
         )
 
-        # Basic data validation
-        validation_result = validate_measurement_data(
-            x_data=delay_times,
-            y_data=probabilities,
-            y_errors=prob_errors,
-            x_name="delay_times",
-            y_name="probabilities",
-        )
-        if not validation_result.success:
-            return validation_result
+        result = AnalysisResult.success_result(data=pd.DataFrame())
 
-        # Check for NaN/inf values
-        nan_result = check_for_nan_inf(
-            {
-                "delay_times": delay_times,
-                "probabilities": probabilities,
-                "errors": prob_errors,
-            }
-        )
-        if not nan_result.success:
-            return nan_result
+        try:
+            # Basic data validation using existing functions
+            validate_fitting_data(delay_times, probabilities, "T2Echo")
+            validate_probability_values(prob_errors, allow_zero=True)
 
-        # Validate ranges
-        range_result = validate_data_ranges(
-            delay_times=delay_times,
-            probabilities=probabilities,
-            prob_errors=prob_errors,
-        )
-        if not range_result.success:
-            return range_result
+        except Exception as e:
+            result.add_error(str(e))
+            if hasattr(e, "suggestions"):
+                result.suggestions.extend(e.suggestions)
+            return result
 
         # T2 Echo specific validations
         if min(delay_times) < 0:
             return AnalysisResult(
                 success=False,
-                error_message="Delay times must be non-negative",
-                error_type="ValidationError",
+                errors=["Delay times must be non-negative"],
+                suggestions=["Check delay time generation and units"],
+                data=pd.DataFrame(),
             )
 
         if max(delay_times) <= min(delay_times):
             return AnalysisResult(
                 success=False,
-                error_message="Delay times must span a range (max > min)",
-                error_type="ValidationError",
+                errors=["Delay times must span a range (max > min)"],
+                suggestions=["Increase max_delay or use more delay points"],
+                data=pd.DataFrame(),
             )
 
         return AnalysisResult(success=True, data={"validation": "passed"})
@@ -269,7 +251,6 @@ class T2EchoAnalysisResult(ExperimentResult):
         """Fit exponential decay to T2 Echo data"""
         import numpy as np
         from scipy.optimize import curve_fit
-        from sklearn.metrics import r2_score
 
         def t2_echo_func(t, amplitude, t2_time, offset):
             """T2 Echo decay function: P = amplitude * exp(-t/T2) + offset"""
@@ -304,9 +285,11 @@ class T2EchoAnalysisResult(ExperimentResult):
 
         amplitude_fit, t2_time_fit, offset_fit = popt
 
-        # Calculate R-squared
+        # Calculate R-squared manually
         y_pred = t2_echo_func(x_data, *popt)
-        r_squared = r2_score(y_data, y_pred)
+        ss_res = np.sum((y_data - y_pred) ** 2)
+        ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
+        r_squared = 1 - (ss_res / ss_tot) if ss_tot != 0 else 0
 
         return T2EchoFittingResult(
             t2_time=float(t2_time_fit),
@@ -355,14 +338,14 @@ class T2EchoAnalysisResult(ExperimentResult):
         if issues:
             return AnalysisResult(
                 success=False,
-                error_message="T2 Echo fitting quality issues: " + "; ".join(issues),
-                error_type="FittingQualityError",
+                errors=["T2 Echo fitting quality issues: " + "; ".join(issues)],
                 warnings=warnings,
                 suggestions=[
                     "Increase measurement range to better capture T2 decay",
                     "Use more delay points for better statistics",
                     "Check for systematic errors in measurements",
                 ],
+                data=pd.DataFrame(),
             )
 
         return AnalysisResult(
@@ -456,6 +439,9 @@ class T2EchoAnalysisResult(ExperimentResult):
                 width=1000,
                 height=500,
             )
+
+            # Set x-axis to logarithmic scale for better visualization of exponential decay
+            fig.update_xaxes(type="log")
 
             # Add fitting results annotation
             annotation_text = (

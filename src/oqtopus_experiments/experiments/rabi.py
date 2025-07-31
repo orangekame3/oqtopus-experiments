@@ -9,7 +9,6 @@ import numpy as np
 import pandas as pd
 from qiskit import QuantumCircuit
 from scipy.optimize import curve_fit
-from scipy.signal import find_peaks
 
 from ..core.base_experiment import BaseExperiment
 from ..models.rabi_models import (
@@ -73,15 +72,6 @@ class Rabi(BaseExperiment):
         if not fitting_result:
             return pd.DataFrame()
 
-        # Get device name from results
-        device_name = "unknown"
-        if all_results:
-            # Get device name from first result's backend field
-            device_name = all_results[0].get("backend", "unknown")
-
-        # Create DataFrame
-        df = self._create_dataframe(fitting_result, device_name)
-
         # Create RabiData for new analysis system
         rabi_data = RabiData(
             amplitudes=fitting_result.amplitudes,
@@ -100,8 +90,9 @@ class Rabi(BaseExperiment):
         )
 
         # Analysis handled by RabiAnalysisResult class
-
-        return df
+        return analysis_result.analyze(
+            plot=plot, save_data=save_data, save_image=save_image
+        )
 
     def circuits(self, **kwargs: Any) -> list["QuantumCircuit"]:
         """Generate Rabi circuits with automatic transpilation"""
@@ -148,8 +139,11 @@ class Rabi(BaseExperiment):
             if popt is None:
                 return None
 
-            fitted_amplitude, fitted_freq, fitted_offset = popt
-            pi_amplitude = 0.5 / fitted_freq
+            fitted_amplitude, fitted_offset = popt
+            # For sin²(π * amp / 2), π-pulse occurs at amp = 1
+            pi_amplitude = 1.0
+            # Fixed frequency for compatibility
+            fitted_freq = np.pi / 2
             r_squared = self._calculate_r_squared(amplitudes, probabilities, popt)
 
             return RabiFittingResult(
@@ -228,30 +222,20 @@ class Rabi(BaseExperiment):
     ) -> np.ndarray | None:
         """Perform Rabi oscillation fitting"""
 
-        def rabi_func(amp, amplitude, frequency, offset):
-            return amplitude * np.sin(np.pi * amp * frequency) ** 2 + offset
+        def rabi_func(amp, amplitude, offset):
+            return amplitude * np.sin(np.pi * amp / 2) ** 2 + offset
 
-        # Estimate initial parameters
-        amplitude_guess = np.max(probabilities) - np.min(probabilities)
-        offset_guess = np.min(probabilities)
-
-        # Estimate frequency from peaks
-        threshold = offset_guess + 0.6 * amplitude_guess
-        peaks, _ = find_peaks(probabilities, height=threshold, distance=2)
-
-        if len(peaks) >= 2:
-            peak_amps = amplitudes[peaks]
-            frequency_guess = 1.0 / np.mean(np.diff(peak_amps))
-        else:
-            frequency_guess = 0.75
+        # Estimate initial parameters for correct Rabi function
+        amplitude_guess = 1.0  # Full Rabi oscillation amplitude
+        offset_guess = 0.0  # Ground state baseline
 
         try:
             popt, _ = curve_fit(
                 rabi_func,
                 amplitudes,
                 probabilities,
-                p0=[amplitude_guess, frequency_guess, offset_guess],
-                bounds=([0, 0.1, 0], [1, 5, 1]),
+                p0=[amplitude_guess, offset_guess],
+                bounds=([0, 0], [1, 0.2]),  # Physical bounds
                 maxfev=2000,
             )
             return popt  # type: ignore
@@ -263,8 +247,8 @@ class Rabi(BaseExperiment):
     ) -> float:
         """Calculate R-squared for fit quality"""
 
-        def rabi_func(amp, amplitude, frequency, offset):
-            return amplitude * np.sin(np.pi * amp * frequency) ** 2 + offset
+        def rabi_func(amp, amplitude, offset):
+            return amplitude * np.sin(np.pi * amp / 2) ** 2 + offset
 
         y_pred = rabi_func(amplitudes, *popt)
         ss_res = np.sum((probabilities - y_pred) ** 2)
@@ -290,7 +274,6 @@ class Rabi(BaseExperiment):
                 }
             )
         return pd.DataFrame(df_data) if df_data else pd.DataFrame()
-
 
     def _get_circuit_params(self) -> list[dict[str, Any]] | None:
         """Get circuit parameters for OQTOPUS"""

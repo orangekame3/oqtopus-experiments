@@ -63,15 +63,13 @@ class TestLocalBackendExperimentIntegration:
         # Analyze results
         df = result.analyze(plot=False, save_data=False, save_image=False)
 
-        # Verify DataFrame structure
+        # Verify DataFrame structure (updated for new error handling system)
         assert isinstance(df, pd.DataFrame)
         assert not df.empty
-        assert "device" in df.columns
         assert "amplitude" in df.columns
         assert "probability" in df.columns
-
-        # Verify device name is correctly set
-        assert df["device"].iloc[0] == "noisy"
+        # Verify Rabi experiment data structure
+        assert len(df) == 5  # 5 amplitude points
 
     @patch("oqtopus_experiments.backends.local_backend.QISKIT_AVAILABLE", True)
     @patch("oqtopus_experiments.backends.local_backend.AerSimulator")
