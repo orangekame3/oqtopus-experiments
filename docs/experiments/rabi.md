@@ -51,8 +51,10 @@ The amplitude sweep reveals the π-pulse calibration point.
 
 The experiment fits data to the Rabi oscillation model:
 ```
-P(|1⟩) = A × sin²(π × amplitude × frequency) + offset
+P(|1⟩) = A × sin²(π × amplitude / 2) + offset
 ```
+
+This formula corresponds to RX(amplitude × π) gates, where the π-pulse occurs at amplitude = 1.
 
 **Key Outputs:**
 - `pi_amplitude`: Drive amplitude for π-pulse

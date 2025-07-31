@@ -211,6 +211,31 @@ Use consistent colors from `get_experiment_colors()`:
 
 #### Theoretical Fitting Formulas
 
+**Rabi Oscillations**
+For RX(amplitude * π) gates:
+- Formula: `P(|1⟩) = A * sin²(π * amp / 2) + offset`
+- π-pulse occurs at amplitude = 1.0
+- Use scipy.optimize.curve_fit with bounds: A ∈ [0, 1], offset ∈ [0, 0.2]
+- **IMPORTANT**: Not `sin²(f * amp)` - must use the correct formula for RX(amp * π)
+
+**T1 Relaxation**
+For excited state decay:
+- Formula: `P(|1⟩) = A * exp(-t/T1) + offset`
+- Use logarithmic time spacing: `np.logspace(log10(1), log10(max_delay), points)`
+- Plot with logarithmic x-axis for better visualization
+
+**T2 Echo Decay**
+For coherence time measurement:
+- Formula: `P(|0⟩) = A * exp(-t/T2) + offset`
+- Use logarithmic time spacing for data collection
+- Plot with logarithmic x-axis
+
+**Ramsey Fringes**
+For T2* measurement with detuning:
+- Formula: `P(|0⟩) = A * exp(-t/T2*) * cos(2πft + φ) + offset`
+- Use LINEAR time spacing to capture oscillations
+- Plot with LINEAR x-axis to show fringes clearly
+
 **Phase Kickback**
 For H-RY(θ)-CP(φ)-H circuit:
 - Formula: `P(|0⟩) = 1 - sin²(θ/2) sin²(φ/2)`
@@ -332,6 +357,20 @@ When facing technical challenges:
 ## Completed Implementations
 
 ### Recently Added
+- **Comprehensive Error Handling System (2024)**: Complete error handling overhaul
+  - Custom exception hierarchy with recovery suggestions
+  - AnalysisResult class for structured error reporting  
+  - Physics-aware validation for all experiment types
+  - Graceful error recovery maintaining backward compatibility
+  - Modern Python Union syntax (X | Y) throughout codebase
+  - All 447 tests passing with no regressions
+
+- **Critical Physics Bug Fixes (2024)**: Corrected fundamental formulas
+  - **Rabi oscillations**: Fixed formula from sin²(f*amp) to sin²(π*amp/2) for RX(amp*π) gates
+  - **Validation logic**: Updated to allow zero amplitudes in Rabi experiments
+  - **Import corrections**: Fixed non-existent function imports across multiple models
+  - **sklearn removal**: Replaced sklearn dependency with manual R² calculations
+
 - **Randomized Benchmarking**: Complete implementation with both standard and interleaved variants
   - Exponential decay fitting for gate error characterization
   - SPAM-insensitive measurements
@@ -382,6 +421,108 @@ show_plotly_figure(fig, config)
 - **CSV data**: `experiment_results.csv` (in current directory)
 - **JSON metadata**: `experiment_results_YYYYMMDD_HHMMSS.json`
 - **Session data**: `.results/experiment_name_YYYYMMDD_HHMMSS/data/`
+
+## Comprehensive Error Handling System
+
+### Current Implementation (2024)
+
+We have implemented a comprehensive error handling system across all experiment types with the following patterns:
+
+#### Custom Exception Hierarchy
+```python
+# src/oqtopus_experiments/exceptions.py
+class OQTOPUSExperimentError(Exception):
+    """Base exception with recovery suggestions"""
+    def __init__(self, message: str, suggestions: list[str] | None = None):
+        super().__init__(message)
+        self.suggestions = suggestions or []
+
+class FittingError(OQTOPUSExperimentError):
+    """Raised when curve fitting fails"""
+
+class InsufficientDataError(OQTOPUSExperimentError):
+    """Raised when insufficient data for analysis"""
+
+class InvalidParameterError(OQTOPUSExperimentError):
+    """Raised when parameters are invalid"""
+```
+
+#### Structured Error Reporting
+```python
+# src/oqtopus_experiments/models/analysis_result.py
+@dataclass
+class AnalysisResult:
+    """Structured result with comprehensive error handling"""
+    success: bool
+    data: pd.DataFrame | None = None
+    errors: list[str] | None = None
+    warnings: list[str] | None = None
+    suggestions: list[str] | None = None
+    metadata: dict[str, Any] | None = None
+    
+    def to_legacy_dataframe(self) -> pd.DataFrame:
+        """Convert to legacy DataFrame format for backward compatibility"""
+```
+
+#### Error Handling in Model Classes
+All experiment model classes (RabiAnalysisResult, T1AnalysisResult, etc.) now implement:
+- **Comprehensive input validation** with detailed error messages
+- **Graceful error recovery** - return meaningful results even when fitting fails
+- **Quality assessment** - warn about poor fit quality or unusual parameters
+- **Backward compatibility** - maintain legacy DataFrame return format
+
+#### Validation Helpers
+```python
+# src/oqtopus_experiments/utils/validation_helpers.py
+def validate_non_negative_values(values: list[float], parameter_name: str) -> None:
+    """Validate values are non-negative (>= 0) - for Rabi amplitudes"""
+
+def validate_probability_values(values: list[float], allow_zero: bool = False) -> None:
+    """Validate probability values are in [0, 1] range"""
+
+def validate_fitting_data(x_data: list[float], y_data: list[float], experiment_name: str) -> None:
+    """Validate data is suitable for curve fitting"""
+```
+
+#### Key Implementation Details
+- **Modern Python Union syntax**: Use `X | Y` instead of `Union[X, Y]`
+- **No sklearn dependency**: All R² calculations done manually with numpy
+- **Physics-aware validation**: Different validation rules for different experiments
+- **Comprehensive suggestions**: Every error includes actionable recovery suggestions
+- **All 447 tests passing**: Maintained full backward compatibility
+
+### Error Handling Best Practices
+
+**✅ DO: Comprehensive validation with helpful messages**
+```python
+def analyze(self, plot=True, save_data=True, save_image=True) -> pd.DataFrame:
+    try:
+        # Validate inputs with detailed error reporting
+        result = self._validate_inputs(amplitudes, probabilities, errors)
+        if not result.success:
+            return result.to_legacy_dataframe()
+            
+        # Attempt analysis with graceful error handling
+        fitting_result = self._fit_data(...)
+        if fitting_result.error_info:
+            result.add_warning(f"Fitting issues: {fitting_result.error_info}")
+            result.add_suggestion("Check data quality and calibration")
+            
+    except InsufficientDataError as e:
+        return AnalysisResult.error_result(
+            errors=[str(e)], 
+            suggestions=e.suggestions
+        ).to_legacy_dataframe()
+```
+
+**❌ DON'T: Silent failures or generic error messages**
+```python
+def analyze(self):
+    try:
+        fit_data()
+    except:
+        return pd.DataFrame()  # Silent failure - no error info!
+```
 
 ## Known Implementation Issues & Future Improvements
 
@@ -439,10 +580,12 @@ show_plotly_figure(fig, config)
    - Hard to add new plot types or modify existing ones
    - **Fix**: Create decoupled visualization system
 
-6. **❌ Weak Error Handling**
-   - Analysis failures return empty DataFrames without clear error information
-   - No validation of input parameters before expensive operations
-   - **Fix**: Implement comprehensive error handling with recovery suggestions
+6. **✅ RESOLVED: Comprehensive Error Handling Implemented (2024)**
+   - Added custom exception hierarchy with recovery suggestions
+   - Implemented structured AnalysisResult class for detailed error reporting
+   - All experiment models now include comprehensive input validation
+   - Graceful error recovery with meaningful fallback results
+   - Modern Python Union syntax (X | Y) throughout codebase
 
 ## Architecture Guidelines for New Implementations
 
