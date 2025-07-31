@@ -87,7 +87,7 @@ class RandomizedBenchmarkingResult(ExperimentResult):
         save_image: bool = True,
     ) -> pd.DataFrame:
         """
-        Analyze Randomized Benchmarking results with exponential decay fitting
+        Analyze Randomized Benchmarking results with comprehensive error handling
 
         Args:
             plot: Whether to generate plots using plot_settings.md guidelines
@@ -99,8 +99,12 @@ class RandomizedBenchmarkingResult(ExperimentResult):
 
         Note:
             Data saving is handled by experiment classes via data manager.
-            This method only performs pure data analysis and visualization.
+            This method performs data analysis with comprehensive error handling
+            and validation to provide helpful feedback when issues occur.
         """
+        from ..exceptions import FittingError, InsufficientDataError
+        from ..models.analysis_result import AnalysisResult
+
         try:
             # Extract measurement data
             data = self.data
@@ -108,9 +112,14 @@ class RandomizedBenchmarkingResult(ExperimentResult):
             mean_probs = data.mean_survival_probabilities
             std_probs = data.std_survival_probabilities
 
+            # Comprehensive input validation
+            result = self._validate_rb_inputs(lengths, mean_probs, std_probs)
+            if not result.success:
+                return result.to_legacy_dataframe()
+
             # Check if we have enough data for fitting
             if len(lengths) < 2:
-                # Not enough data points for fitting
+                # Create result with insufficient data
                 fitting_result = RandomizedBenchmarkingFittingResult(
                     error_per_clifford=0.0,
                     decay_rate=1.0,
@@ -121,23 +130,58 @@ class RandomizedBenchmarkingResult(ExperimentResult):
                     survival_probabilities=mean_probs,
                     error_info="Insufficient data points for fitting (need at least 2)",
                 )
-            else:
-                # Fit decay curve: P(m) = A * r^m + B
-                fitting_result = self._fit_exponential_decay(
-                    lengths, mean_probs, std_probs
+                result.add_warning("Insufficient data for curve fitting")
+                result.add_suggestion(
+                    "Collect more sequence lengths for reliable fitting"
                 )
+            else:
+                # Attempt curve fitting with detailed error handling
+                try:
+                    fitting_result = self._fit_exponential_decay(
+                        lengths, mean_probs, std_probs
+                    )
+                    if fitting_result.error_info:
+                        result.add_warning(
+                            f"Fitting issues: {fitting_result.error_info}"
+                        )
+                        result.add_suggestion(
+                            "Check data quality and try different fitting parameters"
+                        )
+                except Exception as e:
+                    # Create failed fitting result
+                    fitting_result = RandomizedBenchmarkingFittingResult(
+                        error_per_clifford=0.0,
+                        decay_rate=1.0,
+                        initial_fidelity=1.0,
+                        offset=0.0,
+                        r_squared=0.0,
+                        sequence_lengths=lengths,
+                        survival_probabilities=mean_probs,
+                        error_info=f"Fitting failed: {str(e)}",
+                    )
+                    result.add_error(f"Curve fitting failed: {str(e)}")
+                    result.add_suggestion(
+                        "Check if data follows expected exponential decay pattern"
+                    )
+                    result.add_suggestion("Verify measurement data quality")
 
-            # Create DataFrame
+            # Create DataFrame with comprehensive data
             df_data = []
             for i, length in enumerate(lengths):
-                df_data.append(
-                    {
-                        "sequence_length": length,
-                        "mean_survival_probability": mean_probs[i],
-                        "std_survival_probability": std_probs[i],
-                        "num_samples": data.num_samples,
-                    }
-                )
+                row_data = {
+                    "sequence_length": length,
+                    "mean_survival_probability": mean_probs[i],
+                    "std_survival_probability": std_probs[i],
+                    "num_samples": data.num_samples,
+                }
+
+                # Add quality indicators
+                if std_probs[i] > mean_probs[i]:
+                    result.add_warning(
+                        f"High uncertainty at length {length}: std={std_probs[i]:.3f} > mean={mean_probs[i]:.3f}"
+                    )
+
+                df_data.append(row_data)
 
             df = pd.DataFrame(df_data)
 
@@ -150,26 +194,125 @@ class RandomizedBenchmarkingResult(ExperimentResult):
                     fitting_result.offset,
                 )
 
+                # Validate fitting quality
+                self._validate_fitting_quality(fitting_result, result)
+
             # Store fitting result
             self.data.fitting_result = fitting_result
 
-            # Generate plots following plot_settings.md
+            # Generate plots with error handling
             if plot:
-                self._plot_rb_results(df, fitting_result, save_image, plot)
+                try:
+                    self._plot_rb_results(df, fitting_result, save_image, plot)
+                except Exception as e:
+                    result.add_warning(f"Plotting failed: {str(e)}")
+                    result.add_suggestion("Check plotting dependencies and data format")
 
-            # Note: Data saving removed from model class - handled by experiment classes
-            # via BaseExperiment.save_experiment_data() method
+            # Update result with successful data
+            result.data = df
+            result.metadata = {
+                "experiment_type": "randomized_benchmarking",
+                "num_sequences": len(lengths),
+                "fitting_successful": not bool(fitting_result.error_info),
+                "error_per_clifford": fitting_result.error_per_clifford,
+                "r_squared": fitting_result.r_squared,
+            }
 
-            return df
+            # Return legacy DataFrame format for backward compatibility
+            return result.to_legacy_dataframe()
+
+        except InsufficientDataError as e:
+            result = AnalysisResult.error_result(
+                errors=[str(e)],
+                suggestions=e.suggestions,
+                metadata={"experiment_type": "randomized_benchmarking"},
+            )
+            return result.to_legacy_dataframe()
+
+        except FittingError as e:
+            result = AnalysisResult.error_result(
+                errors=[str(e)],
+                suggestions=e.suggestions,
+                metadata={"experiment_type": "randomized_benchmarking"},
+            )
+            return result.to_legacy_dataframe()
 
         except Exception as e:
-            print(f"Analysis failed: {e}")
-            # Return DataFrame with error info
-            return pd.DataFrame(
-                {
-                    "sequence_length": data.sequence_lengths,
-                    "error": [str(e)] * len(data.sequence_lengths),
-                }
+            # Fallback for unexpected errors
+            result = AnalysisResult.error_result(
+                errors=[f"Unexpected analysis error: {str(e)}"],
+                suggestions=[
+                    "Check input data format and types",
+                    "Verify all required dependencies are installed",
+                    "Report this error if it persists",
+                ],
+                metadata={"experiment_type": "randomized_benchmarking"},
+            )
+            return result.to_legacy_dataframe()
+
+    def _validate_rb_inputs(self, lengths, mean_probs, std_probs):
+        """Validate Randomized Benchmarking input data"""
+        from ..models.analysis_result import AnalysisResult
+        from ..utils.validation_helpers import (
+            validate_fitting_data,
+            validate_probability_values,
+            validate_sequence_lengths,
+        )
+
+        result = AnalysisResult.success_result(data=pd.DataFrame())
+
+        try:
+            # Validate sequence lengths
+            validate_sequence_lengths(lengths)
+
+            # Validate probabilities
+            validate_probability_values(mean_probs)
+            validate_probability_values(std_probs, allow_zero=True)
+
+            # Validate data consistency
+            if len(lengths) != len(mean_probs) or len(lengths) != len(std_probs):
+                result.add_error(
+                    "Data length mismatch between lengths, means, and standard deviations"
+                )
+                result.add_suggestion("Check data collection and processing pipeline")
+                return result
+
+            # Validate fitting data if enough points
+            if len(lengths) >= 3:
+                validate_fitting_data(lengths, mean_probs, "Randomized Benchmarking")
+
+        except Exception as e:
+            result.add_error(str(e))
+            if hasattr(e, "suggestions"):
+                result.suggestions.extend(e.suggestions)
+
+        return result
+
+    def _validate_fitting_quality(self, fitting_result, analysis_result):
+        """Validate quality of exponential decay fitting"""
+        # Check R-squared
+        if fitting_result.r_squared < 0.8:
+            analysis_result.add_warning(
+                f"Poor fit quality: R² = {fitting_result.r_squared:.3f}"
+            )
+            analysis_result.add_suggestion(
+                "Consider collecting more data points or checking for systematic errors"
+            )
+
+        # Check error rate reasonableness
+        if fitting_result.error_per_clifford > 0.1:
+            analysis_result.add_warning(
+                f"High error rate: {fitting_result.error_per_clifford:.3f} per Clifford"
+            )
+            analysis_result.add_suggestion("Check device calibration and noise levels")
+
+        # Check decay rate bounds
+        if fitting_result.decay_rate > 1.0:
+            analysis_result.add_warning(
+                f"Unphysical decay rate: r = {fitting_result.decay_rate:.3f} > 1"
+            )
+            analysis_result.add_suggestion(
+                "Check fitting bounds and initial conditions"
             )
 
     def _rb_decay_function(

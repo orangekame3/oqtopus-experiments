@@ -13,6 +13,7 @@ from ..core.base_experiment import BaseExperiment
 from ..models.hadamard_test_models import (
     HadamardTestAnalysisResult,
     HadamardTestCircuitParams,
+    HadamardTestData,
     HadamardTestFittingResult,
     HadamardTestParameters,
 )
@@ -118,32 +119,28 @@ class HadamardTest(BaseExperiment):
         if not fitting_result:
             return pd.DataFrame()
 
-        # Get device name from results
-        device_name = "unknown"
-        if all_results:
-            device_name = all_results[0].get("backend", "unknown")
-
-        # Create DataFrame
-        df = self._create_dataframe(fitting_result, device_name)
-
-        # Create analysis result
-        analysis_result = HadamardTestAnalysisResult(
+        # Create HadamardTestData for new analysis system
+        hadamard_data = HadamardTestData(
+            angles=fitting_result.angles,
+            probabilities=fitting_result.probabilities,
+            probability_errors=[0.02]
+            * len(fitting_result.probabilities),  # Default error
+            test_unitary=self.test_unitary,  # Add required test_unitary field
+            shots_per_point=1000,  # Default shots
             fitting_result=fitting_result,
-            dataframe=df,
-            metadata={
-                "experiment_type": "hadamard_test",
-                "physical_qubit": self.physical_qubit,
-                "test_unitary": self.test_unitary,
-            },
         )
 
-        # Optional actions
-        if plot:
-            self._create_plot(analysis_result, save_image)
-        if save_data:
-            self._save_results(analysis_result)
+        # Create analysis result with new pattern
+        analysis_result = HadamardTestAnalysisResult(
+            data=hadamard_data,
+            raw_results=results,
+            experiment_instance=self,
+        )
 
-        return df
+        # Analysis handled by HadamardTestAnalysisResult class
+        return analysis_result.analyze(
+            plot=plot, save_data=save_data, save_image=save_image
+        )
 
     def circuits(self, **kwargs: Any) -> list["QuantumCircuit"]:
         """Generate Hadamard Test circuits with optimal initial state preparation

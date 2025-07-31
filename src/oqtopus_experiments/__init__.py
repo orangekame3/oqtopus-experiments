@@ -13,6 +13,16 @@ from .core import BaseExperiment, ExperimentDataManager
 # Device information
 from .devices import DeviceInfo
 
+# Exception classes
+from .exceptions import (
+    AnalysisError,
+    DataQualityError,
+    FittingError,
+    InsufficientDataError,
+    InvalidParameterError,
+    OQTOPUSExperimentError,
+)
+
 # Experiments
 from .experiments import (
     CHSH,
@@ -41,4 +51,11 @@ __all__ = [
     "OqtopusBackend",
     "DeviceInfo",
     "ExperimentDataManager",
+    # Exception classes
+    "OQTOPUSExperimentError",
+    "AnalysisError",
+    "InsufficientDataError",
+    "FittingError",
+    "InvalidParameterError",
+    "DataQualityError",
 ]

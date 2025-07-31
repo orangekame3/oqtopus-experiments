@@ -14,6 +14,7 @@ from ..core.base_experiment import BaseExperiment
 from ..models.t1_models import (
     T1AnalysisResult,
     T1CircuitParams,
+    T1Data,
     T1FittingResult,
     T1Parameters,
 )
@@ -71,29 +72,27 @@ class T1(BaseExperiment):
         if not fitting_result:
             return pd.DataFrame()
 
-        # Get device name from results
-        device_name = "unknown"
-        if all_results:
-            # Get device name from first result's backend field
-            device_name = all_results[0].get("backend", "unknown")
-
-        # Create DataFrame
-        df = self._create_dataframe(fitting_result, device_name)
-
-        # Create analysis result
-        analysis_result = T1AnalysisResult(
+        # Create T1Data for new analysis system
+        t1_data = T1Data(
+            delay_times=fitting_result.delay_times,
+            probabilities=fitting_result.probabilities,
+            probability_errors=[0.02]
+            * len(fitting_result.probabilities),  # Default error
+            shots_per_point=1000,  # Default shots
             fitting_result=fitting_result,
-            dataframe=df,
-            metadata={"experiment_type": "t1", "physical_qubit": self.physical_qubit},
         )
 
-        # Optional actions
-        if plot:
-            self._create_plot(analysis_result, save_image)
-        if save_data:
-            self._save_results(analysis_result)
+        # Create analysis result with new pattern
+        analysis_result = T1AnalysisResult(
+            data=t1_data,
+            raw_results=results,
+            experiment_instance=self,
+        )
 
-        return df
+        # Analysis handled by T1AnalysisResult class
+        return analysis_result.analyze(
+            plot=plot, save_data=save_data, save_image=save_image
+        )
 
     def circuits(self, **kwargs: Any) -> list["QuantumCircuit"]:
         """Generate T1 circuits with automatic transpilation"""
@@ -272,140 +271,6 @@ class T1(BaseExperiment):
                 }
             )
         return pd.DataFrame(df_data) if df_data else pd.DataFrame()
-
-    def _create_plot(self, analysis_result: T1AnalysisResult, save_image: bool = False):
-        """Create visualization using utilities"""
-        try:
-            import plotly.graph_objects as go
-
-            from ..utils.visualization import (
-                apply_experiment_layout,
-                get_experiment_colors,
-                get_plotly_config,
-                save_plotly_figure,
-                setup_plotly_environment,
-                show_plotly_figure,
-            )
-
-            setup_plotly_environment()
-            colors = get_experiment_colors()
-            fig = go.Figure()
-
-            df = analysis_result.dataframe
-            result = analysis_result.fitting_result
-
-            # Get device name from dataframe or use fallback
-            device_name = "unknown"
-            if not df.empty and "device" in df.columns:
-                device_name = df["device"].iloc[0]
-            elif hasattr(self, "_last_backend_device"):
-                device_name = self._last_backend_device
-
-            # Data points
-            fig.add_trace(
-                go.Scatter(
-                    x=df["delay_time"],
-                    y=df["probability"],
-                    mode="markers",
-                    name="Data",
-                    marker={
-                        "size": 7,
-                        "color": colors[1],
-                        "line": {"width": 1, "color": "white"},
-                    },
-                )
-            )
-
-            # Fit curve
-            if not result.error_info:
-                x_fine = np.linspace(
-                    df["delay_time"].min(), df["delay_time"].max(), 200
-                )
-                y_fine = (
-                    result.amplitude * np.exp(-x_fine / result.t1_time) + result.offset
-                )
-
-                fig.add_trace(
-                    go.Scatter(
-                        x=x_fine,
-                        y=y_fine,
-                        mode="lines",
-                        name="Fit",
-                        line={"width": 3, "color": colors[0]},
-                    )
-                )
-
-            # Apply layout
-            apply_experiment_layout(
-                fig,
-                title=f"T1 decay : Q{self.physical_qubit} ({device_name})",
-                xaxis_title="Delay time (ns)",
-                yaxis_title="P(|1⟩)",
-                height=400,
-                width=700,
-            )
-            fig.update_yaxes(range=[0, 1.05])  # Add 5% padding at top
-            fig.update_xaxes(type="log")  # Use logarithmic scale for delay time
-
-            # Add annotations for key parameters
-            if not result.error_info:
-                # Add T1 time annotation
-                fig.add_annotation(
-                    x=0.98,
-                    y=0.02,
-                    text=f"Device: {device_name}<br>T₁ = {result.t1_time:.1f} ns ({result.t1_time / 1000:.2f} μs)<br>R² = {result.r_squared:.3f}",
-                    xref="paper",
-                    yref="paper",
-                    showarrow=False,
-                    font={"size": 10, "color": "#666666"},
-                    bgcolor="rgba(255,255,255,0.9)",
-                    bordercolor="#CCCCCC",
-                    borderwidth=1,
-                    align="right",
-                )
-
-            # Save and show
-            if save_image:
-                images_dir = (
-                    getattr(self.data_manager, "session_dir", "./images") + "/plots"
-                )
-                save_plotly_figure(
-                    fig,
-                    name=f"t1_{self.physical_qubit}",
-                    images_dir=images_dir,
-                    width=700,
-                    height=400,
-                )
-
-            config = get_plotly_config(
-                f"t1_Q{self.physical_qubit}", width=700, height=400
-            )
-            show_plotly_figure(fig, config)
-
-        except ImportError:
-            print("plotly not available, skipping plot")
-        except Exception as e:
-            print(f"Plot creation failed: {e}")
-
-    def _save_results(self, analysis_result: T1AnalysisResult):
-        """Save analysis results"""
-        try:
-            result = analysis_result.fitting_result
-            saved_path = self.save_experiment_data(
-                analysis_result.dataframe.to_dict(orient="records"),
-                metadata={
-                    "fitting_summary": {
-                        "t1_time": result.t1_time,
-                        "amplitude": result.amplitude,
-                        "r_squared": result.r_squared,
-                    },
-                    **analysis_result.metadata,
-                },
-                experiment_type="t1",
-            )
-            print(f"Analysis data saved to: {saved_path}")
-        except Exception as e:
-            print(f"Warning: Could not save analysis data: {e}")
 
     def _get_circuit_params(self) -> list[dict[str, Any]] | None:
         """Get circuit parameters for OQTOPUS"""

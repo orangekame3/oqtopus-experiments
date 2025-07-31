@@ -9,12 +9,12 @@ import numpy as np
 import pandas as pd
 from qiskit import QuantumCircuit
 from scipy.optimize import curve_fit
-from scipy.signal import find_peaks
 
 from ..core.base_experiment import BaseExperiment
 from ..models.rabi_models import (
     RabiAnalysisResult,
     RabiCircuitParams,
+    RabiData,
     RabiFittingResult,
     RabiParameters,
 )
@@ -72,29 +72,27 @@ class Rabi(BaseExperiment):
         if not fitting_result:
             return pd.DataFrame()
 
-        # Get device name from results
-        device_name = "unknown"
-        if all_results:
-            # Get device name from first result's backend field
-            device_name = all_results[0].get("backend", "unknown")
-
-        # Create DataFrame
-        df = self._create_dataframe(fitting_result, device_name)
-
-        # Create analysis result
-        analysis_result = RabiAnalysisResult(
+        # Create RabiData for new analysis system
+        rabi_data = RabiData(
+            amplitudes=fitting_result.amplitudes,
+            probabilities=fitting_result.probabilities,
+            probability_errors=[0.02]
+            * len(fitting_result.probabilities),  # Default error
+            shots_per_point=1000,  # Default shots
             fitting_result=fitting_result,
-            dataframe=df,
-            metadata={"experiment_type": "rabi", "physical_qubit": self.physical_qubit},
         )
 
-        # Optional actions
-        if plot:
-            self._create_plot(analysis_result, save_image)
-        if save_data:
-            self._save_results(analysis_result)
+        # Create analysis result with new pattern
+        analysis_result = RabiAnalysisResult(
+            data=rabi_data,
+            raw_results=results,
+            experiment_instance=self,
+        )
 
-        return df
+        # Analysis handled by RabiAnalysisResult class
+        return analysis_result.analyze(
+            plot=plot, save_data=save_data, save_image=save_image
+        )
 
     def circuits(self, **kwargs: Any) -> list["QuantumCircuit"]:
         """Generate Rabi circuits with automatic transpilation"""
@@ -141,8 +139,11 @@ class Rabi(BaseExperiment):
             if popt is None:
                 return None
 
-            fitted_amplitude, fitted_freq, fitted_offset = popt
-            pi_amplitude = 0.5 / fitted_freq
+            fitted_amplitude, fitted_offset = popt
+            # For sin²(π * amp / 2), π-pulse occurs at amp = 1
+            pi_amplitude = 1.0
+            # Fixed frequency for compatibility
+            fitted_freq = np.pi / 2
             r_squared = self._calculate_r_squared(amplitudes, probabilities, popt)
 
             return RabiFittingResult(
@@ -221,30 +222,20 @@ class Rabi(BaseExperiment):
     ) -> np.ndarray | None:
         """Perform Rabi oscillation fitting"""
 
-        def rabi_func(amp, amplitude, frequency, offset):
-            return amplitude * np.sin(np.pi * amp * frequency) ** 2 + offset
+        def rabi_func(amp, amplitude, offset):
+            return amplitude * np.sin(np.pi * amp / 2) ** 2 + offset
 
-        # Estimate initial parameters
-        amplitude_guess = np.max(probabilities) - np.min(probabilities)
-        offset_guess = np.min(probabilities)
-
-        # Estimate frequency from peaks
-        threshold = offset_guess + 0.6 * amplitude_guess
-        peaks, _ = find_peaks(probabilities, height=threshold, distance=2)
-
-        if len(peaks) >= 2:
-            peak_amps = amplitudes[peaks]
-            frequency_guess = 1.0 / np.mean(np.diff(peak_amps))
-        else:
-            frequency_guess = 0.75
+        # Estimate initial parameters for correct Rabi function
+        amplitude_guess = 1.0  # Full Rabi oscillation amplitude
+        offset_guess = 0.0  # Ground state baseline
 
         try:
             popt, _ = curve_fit(
                 rabi_func,
                 amplitudes,
                 probabilities,
-                p0=[amplitude_guess, frequency_guess, offset_guess],
-                bounds=([0, 0.1, 0], [1, 5, 1]),
+                p0=[amplitude_guess, offset_guess],
+                bounds=([0, 0], [1, 0.2]),  # Physical bounds
                 maxfev=2000,
             )
             return popt  # type: ignore
@@ -256,8 +247,8 @@ class Rabi(BaseExperiment):
     ) -> float:
         """Calculate R-squared for fit quality"""
 
-        def rabi_func(amp, amplitude, frequency, offset):
-            return amplitude * np.sin(np.pi * amp * frequency) ** 2 + offset
+        def rabi_func(amp, amplitude, offset):
+            return amplitude * np.sin(np.pi * amp / 2) ** 2 + offset
 
         y_pred = rabi_func(amplitudes, *popt)
         ss_res = np.sum((probabilities - y_pred) ** 2)
@@ -283,167 +274,6 @@ class Rabi(BaseExperiment):
                 }
             )
         return pd.DataFrame(df_data) if df_data else pd.DataFrame()
-
-    def _create_plot(
-        self, analysis_result: RabiAnalysisResult, save_image: bool = False
-    ):
-        """Create visualization using utilities"""
-        try:
-            import plotly.graph_objects as go
-
-            from ..utils.visualization import (
-                apply_experiment_layout,
-                get_experiment_colors,
-                get_plotly_config,
-                save_plotly_figure,
-                setup_plotly_environment,
-                show_plotly_figure,
-            )
-
-            setup_plotly_environment()
-            colors = get_experiment_colors()
-            fig = go.Figure()
-
-            df = analysis_result.dataframe
-            result = analysis_result.fitting_result
-
-            # Get device name from dataframe or use fallback
-            device_name = "unknown"
-            if not df.empty and "device" in df.columns:
-                device_name = df["device"].iloc[0]
-            elif hasattr(self, "_last_backend_device"):
-                device_name = self._last_backend_device
-
-            # Data points
-            fig.add_trace(
-                go.Scatter(
-                    x=df["amplitude"],
-                    y=df["probability"],
-                    mode="markers",
-                    name="Data",
-                    marker={
-                        "size": 7,
-                        "color": colors[1],
-                        "line": {"width": 1, "color": "white"},
-                    },
-                )
-            )
-
-            # Fit curve
-            if not result.error_info:
-                x_fine = np.linspace(df["amplitude"].min(), df["amplitude"].max(), 200)
-                y_fine = (
-                    result.fit_amplitude
-                    * np.sin(np.pi * x_fine * result.frequency) ** 2
-                    + result.offset
-                )
-
-                fig.add_trace(
-                    go.Scatter(
-                        x=x_fine,
-                        y=y_fine,
-                        mode="lines",
-                        name="Fit",
-                        line={"width": 3, "color": colors[0]},
-                    )
-                )
-
-            # Apply layout
-            apply_experiment_layout(
-                fig,
-                title=f"Rabi oscillation : Q{self.physical_qubit} ({device_name})",
-                xaxis_title="Drive amplitude (arb. unit)",
-                yaxis_title="P(|1⟩)",
-                height=400,
-                width=700,
-            )
-            fig.update_yaxes(range=[0, 1.05])  # Add 5% padding at top
-
-            # Add vertical line at π-pulse amplitude
-            if not result.error_info and result.pi_amplitude <= df["amplitude"].max():
-                fig.add_vline(
-                    x=result.pi_amplitude,
-                    line_dash="dash",
-                    line_color=colors[2],
-                    line_width=1.5,
-                    opacity=0.6,
-                )
-
-            # Add annotations for key parameters
-            if not result.error_info:
-                # Add π-pulse amplitude annotation
-                fig.add_annotation(
-                    x=result.pi_amplitude,
-                    y=0.95,
-                    text=f"π-pulse: {result.pi_amplitude:.3f}",
-                    showarrow=True,
-                    arrowhead=2,
-                    arrowsize=1,
-                    arrowwidth=2,
-                    arrowcolor=colors[2],
-                    font={"size": 11, "color": colors[2]},
-                    bgcolor="rgba(255,255,255,0.8)",
-                    bordercolor=colors[2],
-                    borderwidth=1,
-                )
-
-                # Add fit quality annotation
-                fig.add_annotation(
-                    x=0.98,
-                    y=0.02,
-                    text=f"Device: {device_name}<br>R² = {result.r_squared:.3f}<br>f = {result.frequency:.3f}",
-                    xref="paper",
-                    yref="paper",
-                    showarrow=False,
-                    font={"size": 10, "color": "#666666"},
-                    bgcolor="rgba(255,255,255,0.9)",
-                    bordercolor="#CCCCCC",
-                    borderwidth=1,
-                    align="right",
-                )
-
-            # Save and show
-            if save_image:
-                images_dir = (
-                    getattr(self.data_manager, "session_dir", "./images") + "/plots"
-                )
-                save_plotly_figure(
-                    fig,
-                    name=f"rabi_{self.physical_qubit}",
-                    images_dir=images_dir,
-                    width=700,
-                    height=400,
-                )
-
-            config = get_plotly_config(
-                f"rabi_Q{self.physical_qubit}", width=700, height=400
-            )
-            show_plotly_figure(fig, config)
-
-        except ImportError:
-            print("plotly not available, skipping plot")
-        except Exception as e:
-            print(f"Plot creation failed: {e}")
-
-    def _save_results(self, analysis_result: RabiAnalysisResult):
-        """Save analysis results"""
-        try:
-            result = analysis_result.fitting_result
-            saved_path = self.save_experiment_data(
-                analysis_result.dataframe.to_dict(orient="records"),
-                metadata={
-                    "fitting_summary": {
-                        "pi_amplitude": result.pi_amplitude,
-                        "frequency": result.frequency,
-                        "r_squared": result.r_squared,
-                    },
-                    **analysis_result.metadata,
-                },
-                experiment_type="rabi",
-            )
-            print(f"Analysis data saved to: {saved_path}")
-        except Exception as e:
-            print(f"Warning: Could not save analysis data: {e}")
 
     def _get_circuit_params(self) -> list[dict[str, Any]] | None:
         """Get circuit parameters for OQTOPUS"""
