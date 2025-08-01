@@ -202,8 +202,8 @@ class OqtopusBackend:
                                     "backend": "oqtopus",
                                     "params": params,
                                 }
-                        except Exception:
-                            pass
+                        except Exception as e:
+                            print(f"Failed to get result for status {status}: {e}")
 
                         print(f"Unknown job status: {status}")
                         time.sleep(5)
@@ -760,8 +760,10 @@ class OqtopusBackend:
                                             "status": "success",
                                             "params": params,
                                         }
-                                except Exception:
-                                    pass
+                                except Exception as e:
+                                    print(
+                                        f"Failed to get result for job {job_id[:8]}: {e}"
+                                    )
 
                                 if attempt < max_retries - 1:
                                     print(

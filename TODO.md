@@ -12,6 +12,9 @@
 - [x] **Hadamard Test** - Hadamardテスト実験
 - [x] **Randomized Benchmarking** - Cliffordゲートの平均エラー率測定
 - [x] **Interleaved Randomized Benchmarking** - 特定ゲートのエラー率分離評価
+- [x] **Deutsch-Jozsa Algorithm** - 小規模アルゴリズムベンチマーク
+- [x] **Grover Algorithm** - 量子探索アルゴリズム
+- [x] **Bernstein-Vazirani Algorithm** - 隠れビット列の量子アルゴリズム
 
 ## 追加実装予定の実験
 
@@ -70,33 +73,30 @@
 - **目的**: QFTとその逆変換の実行検証
 - **用途**: 多数の制御位相ゲートの累積キャリブレーション誤差検出
 
-#### 9. Deutsch-Jozsa Algorithm
-- **目的**: 小規模アルゴリズムベンチマーク
-- **用途**: 多量子ビット並列性、オラクル合成、回路深度チェック
 
 ### 低優先度：特殊用途・研究向け
 
-#### 10. Quantum Volume
+#### 9. Quantum Volume
 - **目的**: IBM標準のランダム回路性能指標
 - **用途**: n量子ビット、n深度回路の実行能力評価
 
-#### 11. Cross-Entropy Benchmarking (XEB)
+#### 10. Cross-Entropy Benchmarking (XEB)
 - **目的**: 疑似ランダム回路の出力確率分布比較
 - **用途**: Clifford空間を超えた多量子ビット忠実度測定
 
-#### 12. Mermin-GHZ Test
+#### 11. Mermin-GHZ Test
 - **目的**: 3量子ビット以上のベル不等式拡張
 - **用途**: 多体量子もつれと非局所性の検証
 
-#### 13. Gate-Set Tomography (GST)
+#### 12. Gate-Set Tomography (GST)
 - **目的**: 状態準備・測定・ゲートセットの自己整合的キャラクタリゼーション
 - **用途**: QPTの拡張、完璧でない仮定なしの評価
 
-#### 14. Leakage & Seepage Measurement
+#### 13. Leakage & Seepage Measurement
 - **目的**: 計算部分空間からの漏れ（leakage）と戻り（seepage）の定量化
 - **用途**: 超伝導・イオントラップ量子ビット向け
 
-#### 15. Swap Test / Overlap Estimation
+#### 14. Swap Test / Overlap Estimation
 - **目的**: 補助量子ビットによる状態重複度評価
 - **用途**: VQE回路検証、機械学習カーネル
 
@@ -130,6 +130,6 @@
 4. 段階的に他の実験を追加
 
 ---
-*最終更新: 2025-07-26*  
+*最終更新: 2025-08-01*  
 *RB実装完了により更新*  
 *o3との相談結果に基づく提案*
