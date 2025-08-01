@@ -477,9 +477,3 @@ R²: {fitting_result.r_squared:.4f}"""
             print("Plotly not available. Skipping plot.")
         except Exception as e:
             print(f"Plotting failed: {e}")
-
-    def _save_results(
-        self, df: pd.DataFrame, fitting_result: RandomizedBenchmarkingFittingResult
-    ):
-        """Deprecated method - data saving handled by experiment classes"""
-        pass

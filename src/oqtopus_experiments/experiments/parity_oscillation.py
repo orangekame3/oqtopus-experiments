@@ -627,7 +627,10 @@ class ParityOscillation(BaseExperiment):
         self, results: dict[str, Any], save_plot: bool = True, show_plot: bool = False
     ) -> str | None:
         """
-        Generate parity oscillation experiment plot following quantumlib standards
+        Generate parity oscillation experiment plot (legacy method - deprecated)
+
+        This method is kept for backward compatibility but uses plotly internally.
+        Use analyze() with plot=True instead.
 
         Args:
             results: Complete experiment results
@@ -637,138 +640,12 @@ class ParityOscillation(BaseExperiment):
         Returns:
             Plot file path if saved, None otherwise
         """
-        try:
-            import matplotlib.pyplot as plt
-        except ImportError:
-            print("matplotlib not available - skipping plot generation")
-            return None
-
-        analysis = results.get("analysis", {})
-        if not analysis:
-            print("No analysis results for plotting")
-            return None
-
-        # Get device information for plot labeling
-        device_names = list(analysis.keys())
-        device_name = device_names[0] if device_names else "unknown"
-
-        # Create figure with subplots for different delay times
-        device_data = list(analysis.values())[0]  # Get first device data
-        oscillation_data = device_data.get("parity_oscillations", [])
-
-        if not oscillation_data:
-            print("No parity oscillation data for plotting")
-            return None
-
-        # Group by delay time
-        delay_groups: dict[float, list[Any]] = {}
-        for data in oscillation_data:
-            delay = data["delay_us"]
-            if delay not in delay_groups:
-                delay_groups[delay] = []
-            delay_groups[delay].append(data)
-
-        n_delays = len(delay_groups)
-        if n_delays == 0:
-            return None
-
-        # Create subplots
-        if n_delays == 1:
-            # Single subplot for one delay
-            fig, ax = plt.subplots(figsize=(7, 4))
-            axes = [ax]
-        else:
-            # Multiple subplots
-            fig, axes = plt.subplots(
-                nrows=(n_delays + 1) // 2,
-                ncols=2,
-                figsize=(14, 4 * ((n_delays + 1) // 2)),
-            )
-            if n_delays == 2:
-                axes = axes.flatten()
-            else:
-                axes = axes.flatten()
-
-        # Colors for different qubit counts (matching existing style)
-        colors = ["blue", "red", "green", "orange", "purple"]
-
-        for i, (delay_us, delay_data) in enumerate(delay_groups.items()):
-            ax = axes[i] if n_delays > 1 else axes[0]
-
-            for j, data in enumerate(delay_data):
-                phase_values = np.array(data["phase_values"])
-                parity_values = np.array(data["parity_values"])
-                num_qubits = data["num_qubits"]
-
-                color = colors[j % len(colors)]
-                ax.plot(
-                    phase_values,
-                    parity_values,
-                    "o-",
-                    color=color,
-                    label=f"N={num_qubits}",
-                    linewidth=2,
-                    markersize=6,
-                    alpha=0.8,
-                )
-
-                # Fit line removed for simplicity - show only actual data points
-
-            # Formatting (following existing style)
-            ax.set_xlabel("Phase φ [rad]", fontsize=12)
-            ax.set_ylabel("Parity (P_even - P_odd)", fontsize=12)
-            ax.set_title(
-                f"Parity Oscillations (τ = {delay_us} μs) - {device_name}",
-                fontsize=14,
-                fontweight="bold",
-            )
-            ax.grid(True, alpha=0.3)
-            ax.legend(fontsize=10)
-            ax.set_xlim(0, np.pi)
-
-            # X-axis labels in π units (following existing style)
-            ax.set_xticks([0, np.pi / 4, np.pi / 2, 3 * np.pi / 4, np.pi])
-            ax.set_xticklabels(["0", "π/4", "π/2", "3π/4", "π"])
-
-        # Hide unused subplots
-        for i in range(n_delays, len(axes)):
-            axes[i].set_visible(False)
-
-        # Main title with device information
-        fig.suptitle(
-            f"OQTOPUS Experiments Parity Oscillation (GHZ Decoherence) Experiment - {device_name}",
-            fontsize=16,
-            fontweight="bold",
+        # This is a legacy method - just return None since plotting is handled
+        # by the analyze method with plotly
+        print(
+            "Warning: generate_parityoscillation_plot is deprecated. Use analyze(plot=True) instead."
         )
-
-        plot_filename = None
-        if save_plot:
-            plt.tight_layout()
-            plot_filename = f"parity_oscillation_plot_{device_name}_{self.experiment_name}_{int(time.time())}.png"
-
-            # Save to experiment results directory (following existing pattern)
-            if hasattr(self, "data_manager") and hasattr(
-                self.data_manager, "session_dir"
-            ):
-                plot_path = f"{self.data_manager.session_dir}/plots/{plot_filename}"
-                plt.savefig(plot_path, dpi=300, bbox_inches="tight")
-                print(f"Plot saved: {plot_path}")
-                plot_filename = plot_path  # Return full path
-            else:
-                # Fallback: save in current directory
-                plt.savefig(plot_filename, dpi=300, bbox_inches="tight")
-                print(f"⚠️ Plot saved to current directory: {plot_filename}")
-                print("   (data_manager not available)")
-
-        # Display plot
-        if show_plot:
-            try:
-                plt.show()
-            except Exception:
-                pass
-
-        plt.close()
-        return plot_filename
+        return None
 
     def create_plots(
         self, analysis_results: dict[str, Any], save_dir: str | None = None
@@ -780,15 +657,8 @@ class ParityOscillation(BaseExperiment):
             analysis_results: Results from analyze_results()
             save_dir: Directory to save plots (optional)
         """
-        try:
-            # Use the unified plot generation method
-            self.generate_parityoscillation_plot(
-                {"analysis": analysis_results}, save_plot=True, show_plot=False
-            )
-        except ImportError:
-            print("Cannot create plots: matplotlib not available")
-        except Exception as e:
-            print(f"Plot creation failed: {e}")
+        # This is a legacy method - plotting is now handled by analyze()
+        print("Warning: create_plots is deprecated. Use analyze(plot=True) instead.")
 
     def save_complete_experiment_data(self, results: dict[str, Any]) -> str:
         """
@@ -804,14 +674,9 @@ class ParityOscillation(BaseExperiment):
         # Save main experiment data
         main_file = self.save_experiment_data(results["analysis"])
 
-        # Generate and save plots using unified method
-        try:
-            plot_file = self.generate_parityoscillation_plot(
-                results, save_plot=True, show_plot=False
-            )
-        except Exception as e:
-            print(f"⚠️ Plot generation failed: {e}")
-            plot_file = None
+        # Plotting is now handled by analyze() method with plotly
+        # No need to generate plots separately
+        plot_file = None
 
         # Create experiment summary
         summary = self._create_experiment_summary(results)
