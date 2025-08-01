@@ -133,6 +133,51 @@ class BaseExperiment(ABC):
         """Save experiment summary"""
         return self.data_manager.summary()
 
+    def save_plot_figure(
+        self,
+        figure,
+        experiment_name: str,
+        save_formats: list[str] | None = None,
+    ) -> str | None:
+        """
+        Save plot figure using data manager with unified .results/ organization
+
+        Args:
+            figure: Plotly figure object to save
+            experiment_name: Name of the experiment for filename
+            save_formats: List of formats to save (default: ["png"])
+
+        Returns:
+            Path to saved plot file (primary format) or None if saving failed
+
+        Note:
+            Saves plots to .results/experiment_TIMESTAMP/plots/ directory
+            via data manager for consistent file organization.
+        """
+        if figure is None:
+            return None
+
+        try:
+            from ..utils.visualization import save_plotly_figure
+
+            # Use data manager to get plots directory
+            plots_dir = self.data_manager.get_plots_directory()
+
+            # Default to PNG format
+            if save_formats is None:
+                save_formats = ["png"]
+
+            # Save figure using visualization utility
+            saved_path = save_plotly_figure(
+                figure, name=experiment_name, images_dir=plots_dir, formats=save_formats
+            )
+
+            return saved_path
+
+        except Exception as e:
+            print(f"Warning: Failed to save plot figure: {e}")
+            return None
+
     # Template method: overall experiment flow
     def run(
         self,

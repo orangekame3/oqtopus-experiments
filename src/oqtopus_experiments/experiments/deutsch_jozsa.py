@@ -102,9 +102,21 @@ class DeutschJozsa(BaseExperiment):
 
         # Optional actions
         if plot:
-            self._create_plot(analysis_result, save_image)
+            self._create_plot(analysis_result, save_image=False)
         if save_data:
             self._save_results(analysis_result)
+
+        # Handle plot saving via unified architecture
+        if (
+            save_image
+            and hasattr(analysis_result, "_plot_figure")
+            and analysis_result._plot_figure is not None
+        ):
+            self.save_plot_figure(
+                analysis_result._plot_figure,
+                f"deutsch_jozsa_{self.n_qubits}qubits_{self.oracle_type}",
+                save_formats=["png"],
+            )
 
         return df
 
@@ -310,7 +322,6 @@ class DeutschJozsa(BaseExperiment):
                 apply_experiment_layout,
                 get_experiment_colors,
                 get_plotly_config,
-                save_plotly_figure,
                 setup_plotly_environment,
                 show_plotly_figure,
             )
@@ -464,18 +475,8 @@ class DeutschJozsa(BaseExperiment):
                 annotation_position="right",
             )
 
-            # Save and show
-            if save_image:
-                images_dir = (
-                    getattr(self.data_manager, "session_dir", "./images") + "/plots"
-                )
-                save_plotly_figure(
-                    fig,
-                    name=f"deutsch_jozsa_{self.n_qubits}qubits_{self.oracle_type}",
-                    images_dir=images_dir,
-                    width=1000,
-                    height=500,
-                )
+            # Store figure for experiment class to handle saving
+            analysis_result._plot_figure = fig
 
             config = get_plotly_config(
                 f"deutsch_jozsa_{self.n_qubits}qubits", width=1000, height=500
@@ -486,14 +487,16 @@ class DeutschJozsa(BaseExperiment):
             print(f"Failed to create plot: {e}")
 
     def _save_results(self, analysis_result: DeutschJozsaAnalysisResult):
-        """Save analysis results to CSV file"""
+        """Save analysis results using data manager"""
         try:
-            # Save to CSV using the DataFrame
-            filename = (
-                f"deutsch_jozsa_{self.n_qubits}qubits_{self.oracle_type}_results.csv"
+            # Save to unified data structure via data manager
+            data_dict = analysis_result.dataframe.to_dict(orient="records")
+            metadata = analysis_result.metadata.copy()
+
+            self.save_experiment_data(
+                data_dict, metadata=metadata, experiment_type="deutsch_jozsa"
             )
-            analysis_result.dataframe.to_csv(filename, index=False)
-            print(f"Results saved to {filename}")
+            print(f"Results saved to {self.data_manager.session_dir}")
         except Exception as e:
             print(f"Failed to save results: {e}")
 

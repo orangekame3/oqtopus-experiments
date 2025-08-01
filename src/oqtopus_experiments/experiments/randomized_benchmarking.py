@@ -412,12 +412,24 @@ class RandomizedBenchmarking(BaseExperiment):
                 metadata={"experiment_type": "randomized_benchmarking"},
             )
 
-            # Perform analysis
+            # Perform analysis (models return plot figure in metadata)
             df = rb_result.analyze(
                 plot=plot,
                 save_data=False,
-                save_image=save_image,  # Disable model's direct save
+                save_image=False,  # Don't let model save directly
             )
+
+            # Handle plot saving via experiment class
+            if (
+                save_image
+                and hasattr(rb_result, "_plot_figure")
+                and rb_result._plot_figure is not None
+            ):
+                self.save_plot_figure(
+                    rb_result._plot_figure,
+                    "randomized_benchmarking_decay",
+                    save_formats=["png"],
+                )
 
             # Use standard experiment data saving if requested
             if save_data:

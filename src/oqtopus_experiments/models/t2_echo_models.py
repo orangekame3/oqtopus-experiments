@@ -136,7 +136,9 @@ class T2EchoAnalysisResult(ExperimentResult):
                 # Generate plots if requested
                 if plot:
                     try:
-                        self._create_t2_echo_plot(fitting_result, save_image)
+                        self._plot_figure = self._create_t2_echo_plot(
+                            fitting_result, save_image
+                        )
                     except Exception as e:
                         print(f"Warning: Plot generation failed: {e}")
 
@@ -157,7 +159,11 @@ class T2EchoAnalysisResult(ExperimentResult):
                 result = AnalysisResult(
                     success=True,
                     data=analysis_data,
-                    metadata={"fitting_quality": "good", "error_info": None},
+                    metadata={
+                        "fitting_quality": "good",
+                        "error_info": None,
+                        "plot_figure": getattr(self, "_plot_figure", None),
+                    },
                 )
                 return result.to_legacy_dataframe()
 
@@ -372,7 +378,15 @@ class T2EchoAnalysisResult(ExperimentResult):
     def _create_t2_echo_plot(
         self, fitting_result: T2EchoFittingResult, save_image: bool = True
     ):
-        """Create T2 Echo decay plot following plot_settings.md guidelines"""
+        """
+        Create T2 Echo decay plot following plot_settings.md guidelines
+
+        Note: This method returns the figure object for experiment classes to handle saving.
+        Model classes should not perform I/O operations directly.
+
+        Returns:
+            plotly.graph_objects.Figure: The created figure object
+        """
         try:
             import numpy as np
             import plotly.graph_objects as go
@@ -381,7 +395,6 @@ class T2EchoAnalysisResult(ExperimentResult):
                 apply_experiment_layout,
                 get_experiment_colors,
                 get_plotly_config,
-                save_plotly_figure,
                 setup_plotly_environment,
                 show_plotly_figure,
             )
@@ -464,15 +477,15 @@ class T2EchoAnalysisResult(ExperimentResult):
                 borderwidth=1,
             )
 
-            # Save and show plot
-            if save_image:
-                save_plotly_figure(fig, name="t2_echo_decay", images_dir="./plots")
-
+            # Show plot only - saving handled by experiment classes
             config = get_plotly_config("t2_echo_decay", 1000, 500)
             show_plotly_figure(fig, config)
 
+            return fig
+
         except Exception as e:
             print(f"Warning: T2 Echo plot generation failed: {e}")
+            return None
 
 
 class T2EchoCircuitParams(BaseModel):
