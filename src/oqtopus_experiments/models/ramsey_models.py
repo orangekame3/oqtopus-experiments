@@ -148,8 +148,11 @@ class RamseyAnalysisResult(ExperimentResult):
                 # Generate plots if requested
                 if plot:
                     try:
-                        self._create_ramsey_plot(fitting_result, save_image)
+                        self._plot_figure = self._create_ramsey_plot(
+                            fitting_result, save_image
+                        )
                     except Exception as e:
+                        self._plot_figure = None
                         print(f"Warning: Plot generation failed: {e}")
 
                 # Create successful result
@@ -171,7 +174,11 @@ class RamseyAnalysisResult(ExperimentResult):
                 result = AnalysisResult(
                     success=True,
                     data=analysis_data,
-                    metadata={"fitting_quality": "good", "error_info": None},
+                    metadata={
+                        "fitting_quality": "good",
+                        "error_info": None,
+                        "plot_figure": getattr(self, "_plot_figure", None),
+                    },
                 )
                 return result.to_legacy_dataframe()
 
@@ -423,7 +430,15 @@ class RamseyAnalysisResult(ExperimentResult):
     def _create_ramsey_plot(
         self, fitting_result: RamseyFittingResult, save_image: bool = True
     ):
-        """Create Ramsey fringe plot following plot_settings.md guidelines"""
+        """
+        Create Ramsey fringe plot following plot_settings.md guidelines
+
+        Note: This method returns the figure object for experiment classes to handle saving.
+        Model classes should not perform I/O operations directly.
+
+        Returns:
+            plotly.graph_objects.Figure: The created figure object
+        """
         try:
             import numpy as np
             import plotly.graph_objects as go
@@ -432,7 +447,6 @@ class RamseyAnalysisResult(ExperimentResult):
                 apply_experiment_layout,
                 get_experiment_colors,
                 get_plotly_config,
-                save_plotly_figure,
                 setup_plotly_environment,
                 show_plotly_figure,
             )
@@ -518,15 +532,15 @@ class RamseyAnalysisResult(ExperimentResult):
                 borderwidth=1,
             )
 
-            # Save and show plot
-            if save_image:
-                save_plotly_figure(fig, name="ramsey_fringes", images_dir="./plots")
-
+            # Show plot only - saving handled by experiment classes
             config = get_plotly_config("ramsey_fringes", 1000, 500)
             show_plotly_figure(fig, config)
 
+            return fig
+
         except Exception as e:
             print(f"Warning: Ramsey plot generation failed: {e}")
+            return None
 
 
 class RamseyCircuitParams(BaseModel):

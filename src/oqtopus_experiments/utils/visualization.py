@@ -79,7 +79,8 @@ def save_plotly_figure(
     name: str = "experiment",
     *,
     images_dir: str = "./images",
-    format: str = "png",
+    formats: list[str] | None = None,
+    format: str = "png",  # Legacy parameter for backward compatibility
     width: int = 600,
     height: int = 300,
     scale: int = 3,
@@ -91,44 +92,58 @@ def save_plotly_figure(
         fig: Plotly figure object
         name: Base name for the image file
         images_dir: Directory to save images
-        format: Image format (png, svg, jpeg, webp)
+        formats: List of formats to save (default: ["png"])
+        format: Legacy single format parameter (deprecated, use formats)
         width: Image width in pixels
         height: Image height in pixels
         scale: Scale factor for image resolution
 
     Returns:
-        Path to saved image file, or None if saving failed
+        Path to saved image file (primary format), or None if saving failed
     """
     try:
         # Create images directory if it doesn't exist
         if not os.path.exists(images_dir):
             os.makedirs(images_dir)
 
+        # Handle format parameters (backward compatibility)
+        if formats is None:
+            formats = [format]
+
+        saved_files = []
+
         # Generate unique filename with date and counter
         counter = 1
         current_date = datetime.datetime.now().strftime("%Y%m%d")
-        file_path = os.path.join(
-            images_dir,
-            f"{current_date}_{name}_{counter}.{format}",
-        )
 
-        while os.path.exists(file_path):
-            counter += 1
+        for fmt in formats:
             file_path = os.path.join(
                 images_dir,
-                f"{current_date}_{name}_{counter}.{format}",
+                f"{current_date}_{name}_{counter}.{fmt}",
             )
 
-        # Save the figure
-        fig.write_image(
-            file_path,
-            format=format,
-            width=width,
-            height=height,
-            scale=scale,
-        )
-        print(f"Image saved to {file_path}")
-        return file_path
+            # Find available filename
+            temp_counter = counter
+            while os.path.exists(file_path):
+                temp_counter += 1
+                file_path = os.path.join(
+                    images_dir,
+                    f"{current_date}_{name}_{temp_counter}.{fmt}",
+                )
+
+            # Save the figure
+            fig.write_image(
+                file_path,
+                format=fmt,
+                width=width,
+                height=height,
+                scale=scale,
+            )
+            saved_files.append(file_path)
+            print(f"Image saved to {file_path}")
+
+        # Return primary format path
+        return saved_files[0] if saved_files else None
 
     except Exception as e:
         print(f"Failed to save image: {e}")

@@ -163,10 +163,15 @@ class CHSHExperimentResult(ExperimentResult):
                 # Update data with analysis results
                 self.data.analysis_result = analysis_result
 
+                # Store plot figure for experiment classes
+                self._plot_figure = None
+
                 # Generate plots if requested
                 if plot:
                     try:
-                        self._create_chsh_plot(analysis_result, save_image)
+                        self._plot_figure = self._create_chsh_plot(
+                            analysis_result, save_image
+                        )
                     except Exception as e:
                         print(f"Warning: Plot generation failed: {e}")
 
@@ -203,6 +208,7 @@ class CHSHExperimentResult(ExperimentResult):
                     metadata={
                         "bell_violation": analysis_result.bell_violation,
                         "statistical_significance": f"{analysis_result.significance:.2f}σ",
+                        "plot_figure": getattr(self, "_plot_figure", None),
                     },
                 )
                 return result.to_legacy_dataframe()
@@ -405,14 +411,21 @@ class CHSHExperimentResult(ExperimentResult):
     def _create_chsh_plot(
         self, analysis_result: CHSHAnalysisResult, save_image: bool = True
     ):
-        """Create CHSH analysis plot following plot_settings.md guidelines"""
+        """
+        Create CHSH analysis plot following plot_settings.md guidelines
+
+        Note: This method returns the figure object for experiment classes to handle saving.
+        Model classes should not perform I/O operations directly.
+
+        Returns:
+            plotly.graph_objects.Figure: The created figure object
+        """
         try:
             import plotly.graph_objects as go
 
             from ..utils.visualization import (
                 get_experiment_colors,
                 get_plotly_config,
-                save_plotly_figure,
                 setup_plotly_environment,
                 show_plotly_figure,
             )
@@ -514,15 +527,15 @@ class CHSHExperimentResult(ExperimentResult):
                 borderwidth=1,
             )
 
-            # Save and show plot
-            if save_image:
-                save_plotly_figure(fig, name="chsh_analysis", images_dir="./plots")
-
+            # Show plot only - saving handled by experiment classes
             config = get_plotly_config("chsh_analysis", 1000, 500)
             show_plotly_figure(fig, config)
 
+            return fig
+
         except Exception as e:
             print(f"Warning: CHSH plot generation failed: {e}")
+            return None
 
 
 class CHSHCircuitParams(BaseModel):

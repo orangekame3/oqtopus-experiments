@@ -200,10 +200,17 @@ class RandomizedBenchmarkingResult(ExperimentResult):
             # Store fitting result
             self.data.fitting_result = fitting_result
 
+            # Store plot figure for experiment classes to access
+            self._plot_figure = None
+
             # Generate plots with error handling
             if plot:
                 try:
-                    self._plot_rb_results(df, fitting_result, save_image, plot)
+                    self._plot_figure = self._plot_rb_results(
+                        df, fitting_result, save_image, plot
+                    )
+                    # Store plot figure for experiment classes to handle saving
+                    result.metadata["plot_figure"] = self._plot_figure
                 except Exception as e:
                     result.add_warning(f"Plotting failed: {str(e)}")
                     result.add_suggestion("Check plotting dependencies and data format")
@@ -216,6 +223,7 @@ class RandomizedBenchmarkingResult(ExperimentResult):
                 "fitting_successful": not bool(fitting_result.error_info),
                 "error_per_clifford": fitting_result.error_per_clifford,
                 "r_squared": fitting_result.r_squared,
+                "plot_figure": getattr(self, "_plot_figure", None),
             }
 
             # Return legacy DataFrame format for backward compatibility
@@ -389,7 +397,15 @@ class RandomizedBenchmarkingResult(ExperimentResult):
         save_image: bool = False,
         plot: bool = True,
     ):
-        """Plot RB decay curve following plot_settings.md guidelines"""
+        """
+        Plot RB decay curve following plot_settings.md guidelines
+
+        Note: This method returns the figure object for experiment classes to handle saving.
+        Model classes should not perform I/O operations directly.
+
+        Returns:
+            plotly.graph_objects.Figure: The created figure object
+        """
         try:
             import plotly.graph_objects as go
 
@@ -463,17 +479,18 @@ R²: {fitting_result.r_squared:.4f}"""
                     valign="top",
                 )
 
-            # Show plot - saving handled by experiment classes
-            if save_image:
-                # Plot saving handled by experiment classes via data manager
-                pass
+            # Show plot only - saving handled by experiment classes
+            if plot:
+                config = get_plotly_config(
+                    "randomized_benchmarking", width=1000, height=500
+                )
+                show_plotly_figure(fig, config)
 
-            config = get_plotly_config(
-                "randomized_benchmarking", width=1000, height=500
-            )
-            show_plotly_figure(fig, config)
+            return fig
 
         except ImportError:
             print("Plotly not available. Skipping plot.")
+            return None
         except Exception as e:
             print(f"Plotting failed: {e}")
+            return None

@@ -153,6 +153,15 @@ class ExperimentDataManager:
         """
         return f"{self.session_dir}/data"
 
+    def get_plots_directory(self) -> str:
+        """
+        Get the plots directory path
+
+        Returns:
+            Plots directory path
+        """
+        return f"{self.session_dir}/plots"
+
     def _convert_for_json(self, obj):
         """Helper for JSON conversion"""
         if isinstance(obj, dict):

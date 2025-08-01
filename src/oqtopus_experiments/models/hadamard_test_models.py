@@ -168,8 +168,11 @@ class HadamardTestAnalysisResult(ExperimentResult):
                 # Generate plots if requested
                 if plot:
                     try:
-                        self._create_hadamard_test_plot(fitting_result, save_image)
+                        self._plot_figure = self._create_hadamard_test_plot(
+                            fitting_result, save_image
+                        )
                     except Exception as e:
+                        self._plot_figure = None
                         print(f"Warning: Plot generation failed: {e}")
 
                 # Create successful result
@@ -193,7 +196,11 @@ class HadamardTestAnalysisResult(ExperimentResult):
                 result = AnalysisResult(
                     success=True,
                     data=analysis_data,
-                    metadata={"analysis_quality": "good", "error_info": None},
+                    metadata={
+                        "analysis_quality": "good",
+                        "error_info": None,
+                        "plot_figure": getattr(self, "_plot_figure", None),
+                    },
                 )
                 return result.to_legacy_dataframe()
 
@@ -468,7 +475,15 @@ class HadamardTestAnalysisResult(ExperimentResult):
     def _create_hadamard_test_plot(
         self, fitting_result: HadamardTestFittingResult, save_image: bool = True
     ):
-        """Create Hadamard Test plot following plot_settings.md guidelines"""
+        """
+        Create Hadamard Test plot following plot_settings.md guidelines
+
+        Note: This method returns the figure object for experiment classes to handle saving.
+        Model classes should not perform I/O operations directly.
+
+        Returns:
+            plotly.graph_objects.Figure: The created figure object
+        """
         try:
             import numpy as np
             import plotly.graph_objects as go
@@ -476,7 +491,6 @@ class HadamardTestAnalysisResult(ExperimentResult):
             from ..utils.visualization import (
                 get_experiment_colors,
                 get_plotly_config,
-                save_plotly_figure,
                 setup_plotly_environment,
                 show_plotly_figure,
             )
@@ -632,14 +646,12 @@ class HadamardTestAnalysisResult(ExperimentResult):
                 borderwidth=1,
             )
 
-            # Save and show plot
-            if save_image:
-                save_plotly_figure(
-                    fig, name="hadamard_test_analysis", images_dir="./plots"
-                )
-
+            # Show plot only - saving handled by experiment classes
             config = get_plotly_config("hadamard_test_analysis", 1000, 500)
             show_plotly_figure(fig, config)
 
+            return fig
+
         except Exception as e:
             print(f"Warning: Hadamard Test plot generation failed: {e}")
+            return None
