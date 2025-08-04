@@ -485,6 +485,7 @@ class OqtopusBackend:
         disable_transpilation: bool = False,
         mitigation_info: dict[str, Any] | None = None,
         experiment_name: str | None = None,
+        workers: int = 4,
     ) -> list[str | None]:
         """
         Submit circuits in parallel to OQTOPUS cloud with parameter tracking
@@ -567,7 +568,7 @@ class OqtopusBackend:
             # Submit circuits in parallel with parameters
             job_ids: list[str | None] = [None] * len(circuits)
 
-            with ThreadPoolExecutor(max_workers=4) as executor:
+            with ThreadPoolExecutor(max_workers=workers) as executor:
                 # Create circuit-params-index tuples
                 circuit_tuples = [
                     (circuits[i], circuit_params[i], i) for i in range(len(circuits))

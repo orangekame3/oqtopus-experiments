@@ -472,6 +472,7 @@ class BaseExperiment(ABC):
                     disable_transpilation,
                     mitigation_info,
                     experiment_name,
+                    workers=workers,
                 )
             else:
                 job_ids = backend.submit_parallel(
@@ -480,6 +481,7 @@ class BaseExperiment(ABC):
                     circuit_params,
                     disable_transpilation,
                     mitigation_info,
+                    workers=workers,
                 )
             print(f"Collecting {len(job_ids)} results")
             results = backend.collect_parallel(job_ids)

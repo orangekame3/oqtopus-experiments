@@ -24,7 +24,7 @@ def main():
     )
 
     # Run experiment
-    result = exp.run_parallel(backend=backend, shots=1000, workers=2)
+    result = exp.run_parallel(backend=backend, shots=1000, workers=10)
 
     # Analyze results
     df = result.analyze()
