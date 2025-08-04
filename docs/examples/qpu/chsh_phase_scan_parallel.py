@@ -17,8 +17,6 @@ def main():
     # Create CHSH phase scan experiment
     exp = CHSHPhaseScan(
         experiment_name="chsh_phase_scan_qpu",
-        physical_qubit_0=3,
-        physical_qubit_1=2,
         shots_per_circuit=1000,
         phase_points=20,
         phase_start=0.0,
