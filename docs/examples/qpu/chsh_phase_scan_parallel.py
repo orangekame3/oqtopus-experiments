@@ -12,13 +12,15 @@ from oqtopus_experiments.experiments import CHSHPhaseScan
 
 def main():
     # OQTOPUS backend for QPU
-    backend = OqtopusBackend(device="urchin")
+    backend = OqtopusBackend(device="anemone")
 
     # Create CHSH phase scan experiment
     exp = CHSHPhaseScan(
         experiment_name="chsh_phase_scan_qpu",
+        physical_qubit_0=21,
+        physical_qubit_1=20,
         shots_per_circuit=1000,
-        phase_points=20,
+        phase_points=25,
         phase_start=0.0,
         phase_end=math.pi * 3,
     )
