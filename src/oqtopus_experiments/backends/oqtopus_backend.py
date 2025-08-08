@@ -557,7 +557,7 @@ class OqtopusBackend:
 
                     # Add name if experiment_name is provided
                     if experiment_name:
-                        job_kwargs["name"] = f"{experiment_name}_circuit_{index + 1}"
+                        job_kwargs["name"] = f"{experiment_name}"
 
                     job = self.backend.sample_qasm(**job_kwargs)
                     return index, job.job_id
